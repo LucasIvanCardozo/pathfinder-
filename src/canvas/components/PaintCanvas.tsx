@@ -275,11 +275,11 @@ function PaintCanvasImpl({
                 </>
               )
             }
-            // door: use the strongest blur tier (Puertas always sits above
-            // every subdivision, so it gets the max blur).
+            // door: same tier as any cell on the same floor.
             const variants = textureImages.get(doorStateToTextureId(item.door.state))
             if (!variants) return null
-            const img = variants[3]
+            const doorFloorIdx = Math.floor(item.z / subCount)
+            const img = variants[blurTierFor(doorFloorIdx)]
             return (
               <KonvaImage
                 key={`d-${item.door.id}`}
