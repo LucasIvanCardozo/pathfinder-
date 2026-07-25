@@ -56,8 +56,9 @@ function readSvgDimensions(file: string): { width: number; height: number } {
   const raw = readFileSync(file, "utf-8");
   const viewBox = raw.match(/viewBox=["']([^"']+)["']/);
   if (viewBox) {
-    const parts = viewBox[1]?.trim().split(/\s+/).map(Number);
-    if (parts.length === 4) {
+    // biome-ignore lint/style/noNonNullAssertion: regex match group is present when the surrounding `if` is true.
+    const parts = viewBox[1]!.trim().split(/\s+/).map(Number);
+    if (parts && parts.length === 4 && !isNaN(parts[2]!) && !isNaN(parts[3]!)) {
       return { width: parts[2]!, height: parts[3]! };
     }
   }
@@ -169,7 +170,7 @@ type ProcessedTexture = {
 };
 
 async function processTexture(category: string, file: string): Promise<ProcessedTexture> {
-  const ext = file.split(".").pop()?.toLowerCase();
+  const ext = file.split(".").pop()!.toLowerCase();
   if (!isImageExt(ext)) {
     throw new Error(`Unsupported extension: ${ext}`);
   }
@@ -244,7 +245,7 @@ function deleteOrphans(
   const all = listFilesRecursive(root, skipDirNames);
   for (const rel of all) {
     if (expected.has(rel)) continue;
-    const ext = rel.split(".").pop()?.toLowerCase();
+const ext = rel.split(".").pop()!.toLowerCase();
     if (skipExts.includes(ext)) continue;
     if (!isImageExt(ext)) continue;
     const full = join(root, rel);
@@ -295,7 +296,7 @@ async function main() {
   for (const category of categories) {
     const dir = join(TEXTURES_DIR, category);
     const files = readdirSync(dir).filter((f) => {
-      const ext = f.split(".").pop()?.toLowerCase();
+  const ext = f.split(".").pop()!.toLowerCase();
       return isImageExt(ext);
     });
 
@@ -304,7 +305,7 @@ async function main() {
         const r = await processTexture(category, file);
         processed.push(r);
         if (r.wasResized) resized++;
-        const ext = file.split(".").pop()?.toLowerCase();
+      const ext = file.split(".").pop()!.toLowerCase();
         if (ext === "svg") {
           optimized++;
           _svgKept++;

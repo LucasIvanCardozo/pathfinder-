@@ -276,12 +276,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   const activeFloorIndex = floors.findIndex((f) => f.id === activeFloorId);
   const handleFloorUp = () => {
     if (activeFloorIndex < floors.length - 1) {
-      setActiveFloorId(floors[activeFloorIndex + 1]?.id);
+      setActiveFloorId(floors[activeFloorIndex + 1]!.id);
     }
   };
   const handleFloorDown = () => {
     if (activeFloorIndex > 0) {
-      setActiveFloorId(floors[activeFloorIndex - 1]?.id);
+      setActiveFloorId(floors[activeFloorIndex - 1]!.id);
     }
   };
 
@@ -406,7 +406,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     setFloors(remaining);
     // Pick the adjacent floor so the user doesn't end up on a stale id.
     const newIdx = Math.min(idx, remaining.length - 1);
-    setActiveFloorId(remaining[newIdx]?.id);
+    // biome-ignore lint/style/noNonNullAssertion: remaining is non-empty (we checked floors.length > 1).
+    setActiveFloorId(remaining[newIdx]!.id);
     markDirty();
   };
 
@@ -436,10 +437,28 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     markDirty();
   };
 
-  const handleClear = () => {
-    if (!confirm("¿Borrar todas las celdas pintadas y puertas de este escenario?")) return;
+  // Three granularities of "clear", each with its own confirmation.
+  const handleClearAll = () => {
+    if (!confirm("¿Borrar TODO el scenario (pintadas + puertas de todos los pisos)? No se puede deshacer.")) return;
     setPaintedCells([]);
     setDoors([]);
+    markDirty();
+  };
+
+  const handleClearFloor = () => {
+    if (!confirm(`¿Borrar todas las celdas pintadas y puertas de "${activeFloor.name}"? No se puede deshacer.`)) return;
+    const fid = activeFloor.id;
+    setPaintedCells((prev) => prev.filter((c) => c.floorId !== fid));
+    setDoors((prev) => prev.filter((d) => d.floorId !== fid));
+    markDirty();
+  };
+
+  const handleClearSubdivision = () => {
+    if (!activeSubdivision) return;
+    if (!confirm(`¿Borrar todas las celdas pintadas de "${activeSubdivision.name}" en "${activeFloor.name}"? No se puede deshacer.`)) return;
+    const fid = activeFloor.id;
+    const sid = activeSubdivisionId;
+    setPaintedCells((prev) => prev.filter((c) => !(c.floorId === fid && c.subdivisionId === sid)));
     markDirty();
   };
 
@@ -580,14 +599,47 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
           >
             {autosaveEnabled ? "Autoguardado ON" : "Autoguardado OFF"}
           </button>
-          <button
-            type="button"
-            className="button danger"
-            onClick={handleClear}
-            disabled={paintedCells.length === 0 && doors.length === 0}
-          >
-            Limpiar
-          </button>
+          <div className="clear-buttons">
+            <button
+              type="button"
+              className="button mini danger"
+              onClick={handleClearAll}
+              disabled={paintedCells.length === 0 && doors.length === 0}
+              title="Borrar TODO el scenario"
+            >
+              🗑 Todo
+            </button>
+            <button
+              type="button"
+              className="button mini danger"
+              onClick={handleClearFloor}
+              disabled={
+                paintedCells.filter((c) => c.floorId === activeFloorId).length === 0 &&
+                doors.filter((d) => d.floorId === activeFloorId).length === 0
+              }
+              title={`Borrar todo "${activeFloor.name}"`}
+            >
+              🗑 Piso
+            </button>
+            <button
+              type="button"
+              className="button mini danger"
+              onClick={handleClearSubdivision}
+              disabled={
+                !activeSubdivision ||
+                paintedCells.filter(
+                  (c) => c.floorId === activeFloorId && c.subdivisionId === activeSubdivisionId,
+                ).length === 0
+              }
+              title={
+                activeSubdivision
+                  ? `Borrar "${activeSubdivision.name}" de "${activeFloor.name}"`
+                  : "Sin subcapa activa"
+              }
+            >
+              🗑 Sub
+            </button>
+          </div>
           <button
             type="button"
             className="button primary"

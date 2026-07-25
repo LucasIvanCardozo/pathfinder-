@@ -222,6 +222,11 @@
   border-color: #e07a7a;
 }
 
+.clear-buttons {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
 .button.mini {
   padding: 0.25rem 0.5rem;
   font-size: 0.8rem;
