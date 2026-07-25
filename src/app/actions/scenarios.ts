@@ -140,10 +140,11 @@ export async function saveScenario(input: SaveScenarioInput): Promise<{ id: stri
   if (input.id) {
     // Update: delete floors (cascades to cells and doors) then recreate
     // everything in a single transaction.
+    const scenarioId = input.id;
     const updated = await prisma.$transaction(async (tx) => {
-      await tx.floor.deleteMany({ where: { scenarioId: input.id! } });
+      await tx.floor.deleteMany({ where: { scenarioId } });
       const scenario = await tx.scenario.update({
-        where: { id: input.id! },
+        where: { id: scenarioId },
         data: {
           name,
           floors: { create: floorData },

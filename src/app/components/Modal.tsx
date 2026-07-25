@@ -11,8 +11,9 @@ type ModalProps = {
 
 /**
  * Generic modal dialog. Renders a backdrop + centered content panel.
- * Closes on Escape or backdrop click. Uses a native <dialog> for a11y and
- * keyboard handling out of the box.
+ * Closes on Escape or backdrop click. A native <dialog> is used as the
+ * backdrop so screen readers and keyboard handlers get the right semantics
+ * for free.
  */
 export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   useEffect(() => {
@@ -27,15 +28,20 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <button
-      type="button"
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop intentionally closes on click.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click is the documented close affordance.
+    <div
       className="modal-backdrop"
       onClick={onClose}
-      aria-label="Cerrar modal"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
     >
       <div
         className="modal-panel"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -53,5 +59,6 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
         </header>
         <div className="modal-content">{children}</div>
       </div>
-    </button>
+    </div>
+  );
 }

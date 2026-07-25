@@ -7,7 +7,6 @@ type FormInputProps = {
   placeholder?: string;
   type?: "text" | "email" | "url";
   disabled?: boolean;
-  autoFocus?: boolean;
 };
 
 /**
@@ -19,7 +18,6 @@ export function FormInput({
   placeholder,
   type = "text",
   disabled = false,
-  autoFocus = false,
 }: FormInputProps) {
   const { register } = useFormContext();
   return (
