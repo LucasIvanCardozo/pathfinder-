@@ -1,13 +1,14 @@
 // Pathfinder battle map — Prisma schema
 // Postgres + Driver Adapter (pg) for Next.js 16 Server Actions.
+// Connection URL is configured in prisma.config.ts (Prisma 7+).
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Scenario {
@@ -18,8 +19,6 @@ model Scenario {
 
   floors Floor[]
   doors  Door[]
-
-  @@index([updatedAt])
 }
 
 model Floor {

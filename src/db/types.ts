@@ -1,8 +1,8 @@
 // Re-export the Prisma generated types so consumers don't have to
-// import from @prisma/client directly.
+// import from the generated client path directly.
 export type {
   Floor,
   PaintedCell,
   Prisma,
   Scenario,
-} from "@prisma/client";
+} from "@/generated/prisma/client";
