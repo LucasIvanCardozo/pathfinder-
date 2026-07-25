@@ -1,7 +1,7 @@
 "use client";
 
 import { Stage, Layer, Image as KonvaImage, Rect } from "react-konva";
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import type Konva from "konva";
 import type { Floor, PaintedCell, Texture, SubdivisionConfig, Door } from "@/pieces";
 import { GridLayer } from "./GridLayer";
@@ -12,7 +12,8 @@ import type { PaintTool } from "./PaintToolbar";
 export type ScreenPos = { x: number; y: number };
 
 type Props = {
-  floor: Floor;
+  floors: Floor[];
+  activeFloorId: string;
   subdivisions: SubdivisionConfig[];
   paintedCells: PaintedCell[];
   doors: Door[];
@@ -20,10 +21,6 @@ type Props = {
   activeSubdivisionId: string;
   activeTextureId: string | null;
   tool: PaintTool;
-  /**
-   * Called when the user clicks/drags a cell. The screenPos lets the
-   * caller position UI (e.g. the door menu) near the cursor.
-   */
   onPaint: (
     floorId: string,
     subdivisionId: string,
@@ -38,7 +35,8 @@ type Props = {
 };
 
 function PaintCanvasImpl({
-  floor,
+  floors,
+  activeFloorId,
   subdivisions,
   paintedCells,
   doors,
@@ -53,15 +51,49 @@ function PaintCanvasImpl({
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
 
-  const stageNativeWidth = floor.width * floor.baseCellSize;
-  const stageNativeHeight = floor.height * floor.baseCellSize;
+  const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0]!;
+
+  const stageNativeWidth = activeFloor.width * activeFloor.baseCellSize;
+  const stageNativeHeight = activeFloor.height * activeFloor.baseCellSize;
   const scaleX = width / stageNativeWidth;
   const scaleY = height / stageNativeHeight;
 
   const textureImages = useTextureImages(textures);
 
-  // Subdivisions sorted by `order` for deterministic layering.
-  const sortedSubs = [...subdivisions].sort((a, b) => a.order - b.order);
+  // Subdivisions sorted by `order` for deterministic Z layering.
+  const sortedSubs = useMemo(
+    () => [...subdivisions].sort((a, b) => a.order - b.order),
+    [subdivisions],
+  );
+
+  const subById = useMemo(() => {
+    const m = new Map<string, SubdivisionConfig>();
+    for (const sub of sortedSubs) m.set(sub.id, sub);
+    return m;
+  }, [sortedSubs]);
+
+  const activeIndex = floors.findIndex((f) => f.id === activeFloorId);
+
+  // Flat list of painted cells, ordered by Z = floorIndex * subCount + sub.order.
+  // Only cells from the active floor and the floors BELOW it are rendered —
+  // when you stand on PB you don't see what was painted on Piso 1 or Piso 2.
+  const cellsByZ = useMemo(() => {
+    if (activeIndex < 0) return [];
+    const subCount = sortedSubs.length;
+    type Item = { z: number; cell: PaintedCell; sub: SubdivisionConfig };
+    const items: Item[] = [];
+    for (let fIdx = 0; fIdx <= activeIndex; fIdx++) {
+      const floor = floors[fIdx]!;
+      for (const cell of paintedCells) {
+        if (cell.floorId !== floor.id) continue;
+        const sub = subById.get(cell.subdivisionId);
+        if (!sub) continue;
+        items.push({ z: fIdx * subCount + sub.order, cell, sub });
+      }
+    }
+    items.sort((a, b) => a.z - b.z);
+    return items;
+  }, [floors, paintedCells, sortedSubs, subById, activeIndex]);
 
   const apply = useCallback(
     (clientX: number, clientY: number, isDragging: boolean) => {
@@ -73,11 +105,11 @@ function PaintCanvasImpl({
       const nativeX = (xInContainer / rect.width) * stageNativeWidth;
       const nativeY = (yInContainer / rect.height) * stageNativeHeight;
 
-      const sub = subdivisions.find((s) => s.id === activeSubdivisionId);
+      const sub = subById.get(activeSubdivisionId);
       if (!sub) return;
-      const cellSize = floor.baseCellSize / sub.cellSizeRatio;
-      const maxX = floor.width * sub.cellSizeRatio;
-      const maxY = floor.height * sub.cellSizeRatio;
+      const cellSize = activeFloor.baseCellSize / sub.cellSizeRatio;
+      const maxX = activeFloor.width * sub.cellSizeRatio;
+      const maxY = activeFloor.height * sub.cellSizeRatio;
       const gridX = Math.floor(nativeX / cellSize);
       const gridY = Math.floor(nativeY / cellSize);
       if (gridX < 0 || gridY < 0 || gridX >= maxX || gridY >= maxY) return;
@@ -85,7 +117,7 @@ function PaintCanvasImpl({
       const textureId = tool === "paint" ? activeTextureId : null;
       if (tool === "paint" && !textureId) return;
       onPaint(
-        floor.id,
+        activeFloor.id,
         activeSubdivisionId,
         gridX,
         gridY,
@@ -94,7 +126,7 @@ function PaintCanvasImpl({
         isDragging,
       );
     },
-    [activeTextureId, activeSubdivisionId, floor, onPaint, subdivisions, tool],
+    [activeTextureId, activeSubdivisionId, activeFloor, onPaint, subById],
   );
 
   const getEventCoords = (
@@ -161,50 +193,42 @@ function PaintCanvasImpl({
       >
         <GridLayer
           config={{
-            baseCellSize: floor.baseCellSize,
-            width: floor.width,
-            height: floor.height,
+            baseCellSize: activeFloor.baseCellSize,
+            width: activeFloor.width,
+            height: activeFloor.height,
           }}
         />
-        {sortedSubs.map((sub) => {
-          const cellSize = floor.baseCellSize / sub.cellSizeRatio;
-          const subWidth = floor.width * sub.cellSizeRatio;
-          const subHeight = floor.height * sub.cellSizeRatio;
-          const cellsInSub = paintedCells.filter(
-            (c) => c.floorId === floor.id && c.subdivisionId === sub.id,
-          );
-          return (
-            <Layer key={sub.id} listening={false}>
-              {cellsInSub.map((cell) => {
-                const img = textureImages.get(cell.textureId);
-                if (!img) return null;
-                return (
-                  <KonvaImage
-                    key={cell.id}
-                    image={img}
-                    x={cell.gridX * cellSize}
-                    y={cell.gridY * cellSize}
-                    width={cellSize}
-                    height={cellSize}
-                  />
-                );
-              })}
-              <Rect
-                x={0}
-                y={0}
-                width={subWidth * cellSize}
-                height={subHeight * cellSize}
-                stroke={sub.id === activeSubdivisionId ? "#c9a86a" : "transparent"}
-                strokeWidth={1}
-                dash={[4, 4]}
+
+        {/*
+          Single Layer with every painted cell, sorted by Z. Z = floorIndex *
+          subCount + sub.order. Lower Z renders first (behind); higher Z renders
+          on top. A floor painted on a higher floor correctly occludes the
+          cells of any lower floor at the same position, regardless of
+          subdivision.
+        */}
+        <Layer listening={false}>
+          {cellsByZ.map(({ cell, sub }) => {
+            const cellSize = activeFloor.baseCellSize / sub.cellSizeRatio;
+            const img = textureImages.get(cell.textureId);
+            if (!img) return null;
+            return (
+              <KonvaImage
+                key={cell.id}
+                image={img}
+                x={cell.gridX * cellSize}
+                y={cell.gridY * cellSize}
+                width={cellSize}
+                height={cellSize}
+                perfectDrawEnabled={false}
               />
-            </Layer>
-          );
-        })}
-        {/* Doors layer — pure render, hit-tested via Stage.handlePaint. */}
+            );
+          })}
+        </Layer>
+
+        {/* Doors layer — only the active floor's doors, not cascaded. */}
         <DoorLayer
-          doors={doors.filter((d) => d.floorId === floor.id)}
-          cellSize={floor.baseCellSize}
+          doors={doors.filter((d) => d.floorId === activeFloor.id)}
+          cellSize={activeFloor.baseCellSize}
           baseTextures={textures}
         />
       </Stage>

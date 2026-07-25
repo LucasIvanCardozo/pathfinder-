@@ -463,27 +463,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
                 ×
               </button>
             ) : null}
-            {otherFloors.length > 0 ? (
-              <select
-                className="button mini floor-copy-select"
-                value=""
-                onChange={(e) => {
-                  handleCopyFloorFrom(e.target.value)
-                  e.target.value = '' // reset so the same source can be picked again
-                }}
-                title={`Copiar contenido de otro piso a ${activeFloor.name}`}
-                aria-label="Copiar contenido de otro piso"
-              >
-                <option value="" hidden>
-                  📋 Copiar
-                </option>
-                {otherFloors.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
           </div>
           <span className="canvas-stat">
             {paintedInFloor} celdas · {doorsInFloor} puertas
@@ -529,7 +508,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
         )}
 
         <PaintCanvas
-          floor={activeFloor}
+          floors={floors}
+          activeFloorId={activeFloorId}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
           doors={doors}
