@@ -1,0 +1,167 @@
+/* Subdivision manager modal */
+.subdivision-manager {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1.25rem;
+  min-height: 480px;
+}
+
+.subdivision-manager-list h3,
+.subdivision-manager-form h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+}
+
+.subdivision-manager-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+.subdivision-manager-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.subdivision-manager-list li.editing {
+  border-color: var(--accent);
+  background: rgba(201, 168, 106, 0.08);
+}
+
+.subdivision-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.subdivision-row-info strong {
+  color: var(--fg);
+}
+
+.subdivision-row-meta {
+  color: var(--fg-muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.subdivision-row-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.subdivision-manager-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0;
+  min-width: 0;
+}
+
+.form-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.texture-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: var(--bg);
+}
+
+.texture-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.texture-picker-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.texture-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.texture-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.texture-picker-row:hover {
+  border-color: var(--accent);
+}
+
+.texture-picker-row.selected {
+  border-color: var(--accent);
+  background: rgba(201, 168, 106, 0.1);
+}
+
+.texture-picker-row input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.texture-picker-row img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.texture-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.texture-picker-name {
+  color: var(--fg);
+}
+
+.texture-picker-meta {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  text-transform: capitalize;
+}
+
+@media (max-width: 700px) {
+  .subdivision-manager {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,399 @@
+/* Editor layout */
+
+.editor {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.paint-sidebar {
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.back-link {
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  display: inline-block;
+  width: fit-content;
+}
+
+.back-link:hover {
+  color: var(--accent);
+  background: var(--bg);
+}
+
+.canvas-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.canvas-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+  flex-wrap: wrap;
+}
+
+.canvas-stat {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.scenario-name-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.scenario-name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Floor switcher */
+.floor-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.floor-current {
+  min-width: 100px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--fg);
+  padding: 0.25rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.floor-name {
+  font-weight: 500;
+  color: var(--fg);
+  padding: 0 0.5rem;
+  min-width: 110px;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.floor-select {
+  padding: 0.3rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+/* Autosave status indicator */
+.autosave-status {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.autosave-status[data-status="pending"] {
+  color: #d4a85a;
+  border-color: #5a4220;
+}
+
+.autosave-status[data-status="saving"] {
+  color: #7ab3e0;
+  border-color: #2a4a6b;
+}
+
+.autosave-status[data-status="saved"] {
+  color: #7adc7a;
+  border-color: #2a5a2a;
+}
+
+.autosave-status[data-status="error"] {
+  color: #e07a7a;
+  border-color: #5a2a2a;
+}
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.button:hover {
+  border-color: var(--accent);
+}
+
+.button.primary {
+  background: var(--accent);
+  color: #1a1206;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.button.primary:hover {
+  filter: brightness(1.05);
+}
+
+.button.danger {
+  color: #e07a7a;
+  border-color: #4a2222;
+}
+
+.button.danger:hover {
+  background: #2a1414;
+  border-color: #e07a7a;
+}
+
+.button.mini {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Paint toolbar */
+.paint-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.paint-tool {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.paint-tool:hover {
+  border-color: var(--accent);
+}
+
+.paint-tool.active {
+  background: var(--accent);
+  color: #1a1206;
+  border-color: var(--accent);
+  font-weight: 500;
+}
+
+/* Subdivision tabs + special "Puertas" tab inside the same segmented control. */
+.subdivision-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.subdivision-tabs-separator {
+  width: 1px;
+  margin: 0.25rem 0.15rem;
+  background: var(--border);
+}
+
+/* Drag & drop reordering */
+.subdivision-tab-wrapper {
+  display: inline-flex;
+  position: relative;
+}
+
+.subdivision-tab-wrapper.drop-left::before,
+.subdivision-tab-wrapper.drop-right::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.subdivision-tab-wrapper.drop-left::before {
+  left: -3px;
+}
+
+.subdivision-tab-wrapper.drop-right::after {
+  right: -3px;
+}
+
+.subdivision-tab[draggable] {
+  cursor: grab;
+}
+
+.subdivision-tab.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.doors-tab {
+  /* Same exact shape as .subdivision-tab; differentiated only by the
+   * accent color used in the active state below. */
+}
+
+.doors-tab.active {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.subdivision-tab {
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.subdivision-tab:hover {
+  color: var(--fg);
+}
+
+.subdivision-tab.active {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Texture palette */
+.texture-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.texture-palette-title {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+}
+
+.texture-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.texture-palette-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--fg);
+  font-size: 0.7rem;
+  transition: border-color 0.15s, transform 0.05s;
+}
+
+.texture-palette-card:hover {
+  border-color: var(--accent);
+}
+
+.texture-palette-card.active {
+  border-color: var(--accent);
+  background: rgba(201, 168, 106, 0.1);
+}
+
+.texture-palette-card img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.texture-palette-card span {
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+/* Canvas container */
+.paint-canvas-container {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  align-self: center;
+}
+
+.canvas-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1200px;
+  height: 800px;
+  color: var(--fg-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}

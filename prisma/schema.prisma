@@ -1,0 +1,81 @@
+// Pathfinder battle map — Prisma schema
+// Postgres + Driver Adapter (pg) for Next.js 16 Server Actions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Scenario {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  floors Floor[]
+  doors  Door[]
+
+  @@index([updatedAt])
+}
+
+model Floor {
+  id           String @id @default(cuid())
+  scenarioId   String
+  name         String
+  baseCellSize Int
+  width        Int
+  height       Int
+  order        Int    @default(0)
+
+  scenario     Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  paintedCells PaintedCell[]
+  doors        Door[]
+
+  @@index([scenarioId])
+}
+
+model PaintedCell {
+  id            String @id @default(cuid())
+  floorId       String
+  subdivisionId String
+  gridX         Int
+  gridY         Int
+  textureId     String
+
+  floor Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@index([floorId, subdivisionId])
+}
+
+model SubdivisionConfig {
+  id            String @id @default(cuid())
+  name          String
+  textureIds    String @default("[]")
+  cellSizeRatio Int
+  order         Int    @default(0)
+
+  @@index([order])
+}
+
+model Door {
+  id          String   @id @default(cuid())
+  scenarioId  String
+  floorId     String
+  textureId   String
+  gridX       Int
+  gridY       Int
+  state       String   @default("closed")
+  orientation Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  floor    Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@index([floorId])
+}
