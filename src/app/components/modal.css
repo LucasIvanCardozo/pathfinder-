@@ -43,7 +43,9 @@
   cursor: pointer;
   padding: 0 0.5rem;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .modal-close:hover {

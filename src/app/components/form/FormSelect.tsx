@@ -18,12 +18,7 @@ type FormSelectProps = {
  * Select wired to RHF. Uses the native <select> for native keyboard
  * navigation and accessibility.
  */
-export function FormSelect({
-  name,
-  options,
-  placeholder,
-  disabled = false,
-}: FormSelectProps) {
+export function FormSelect({ name, options, placeholder, disabled = false }: FormSelectProps) {
   const { register } = useFormContext();
   return (
     <select

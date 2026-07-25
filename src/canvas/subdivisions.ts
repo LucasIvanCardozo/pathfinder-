@@ -15,8 +15,6 @@ export function isDoorsSubdivision(subdivisionName: string): boolean {
 }
 
 /** Filter out the special "Puertas" subdivision from the regular tab list. */
-export function filterVisibleSubdivisions<T extends { name: string }>(
-  subdivisions: T[],
-): T[] {
+export function filterVisibleSubdivisions<T extends { name: string }>(subdivisions: T[]): T[] {
   return subdivisions.filter((s) => s.name !== DOORS_SUBDIVISION_NAME);
 }

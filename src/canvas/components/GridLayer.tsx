@@ -10,11 +10,7 @@ type Props = {
   strokeWidth?: number;
 };
 
-export function GridLayer({
-  config,
-  stroke = "#2a2e36",
-  strokeWidth = 1,
-}: Props) {
+export function GridLayer({ config, stroke = "#2a2e36", strokeWidth = 1 }: Props) {
   const lines = gridLines(config);
   return (
     <Layer listening={false}>

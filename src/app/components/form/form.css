@@ -78,7 +78,9 @@
   border: 2px dashed var(--border);
   border-radius: 6px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .form-file-label:hover {

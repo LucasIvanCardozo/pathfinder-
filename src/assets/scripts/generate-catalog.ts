@@ -45,9 +45,7 @@ function isImageExt(s: string): s is ImageExt {
 }
 
 function prettifyBasename(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return name.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function isValidCategory(c: string): c is PieceCategory {
@@ -91,9 +89,10 @@ async function resizeIfNeeded(
 ): Promise<boolean> {
   const longest = Math.max(dims.width, dims.height);
   if (longest <= MAX_SIZE) return false;
-  const target = longest === dims.width
-    ? { width: MAX_SIZE, height: Math.round((dims.height / dims.width) * MAX_SIZE) }
-    : { width: Math.round((dims.width / dims.height) * MAX_SIZE), height: MAX_SIZE };
+  const target =
+    longest === dims.width
+      ? { width: MAX_SIZE, height: Math.round((dims.height / dims.width) * MAX_SIZE) }
+      : { width: Math.round((dims.width / dims.height) * MAX_SIZE), height: MAX_SIZE };
   const buf = readFileSync(file);
   if (ext === "svg") {
     const out = await sharp(buf, { density: 300 })
@@ -102,9 +101,7 @@ async function resizeIfNeeded(
       .toBuffer();
     writeFileSync(file, out);
   } else {
-    const out = await sharp(buf)
-      .resize(target.width, target.height, { fit: "fill" })
-      .toBuffer();
+    const out = await sharp(buf).resize(target.width, target.height, { fit: "fill" }).toBuffer();
     writeFileSync(file, out);
   }
   return true;
@@ -171,10 +168,7 @@ type ProcessedTexture = {
   originalSize: { width: number; height: number };
 };
 
-async function processTexture(
-  category: string,
-  file: string,
-): Promise<ProcessedTexture> {
+async function processTexture(category: string, file: string): Promise<ProcessedTexture> {
   const ext = file.split(".").pop()!.toLowerCase();
   if (!isImageExt(ext)) {
     throw new Error(`Unsupported extension: ${ext}`);
@@ -222,10 +216,7 @@ async function processTexture(
   };
 }
 
-function listFilesRecursive(
-  root: string,
-  skipDirNames: string[] = [],
-): string[] {
+function listFilesRecursive(root: string, skipDirNames: string[] = []): string[] {
   const out: string[] = [];
   function walk(dir: string, rel: string): void {
     if (!existsSync(dir)) return;
@@ -367,24 +358,15 @@ export function findTexturesByIds(ids: string[]): Texture[] {
     expectedThumbs.add(`${r.category}/${r.basename}.webp`);
   }
 
-  const orphanSources = deleteOrphans(
-    TEXTURES_DIR,
-    expectedSources,
-    [],
-    ["_thumbs"],
-  );
-  const orphanWebps = deleteOrphans(
-    TEXTURES_DIR,
-    expectedWebps,
-    ["svg"],
-    ["_thumbs"],
-  );
+  const orphanSources = deleteOrphans(TEXTURES_DIR, expectedSources, [], ["_thumbs"]);
+  const orphanWebps = deleteOrphans(TEXTURES_DIR, expectedWebps, ["svg"], ["_thumbs"]);
   const orphanThumbs = deleteOrphans(THUMBS_DIR, expectedThumbs);
 
-  const totalOrphans =
-    orphanSources.length + orphanWebps.length + orphanThumbs.length;
+  const totalOrphans = orphanSources.length + orphanWebps.length + orphanThumbs.length;
 
-  console.log(`\n✓ Generated ${processed.length} texture(s) → ${relative(REPO_ROOT, CATALOG_PATH)}`);
+  console.log(
+    `\n✓ Generated ${processed.length} texture(s) → ${relative(REPO_ROOT, CATALOG_PATH)}`,
+  );
   if (resized > 0) {
     console.log(`  Resized ${resized} oversized file(s) to max ${MAX_SIZE}px`);
   }

@@ -26,6 +26,6 @@ export function PaintToolbar({ tool, onChange }: Props) {
       >
         🧹 Borrar
       </button>
-      </div>
+    </div>
   );
 }

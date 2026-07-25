@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import type { SubdivisionConfig } from "@/pieces";
-import {
-  DOORS_SUBDIVISION_NAME,
-  filterVisibleSubdivisions,
-} from "../subdivisions";
+import { DOORS_SUBDIVISION_NAME, filterVisibleSubdivisions } from "../subdivisions";
 
 type Props = {
   subdivisions: SubdivisionConfig[];
@@ -26,31 +23,20 @@ type DropIndicator = { id: string; side: "left" | "right" } | null;
  * can reorder them; the "Puertas" tab is intentionally fixed at the end
  * (its separator marks it as a special-destination tab, not a peer).
  */
-export function SubdivisionTabs({
-  subdivisions,
-  activeId,
-  onChange,
-  onReorder,
-}: Props) {
+export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }: Props) {
   const doorsSub = subdivisions.find((s) => s.name === DOORS_SUBDIVISION_NAME);
   const visible = filterVisibleSubdivisions(subdivisions);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 
-  const handleDragStart = (
-    e: React.DragEvent<HTMLButtonElement>,
-    id: string,
-  ) => {
+  const handleDragStart = (e: React.DragEvent<HTMLButtonElement>, id: string) => {
     e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
     setDraggingId(id);
   };
 
-  const handleDragOver = (
-    e: React.DragEvent<HTMLButtonElement>,
-    id: string,
-  ) => {
+  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>, id: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     const rect = e.currentTarget.getBoundingClientRect();
@@ -66,11 +52,7 @@ export function SubdivisionTabs({
   const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault();
     const fromId = e.dataTransfer.getData("text/plain");
-    if (
-      !fromId ||
-      !dropIndicator ||
-      fromId === dropIndicator.id
-    ) {
+    if (!fromId || !dropIndicator || fromId === dropIndicator.id) {
       handleDragEnd();
       return;
     }
@@ -83,15 +65,11 @@ export function SubdivisionTabs({
       {visible.map((sub) => {
         const isDragging = draggingId === sub.id;
         const indicatorHere =
-          dropIndicator && dropIndicator.id === sub.id
-            ? dropIndicator.side
-            : null;
+          dropIndicator && dropIndicator.id === sub.id ? dropIndicator.side : null;
         return (
           <div
             key={sub.id}
-            className={`subdivision-tab-wrapper ${
-              indicatorHere ? `drop-${indicatorHere}` : ""
-            }`}
+            className={`subdivision-tab-wrapper ${indicatorHere ? `drop-${indicatorHere}` : ""}`}
           >
             <button
               type="button"
@@ -119,9 +97,7 @@ export function SubdivisionTabs({
             type="button"
             role="tab"
             aria-selected={doorsSub.id === activeId}
-            className={`subdivision-tab doors-tab ${
-              doorsSub.id === activeId ? "active" : ""
-            }`}
+            className={`subdivision-tab doors-tab ${doorsSub.id === activeId ? "active" : ""}`}
             onClick={() => onChange(doorsSub.id)}
             title="Activar la subcapa Puertas"
           >

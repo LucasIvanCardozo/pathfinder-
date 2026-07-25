@@ -32,11 +32,7 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
   );
 }
 
-export default function EditorPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default function EditorPage({ searchParams }: { searchParams: SearchParams }) {
   return (
     <Suspense fallback={<EditorFallback />}>
       <EditorContent searchParams={searchParams} />

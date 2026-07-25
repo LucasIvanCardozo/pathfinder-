@@ -67,7 +67,9 @@
   font-size: 0.85rem;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .door-state-btn:hover {

@@ -2,11 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db";
-import {
-  SubdivisionConfigInputSchema,
-  type SubdivisionConfig,
-  type Texture,
-} from "@/pieces";
+import { SubdivisionConfigInputSchema, type SubdivisionConfig, type Texture } from "@/pieces";
 import { ALL_TEXTURES } from "@/assets";
 
 const DEFAULT_SUBDIVISIONS: Omit<SubdivisionConfig, "id">[] = [
@@ -173,13 +169,9 @@ export async function updateSubdivision(
   };
 }
 
-export type DeleteSubdivisionResult =
-  | { success: true }
-  | { success: false; error: string };
+export type DeleteSubdivisionResult = { success: true } | { success: false; error: string };
 
-export async function deleteSubdivision(
-  id: string,
-): Promise<DeleteSubdivisionResult> {
+export async function deleteSubdivision(id: string): Promise<DeleteSubdivisionResult> {
   // The "Puertas" subdivision is special and cannot be deleted.
   // We look it up by name to avoid relying on a hardcoded id.
   const sub = await prisma.subdivisionConfig.findUnique({ where: { id } });
@@ -204,9 +196,7 @@ export async function deleteSubdivision(
   return { success: true };
 }
 
-export async function reorderSubdivisions(
-  orders: { id: string; order: number }[],
-): Promise<void> {
+export async function reorderSubdivisions(orders: { id: string; order: number }[]): Promise<void> {
   await prisma.$transaction(
     orders.map((o) =>
       prisma.subdivisionConfig.update({

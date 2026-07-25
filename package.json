@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome lint",
+    "format": "biome format --write",
+    "check": "biome check --write",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf node_modules .next",
     "gen-cat": "tsx src/assets/scripts/generate-catalog.ts",
@@ -29,6 +31,7 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.2.0",

@@ -39,7 +39,9 @@
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .home-nav-link:hover {
@@ -61,7 +63,9 @@
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .home-nav .back-link:hover {
@@ -103,7 +107,9 @@
   font-size: 0.85rem;
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .button:hover {
@@ -155,7 +161,9 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 8px;
-  transition: border-color 0.15s, transform 0.05s;
+  transition:
+    border-color 0.15s,
+    transform 0.05s;
 }
 
 .scenario-card:hover {

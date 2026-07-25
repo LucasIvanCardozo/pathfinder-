@@ -11,9 +11,7 @@ type Props = {
 };
 
 export function TexturesGallery({ textures, categories }: Props) {
-  const [filterCategory, setFilterCategory] = useState<PieceCategory | "all">(
-    "all",
-  );
+  const [filterCategory, setFilterCategory] = useState<PieceCategory | "all">("all");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -139,12 +137,7 @@ function TextureCard({ texture }: { texture: Texture }) {
             ))}
           </div>
         ) : null}
-        <a
-          href={texture.imagePath}
-          target="_blank"
-          rel="noreferrer"
-          className="gallery-card-link"
-        >
+        <a href={texture.imagePath} target="_blank" rel="noreferrer" className="gallery-card-link">
           Ver archivo ↗
         </a>
       </div>

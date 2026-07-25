@@ -120,7 +120,9 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .texture-picker-row:hover {

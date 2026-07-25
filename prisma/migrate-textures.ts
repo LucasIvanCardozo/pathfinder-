@@ -6,8 +6,8 @@ const RENAMES: Record<string, string> = {
   "stone-floor": "floor-stone",
   "wood-floor": "floor-wood",
   "sand-floor": "floor-sand",
-  "water": "water-plain",
-  "lava": "lava-plain",
+  water: "water-plain",
+  lava: "lava-plain",
   "stone-wall": "wall-stone",
   "object-placeholder": "decoration-marker",
 };

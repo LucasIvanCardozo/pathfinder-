@@ -15,16 +15,13 @@ const globalForPrisma = globalThis as unknown as {
 function createClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error(
-      "DATABASE_URL is not set. Add it to apps/web/.env.local and packages/db/.env",
-    );
+    throw new Error("DATABASE_URL is not set. Add it to apps/web/.env.local and packages/db/.env");
   }
   const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 
-export const prisma: PrismaClient =
-  globalForPrisma.prisma ?? createClient();
+export const prisma: PrismaClient = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

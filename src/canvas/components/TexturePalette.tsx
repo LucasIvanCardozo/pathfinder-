@@ -12,11 +12,7 @@ type Props = {
  * Vertical palette of textures for the active subdivision. Click to select
  * the texture to paint with.
  */
-export function TexturePalette({
-  textures,
-  activeTextureId,
-  onSelect,
-}: Props) {
+export function TexturePalette({ textures, activeTextureId, onSelect }: Props) {
   return (
     <div className="texture-palette">
       <h3 className="texture-palette-title">Texturas</h3>
@@ -29,11 +25,7 @@ export function TexturePalette({
             onClick={() => onSelect(texture.id)}
             title={texture.name}
           >
-            <img
-              src={texture.imagePath}
-              alt={texture.name}
-              draggable={false}
-            />
+            <img src={texture.imagePath} alt={texture.name} draggable={false} />
             <span>{texture.name}</span>
           </button>
         ))}

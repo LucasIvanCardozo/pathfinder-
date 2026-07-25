@@ -40,9 +40,7 @@ async function HomeContent() {
           </Link>
         </div>
         {scenarios.length === 0 ? (
-          <p className="empty">
-            No hay escenarios guardados. Creá uno para empezar.
-          </p>
+          <p className="empty">No hay escenarios guardados. Creá uno para empezar.</p>
         ) : (
           <ul className="scenario-list">
             {scenarios.map((s) => (
@@ -50,8 +48,8 @@ async function HomeContent() {
                 <Link href={`/editor?id=${s.id}`} className="scenario-link">
                   <span className="scenario-name">{s.name}</span>
                   <span className="scenario-meta">
-                    {s.floorCount} {s.floorCount === 1 ? "piso" : "pisos"} ·{" "}
-                    {s.paintedCellCount} celdas pintadas
+                    {s.floorCount} {s.floorCount === 1 ? "piso" : "pisos"} · {s.paintedCellCount}{" "}
+                    celdas pintadas
                   </span>
                   <span className="scenario-date">
                     {new Date(s.updatedAt).toLocaleString("es")}

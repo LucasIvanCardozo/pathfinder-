@@ -8,9 +8,7 @@ import type { Texture } from "@/pieces";
  * Map keyed by texture id. Re-uses the browser's image cache so the same
  * texture isn't loaded twice when used in multiple layers.
  */
-export function useTextureImages(
-  textures: Texture[],
-): Map<string, HTMLImageElement> {
+export function useTextureImages(textures: Texture[]): Map<string, HTMLImageElement> {
   const [images, setImages] = useState<Map<string, HTMLImageElement>>(new Map());
 
   useEffect(() => {

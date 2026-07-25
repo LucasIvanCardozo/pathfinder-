@@ -25,14 +25,8 @@ export async function listScenarios(): Promise<ScenarioSummary[]> {
     },
   });
   return rows.map((s) => {
-    const cellCount = s.floors.reduce(
-      (sum, f) => sum + f._count.paintedCells,
-      0,
-    );
-    const doorCount = s.floors.reduce(
-      (sum, f) => sum + f._count.doors,
-      0,
-    );
+    const cellCount = s.floors.reduce((sum, f) => sum + f._count.paintedCells, 0);
+    const doorCount = s.floors.reduce((sum, f) => sum + f._count.doors, 0);
     return {
       id: s.id,
       name: s.name,
@@ -53,9 +47,7 @@ export type LoadScenarioResult = {
   doors: Door[];
 };
 
-export async function loadScenario(
-  id: string,
-): Promise<LoadScenarioResult | null> {
+export async function loadScenario(id: string): Promise<LoadScenarioResult | null> {
   const scenario = await prisma.scenario.findUnique({
     where: { id },
     include: {
@@ -112,9 +104,7 @@ export type SaveScenarioInput = {
   doors: Door[];
 };
 
-export async function saveScenario(
-  input: SaveScenarioInput,
-): Promise<{ id: string }> {
+export async function saveScenario(input: SaveScenarioInput): Promise<{ id: string }> {
   const validated = ScenarioInputSchema.safeParse({
     id: input.id ?? "pending",
     name: input.name,

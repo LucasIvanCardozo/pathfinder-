@@ -24,7 +24,9 @@
   font-size: 0.85rem;
   padding: 0.35rem 0.5rem;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
   display: inline-block;
   width: fit-content;
 }
@@ -122,9 +124,12 @@
   -webkit-appearance: none;
   padding-right: 1.25rem;
   cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: calc(100% - 0.55rem) 50%, calc(100% - 0.3rem) 50%;
+  background-position:
+    calc(100% - 0.55rem) 50%,
+    calc(100% - 0.3rem) 50%;
   background-size: 5px 5px;
   background-repeat: no-repeat;
 }
@@ -187,7 +192,9 @@
   font-family: inherit;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .button:hover {
@@ -237,7 +244,9 @@
   font-size: 0.85rem;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .paint-tool:hover {
@@ -323,7 +332,9 @@
   font-family: inherit;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .subdivision-tab:hover {
@@ -371,7 +382,9 @@
   font-family: inherit;
   color: var(--fg);
   font-size: 0.7rem;
-  transition: border-color 0.15s, transform 0.05s;
+  transition:
+    border-color 0.15s,
+    transform 0.05s;
 }
 
 .texture-palette-card:hover {
