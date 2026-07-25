@@ -5,95 +5,137 @@ import type { Texture } from "@/pieces";
 
 export const ALL_TEXTURES: Texture[] = [
   {
-    id: "decoration-marker",
-    name: "Marker",
-    imagePath: "/pieces/textures/decoration/marker.svg",
-    width: 16,
-    height: 16,
-    category: "decoration",
-    tags: ["decoration"],
+    "id": "decoration-marker",
+    "name": "Marker",
+    "imagePath": "/pieces/textures/decoration/marker.svg",
+    "width": 16,
+    "height": 16,
+    "category": "decoration",
+    "tags": [
+      "decoration"
+    ]
   },
   {
-    id: "door-closed",
-    name: "Closed",
-    imagePath: "/pieces/textures/door/closed.svg",
-    width: 64,
-    height: 64,
-    category: "door",
-    tags: ["door"],
+    "id": "door-closed",
+    "name": "Closed",
+    "imagePath": "/pieces/textures/door/closed.svg",
+    "width": 64,
+    "height": 64,
+    "category": "door",
+    "tags": [
+      "door"
+    ]
   },
   {
-    id: "door-locked",
-    name: "Locked",
-    imagePath: "/pieces/textures/door/locked.svg",
-    width: 64,
-    height: 64,
-    category: "door",
-    tags: ["door"],
+    "id": "door-locked",
+    "name": "Locked",
+    "imagePath": "/pieces/textures/door/locked.svg",
+    "width": 64,
+    "height": 64,
+    "category": "door",
+    "tags": [
+      "door"
+    ]
   },
   {
-    id: "door-open",
-    name: "Open",
-    imagePath: "/pieces/textures/door/open.svg",
-    width: 64,
-    height: 64,
-    category: "door",
-    tags: ["door"],
+    "id": "door-open",
+    "name": "Open",
+    "imagePath": "/pieces/textures/door/open.svg",
+    "width": 64,
+    "height": 64,
+    "category": "door",
+    "tags": [
+      "door"
+    ]
   },
   {
-    id: "floor-sand",
-    name: "Sand",
-    imagePath: "/pieces/textures/floor/sand.svg",
-    width: 64,
-    height: 64,
-    category: "floor",
-    tags: ["floor"],
+    "id": "floor-pasto",
+    "name": "Pasto",
+    "imagePath": "/pieces/textures/floor/pasto.webp",
+    "width": 128,
+    "height": 128,
+    "category": "floor",
+    "tags": [
+      "floor"
+    ]
   },
   {
-    id: "floor-stone",
-    name: "Stone",
-    imagePath: "/pieces/textures/floor/stone.svg",
-    width: 64,
-    height: 64,
-    category: "floor",
-    tags: ["floor"],
+    "id": "floor-sand",
+    "name": "Sand",
+    "imagePath": "/pieces/textures/floor/sand.svg",
+    "width": 64,
+    "height": 64,
+    "category": "floor",
+    "tags": [
+      "floor"
+    ]
   },
   {
-    id: "floor-wood",
-    name: "Wood",
-    imagePath: "/pieces/textures/floor/wood.svg",
-    width: 64,
-    height: 64,
-    category: "floor",
-    tags: ["floor"],
+    "id": "floor-stone",
+    "name": "Stone",
+    "imagePath": "/pieces/textures/floor/stone.svg",
+    "width": 64,
+    "height": 64,
+    "category": "floor",
+    "tags": [
+      "floor"
+    ]
   },
   {
-    id: "lava-plain",
-    name: "Plain",
-    imagePath: "/pieces/textures/lava/plain.svg",
-    width: 64,
-    height: 64,
-    category: "lava",
-    tags: ["lava"],
+    "id": "floor-wood",
+    "name": "Wood",
+    "imagePath": "/pieces/textures/floor/wood.svg",
+    "width": 64,
+    "height": 64,
+    "category": "floor",
+    "tags": [
+      "floor"
+    ]
   },
   {
-    id: "wall-stone",
-    name: "Stone",
-    imagePath: "/pieces/textures/wall/stone.svg",
-    width: 64,
-    height: 64,
-    category: "wall",
-    tags: ["wall"],
+    "id": "lava-plain",
+    "name": "Plain",
+    "imagePath": "/pieces/textures/lava/plain.svg",
+    "width": 64,
+    "height": 64,
+    "category": "lava",
+    "tags": [
+      "lava"
+    ]
   },
   {
-    id: "water-plain",
-    name: "Plain",
-    imagePath: "/pieces/textures/water/plain.svg",
-    width: 64,
-    height: 64,
-    category: "water",
-    tags: ["water"],
+    "id": "wall-azul",
+    "name": "Azul",
+    "imagePath": "/pieces/textures/wall/azul.webp",
+    "width": 128,
+    "height": 128,
+    "category": "wall",
+    "tags": [
+      "wall"
+    ]
   },
+  {
+    "id": "wall-stone",
+    "name": "Stone",
+    "imagePath": "/pieces/textures/wall/stone.svg",
+    "width": 64,
+    "height": 64,
+    "category": "wall",
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "water-plain",
+    "name": "Plain",
+    "imagePath": "/pieces/textures/water/plain.svg",
+    "width": 64,
+    "height": 64,
+    "category": "water",
+    "tags": [
+      "water"
+    ]
+  }
 ];
 
 export function findTexture(textureId: string): Texture | undefined {
@@ -101,5 +143,7 @@ export function findTexture(textureId: string): Texture | undefined {
 }
 
 export function findTexturesByIds(ids: string[]): Texture[] {
-  return ids.map((id) => findTexture(id)).filter((t): t is Texture => t !== undefined);
+  return ids
+    .map((id) => findTexture(id))
+    .filter((t): t is Texture => t !== undefined);
 }

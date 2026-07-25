@@ -27,7 +27,8 @@
         "noExplicitAny": "warn"
       },
       "style": {
-        "useImportType": "warn"
+        "useImportType": "warn",
+            "noNonNullAssertion": "off"
       }
     }
   },

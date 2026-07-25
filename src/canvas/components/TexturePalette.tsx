@@ -1,6 +1,7 @@
 "use client";
 
 import type { Texture } from "@/pieces";
+import Image from "next/image"
 
 type Props = {
   textures: Texture[];
@@ -25,7 +26,7 @@ export function TexturePalette({ textures, activeTextureId, onSelect }: Props) {
             onClick={() => onSelect(texture.id)}
             title={texture.name}
           >
-            <img src={texture.imagePath} alt={texture.name} draggable={false} />
+            <Image src={texture.imagePath} alt={texture.name} width={texture.width} height={texture.height} sizes="128px" draggable={false} />
             <span>{texture.name}</span>
           </button>
         ))}

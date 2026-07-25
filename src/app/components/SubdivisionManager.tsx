@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Image from "next/image"
 import { useMemo, useState, useTransition } from "react";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -209,7 +210,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allTextures 
                             checked={selected.has(texture.id)}
                             onChange={() => toggle(texture.id)}
                           />
-                          <img src={texture.imagePath} alt={texture.name} draggable={false} />
+                          <Image src={texture.imagePath} alt={texture.name} width={texture.width} height={texture.height} sizes="128px" draggable={false} />
                           <div className="texture-picker-info">
                             <span className="texture-picker-name">{texture.name}</span>
                             <span className="texture-picker-meta">{texture.category}</span>

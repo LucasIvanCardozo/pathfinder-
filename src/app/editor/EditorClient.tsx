@@ -410,7 +410,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     setFloors(remaining);
     // Pick the adjacent floor so the user doesn't end up on a stale id.
     const newIdx = Math.min(idx, remaining.length - 1);
-    // biome-ignore lint/style/noNonNullAssertion: remaining is non-empty (we checked floors.length > 1).
     setActiveFloorId(remaining[newIdx]!.id);
     markDirty();
   };

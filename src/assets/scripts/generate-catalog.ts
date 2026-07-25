@@ -4,7 +4,6 @@
 
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   rmdirSync,
@@ -21,11 +20,9 @@ import type { PieceCategory, Texture } from "@/pieces";
 // The script is run from the project root (where public/ and src/ live).
 const REPO_ROOT = process.cwd();
 const TEXTURES_DIR = join(REPO_ROOT, "public/pieces/textures");
-const THUMBS_DIR = join(TEXTURES_DIR, "_thumbs");
 const CATALOG_PATH = join(REPO_ROOT, "src/assets/catalog.ts");
 
 const MAX_SIZE = 128;
-const THUMB_SIZE = 256;
 
 const VALID_CATEGORIES: PieceCategory[] = [
   "wall",
@@ -56,9 +53,8 @@ function readSvgDimensions(file: string): { width: number; height: number } {
   const raw = readFileSync(file, "utf-8");
   const viewBox = raw.match(/viewBox=["']([^"']+)["']/);
   if (viewBox) {
-    // biome-ignore lint/style/noNonNullAssertion: regex match group is present when the surrounding `if` is true.
     const parts = viewBox[1]!.trim().split(/\s+/).map(Number);
-    if (parts && parts.length === 4 && !isNaN(parts[2]!) && !isNaN(parts[3]!)) {
+    if (parts && parts.length === 4 && !Number.isNaN(parts[2]!) && !Number.isNaN(parts[3]!)) {
       return { width: parts[2]!, height: parts[3]! };
     }
   }
@@ -79,54 +75,6 @@ function readRasterDimensions(file: string): { width: number; height: number } {
   return { width: result.width, height: result.height };
 }
 
-function getDimensions(file: string, ext: ImageExt): { width: number; height: number } {
-  return ext === "svg" ? readSvgDimensions(file) : readRasterDimensions(file);
-}
-
-async function resizeIfNeeded(
-  file: string,
-  ext: ImageExt,
-  dims: { width: number; height: number },
-): Promise<boolean> {
-  const longest = Math.max(dims.width, dims.height);
-  if (longest <= MAX_SIZE) return false;
-  const target =
-    longest === dims.width
-      ? { width: MAX_SIZE, height: Math.round((dims.height / dims.width) * MAX_SIZE) }
-      : { width: Math.round((dims.width / dims.height) * MAX_SIZE), height: MAX_SIZE };
-  const buf = readFileSync(file);
-  if (ext === "svg") {
-    const out = await sharp(buf, { density: 300 })
-      .resize(target.width, target.height, { fit: "fill" })
-      .png()
-      .toBuffer();
-    writeFileSync(file, out);
-  } else {
-    const out = await sharp(buf).resize(target.width, target.height, { fit: "fill" }).toBuffer();
-    writeFileSync(file, out);
-  }
-  return true;
-}
-
-async function generateThumb(
-  file: string,
-  ext: ImageExt,
-  categoryDir: string,
-  basename: string,
-): Promise<void> {
-  const thumbFile = join(THUMBS_DIR, categoryDir, `${basename}.webp`);
-  mkdirSync(join(THUMBS_DIR, categoryDir), { recursive: true });
-  const buf = readFileSync(file);
-  const sharpInput = ext === "svg" ? sharp(buf, { density: 200 }) : sharp(buf);
-  await sharpInput
-    .resize(THUMB_SIZE, THUMB_SIZE, {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    })
-    .webp({ quality: 80 })
-    .toFile(thumbFile);
-}
-
 async function generateWebpVariant(
   file: string,
   ext: ImageExt,
@@ -135,11 +83,14 @@ async function generateWebpVariant(
 ): Promise<string> {
   const webpPath = join(TEXTURES_DIR, categoryDir, `${basename}.webp`);
   const buf = readFileSync(file);
-  if (ext === "svg") {
-    await sharp(buf, { density: 300 }).webp({ quality: 90 }).toFile(webpPath);
-  } else {
-    await sharp(buf).webp({ quality: 90 }).toFile(webpPath);
-  }
+  const pipeline = ext === "svg" ? sharp(buf, { density: 300 }) : sharp(buf);
+  await pipeline
+    .resize(MAX_SIZE, MAX_SIZE, {
+      fit: "cover",
+      position: "center",
+    })
+    .webp({ quality: 90 })
+    .toFile(webpPath);
   return webpPath;
 }
 
@@ -177,23 +128,22 @@ async function processTexture(category: string, file: string): Promise<Processed
   const fullPath = join(TEXTURES_DIR, category, file);
   const basename = file.replace(/\.[^.]+$/, "");
 
-  const originalDims = getDimensions(fullPath, ext);
-  const wasResized = await resizeIfNeeded(fullPath, ext, originalDims);
-  const finalDims = wasResized ? getDimensions(fullPath, ext) : originalDims;
+  let imagePath: string;
+  let finalDims: { width: number; height: number };
+  let originalDims: { width: number; height: number };
 
   if (ext === "svg") {
     optimizeSvg(fullPath);
-  }
-
-  let imagePath: string;
-  if (ext === "svg") {
+    originalDims = readSvgDimensions(fullPath);
+    finalDims = originalDims;
     imagePath = `/pieces/textures/${category}/${file}`;
   } else {
+    originalDims = readRasterDimensions(fullPath);
+    // Raster sources always become a square MAX_SIZE×MAX_SIZE cover crop.
+    finalDims = { width: MAX_SIZE, height: MAX_SIZE };
     await generateWebpVariant(fullPath, ext, category, basename);
     imagePath = `/pieces/textures/${category}/${basename}.webp`;
   }
-
-  await generateThumb(fullPath, ext, category, basename);
 
   const cat: PieceCategory = isValidCategory(category) ? category : "other";
   const texture: Texture = {
@@ -210,9 +160,10 @@ async function processTexture(category: string, file: string): Promise<Processed
     texture,
     category,
     basename,
-    sourceFile: file,
-    isSquare: finalDims.width === finalDims.height,
-    wasResized,
+    // The "source" is whatever stays on disk: .svg for SVGs, .webp for rasters.
+    sourceFile: ext === "svg" ? file : `${basename}.webp`,
+    isSquare: true, // After cover, every output is square.
+    wasResized: ext !== "svg",
     originalSize: originalDims,
   };
 }
@@ -348,22 +299,25 @@ export function findTexturesByIds(ids: string[]): Texture[] {
 
   writeFileSync(CATALOG_PATH, catalogContent, "utf-8");
 
+  // expectedSources = archivos canónicos que deben quedar en disco:
+  //   - SVGs (.svg) — vectoriales
+  //   - WebPs (.webp) derivados de raster sources
+  // Cualquier JPG/PNG/WebP no esperado se considera residuo y se borra.
+  // expectedSources = archivos canónicos que deben quedar en disco:
+  //   - SVGs (.svg) — vectoriales
+  //   - WebPs (.webp) derivados de raster sources
+  // Cualquier JPG/PNG/WebP no esperado se considera residuo y se borra.
   const expectedSources = new Set<string>();
-  const expectedWebps = new Set<string>();
-  const expectedThumbs = new Set<string>();
   for (const r of processed) {
     expectedSources.add(`${r.category}/${r.sourceFile}`);
-    if (!r.sourceFile.endsWith(".svg")) {
-      expectedWebps.add(`${r.category}/${r.basename}.webp`);
-    }
-    expectedThumbs.add(`${r.category}/${r.basename}.webp`);
   }
 
-  const orphanSources = deleteOrphans(TEXTURES_DIR, expectedSources, [], ["_thumbs"]);
-  const orphanWebps = deleteOrphans(TEXTURES_DIR, expectedWebps, ["svg"], ["_thumbs"]);
-  const orphanThumbs = deleteOrphans(THUMBS_DIR, expectedThumbs);
+  // Una sola pasada en TEXTURES_DIR: skippea SVGs (no se borran), borra
+  // cualquier otro archivo de imagen que no esté esperado (incluye JPGs/PNGs
+  // originales que ya se convirtieron a WebP).
+  const orphanSources = deleteOrphans(TEXTURES_DIR, expectedSources, ["svg"]);
 
-  const totalOrphans = orphanSources.length + orphanWebps.length + orphanThumbs.length;
+  const totalOrphans = orphanSources.length;
 
   console.log(
     `\n✓ Generated ${processed.length} texture(s) → ${relative(REPO_ROOT, CATALOG_PATH)}`,
@@ -377,10 +331,9 @@ export function findTexturesByIds(ids: string[]): Texture[] {
   if (webpGenerated > 0) {
     console.log(`  Generated ${webpGenerated} WebP variant(s) for raster sources`);
   }
-  console.log(`  Generated ${processed.length} thumbnail(s) in _thumbs/`);
   if (totalOrphans > 0) {
     console.log(`  Removed ${totalOrphans} orphan file(s):`);
-    for (const o of [...orphanSources, ...orphanWebps, ...orphanThumbs]) {
+    for (const o of orphanSources) {
       console.log(`    ✗ ${o}`);
     }
   }

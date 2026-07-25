@@ -29,7 +29,6 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop intentionally closes on click.
-    // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click is the documented close affordance.
     <div
       className="modal-backdrop"
       onClick={onClose}

@@ -36,6 +36,14 @@ type Props = {
 
 type RenderItem = { kind: 'cell'; z: number; cell: PaintedCell; sub: SubdivisionConfig } | { kind: 'door'; z: number; door: Door }
 
+// Depth-based visual effects applied to cells on floors below the active one.
+// Each flag can be flipped to disable that effect independently.
+// - darken: cells farther down get a black overlay (more "in shadow")
+// - scale:  cells farther down are rendered slightly smaller (perspective)
+const DEPTH_EFFECTS = { darken: true, scale: true } as const
+const DARKEN_PER_TIER = 0.2
+const SCALE_PER_TIER = 0
+
 function PaintCanvasImpl({
   floors,
   activeFloorId,
@@ -62,13 +70,6 @@ function PaintCanvasImpl({
 
   const textureImages = useTextureImages(textures)
 
-  // Depth-based visual effects applied to cells on floors below the active
-  // one. Each flag can be flipped to disable that effect independently.
-  // - darken: cells farther down get a black overlay (more "in shadow")
-  // - scale:   cells farther down are rendered slightly smaller (perspective)
-  const DEPTH_EFFECTS = { darken: true, scale: true } as const
-  const DARKEN_PER_TIER = 0.15
-  const SCALE_PER_TIER = 0
 
   // Subdivisions sorted by `order` for deterministic Z layering.
   const sortedSubs = useMemo(() => [...subdivisions].sort((a, b) => a.order - b.order), [subdivisions])
@@ -133,7 +134,7 @@ function PaintCanvasImpl({
 
     items.sort((a, b) => a.z - b.z)
     return items
-  }, [floors, paintedCells, doors, sortedSubs, subById, activeIndex])
+  }, [floors, paintedCells, doors, subById, activeIndex, subCount])
 
   const apply = useCallback(
     (clientX: number, clientY: number, isDragging: boolean) => {

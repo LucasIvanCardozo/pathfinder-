@@ -12,8 +12,8 @@ export type BlurTier = 0 | 1 | 2 | 3
 export const BLUR_PX: Record<BlurTier, number> = {
   0: 0,
   1: 1,
-  2: 2.5,
-  3: 4,
+  2: 2,
+  3: 3,
 }
 
 export type ImageVariants = Record<BlurTier, HTMLImageElement>
@@ -34,6 +34,9 @@ export function useTextureImages(textures: Texture[]): Map<string, ImageVariants
       return
     }
 
+    // Cancellation flag: when `textures` changes (or the component unmounts),
+    // we discard in-flight loads to avoid setting stale variants.
+    let cancelled = false
     const map = new Map<string, ImageVariants>()
     let finished = 0
     const total = textures.length
@@ -42,18 +45,21 @@ export function useTextureImages(textures: Texture[]): Map<string, ImageVariants
       const baseImg = new window.Image()
       baseImg.crossOrigin = 'anonymous'
       baseImg.onload = () => {
-        // Skip stale loads from a previous texture set.
-        if (!textures.includes(texture)) return
-        const variants = generateVariants(baseImg)
-        map.set(texture.id, variants)
+        if (cancelled) return
+        map.set(texture.id, generateVariants(baseImg))
         finished++
         if (finished === total) setImages(new Map(map))
       }
       baseImg.onerror = () => {
+        if (cancelled) return
         finished++
         if (finished === total) setImages(new Map(map))
       }
       baseImg.src = texture.imagePath
+    }
+
+    return () => {
+      cancelled = true
     }
   }, [textures])
 
@@ -61,9 +67,8 @@ export function useTextureImages(textures: Texture[]): Map<string, ImageVariants
 }
 
 /**
- * Renders the source image at 4 blur intensities (0, 1, 2.5, 4 px) using
- * the browser's native canvas filter. Returns a map of tiers to Image
- * elements (re-using the tier=0 element when blurPx=0).
+ * Renders the source image at all blur tiers using the browser's native
+ * canvas filter. Tier 0 reuses the source image directly (no filter).
  */
 function generateVariants(src: HTMLImageElement): ImageVariants {
   // tier 0 is the unmodified image

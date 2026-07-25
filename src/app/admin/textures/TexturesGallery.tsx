@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image"
 import { useMemo, useState } from "react";
 import type { PieceCategory, Texture } from "@/pieces";
 import "./gallery.css";
@@ -117,7 +118,7 @@ function TextureCard({ texture }: { texture: Texture }) {
   return (
     <article className="gallery-card">
       <div className="gallery-card-image">
-        <img src={texture.imagePath} alt={texture.name} />
+        <Image src={texture.imagePath} alt={texture.name} width={texture.width} height={texture.height} sizes="128px" />
       </div>
       <div className="gallery-card-body">
         <h3 className="gallery-card-name">{texture.name}</h3>
