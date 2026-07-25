@@ -42,8 +42,8 @@ type Props = {
 
 function makeDefaultFloor(): Floor {
   return {
-    id: `floor-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    name: 'Planta baja',
+    id: generateId('floor'),
+    name: 'Planta Baja',
     baseCellSize: 64,
     width: 20,
     height: 14,
@@ -298,12 +298,15 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     setTool(newTool)
   }
 
-  // Naming convention for floors based on position in the array:
-  // index 0 → "Planta Baja"; negative → "Subsuelo N"; positive → "Piso N".
+  // Naming convention: distance to the Planta Baja determines the name,
+  // not the absolute array index. pbIndex is looked up by name because the
+  // user might rename floors later.
+  const plantaBajaIndex = floors.findIndex((f) => f.name.toLowerCase() === 'planta baja')
   const floorNameForIndex = (index: number): string => {
-    if (index === 0) return 'Planta Baja'
-    if (index < 0) return `Subsuelo ${-index}`
-    return `Piso ${index}`
+    if (index === plantaBajaIndex) return 'Planta Baja'
+    if (plantaBajaIndex === -1) return `Piso ${index}` // no pb yet, fallback
+    if (index < plantaBajaIndex) return `Subsuelo ${plantaBajaIndex - index}`
+    return `Piso ${index - plantaBajaIndex}`
   }
 
   const makeFloor = (): Floor => ({
@@ -315,7 +318,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   })
 
   const handleAddFloorAbove = () => {
-    const newIndex = floors.length // appended at the end
+    // Appended at the end → it's the new top floor.
+    const newIndex = floors.length
     const newFloor: Floor = { ...makeFloor(), name: floorNameForIndex(newIndex) }
     setFloors((prev) => [...prev, newFloor])
     setActiveFloorId(newFloor.id)
@@ -323,13 +327,51 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   }
 
   const handleAddFloorBelow = () => {
-    // Prepend as Subsuelo. If there are already floors, index = -count so the
-    // name continues the chain (e.g. with [Subsuelo 1, Planta Baja] the next
-    // Subsuelo gets index -2 → "Subsuelo 2").
-    const newIndex = floors.length > 0 ? -floors.length : -1
-    const newFloor: Floor = { ...makeFloor(), name: floorNameForIndex(newIndex) }
+    // Prepended. After prepend, the new floor sits at index 0 and the
+    // Planta Baja shifts down by one. Subsuelo N where N = old pbIndex + 1.
+    const newN = plantaBajaIndex + 1
+    const newFloor: Floor = {
+      ...makeFloor(),
+      name: `Subsuelo ${newN}`,
+    }
     setFloors((prev) => [newFloor, ...prev])
     setActiveFloorId(newFloor.id)
+    markDirty()
+  }
+
+  // Delete the active floor if it's the topmost or bottommost (but never
+  // the Planta Baja — that's the scenario's anchor).
+  const isAtTop = activeFloorIndex === floors.length - 1
+  const isAtBottom = activeFloorIndex === 0
+  const isPlantaBaja = activeFloor.name.toLowerCase() === 'planta baja'
+  const canDeleteFloor = floors.length > 1 && !isPlantaBaja && (isAtTop || isAtBottom)
+
+  const handleDeleteFloor = () => {
+    if (!canDeleteFloor) return
+    if (!confirm(`¿Borrar "${activeFloor.name}"? Las celdas y puertas de este piso se perderán.`)) return
+    const idx = activeFloorIndex
+    const remaining = floors.filter((_, i) => i !== idx)
+    setFloors(remaining)
+    // Pick the adjacent floor so the user doesn't end up on a stale id.
+    const newIdx = Math.min(idx, remaining.length - 1)
+    setActiveFloorId(remaining[newIdx]!.id)
+    markDirty()
+  }
+
+  // Copy the painted cells + doors of another floor into the active one.
+  // Useful for, e.g., duplicating a castle's ground floor up to the next
+  // floor so the GM can tweak the upper half without re-painting everything.
+  const otherFloors = floors.filter((f) => f.id !== activeFloorId)
+  const handleCopyFloorFrom = (sourceFloorId: string) => {
+    if (!sourceFloorId) return
+    const source = floors.find((f) => f.id === sourceFloorId)
+    if (!source) return
+    if (!confirm(`¿Copiar "${source.name}" a "${activeFloor.name}"? El contenido actual de "${activeFloor.name}" será reemplazado.`)) return
+    // Copy painted cells with regenerated IDs to avoid collisions.
+    const newCells = paintedCells.filter((c) => c.floorId === sourceFloorId).map((c) => ({ ...c, id: generateId('cell'), floorId: activeFloorId }))
+    const newDoors = doors.filter((d) => d.floorId === sourceFloorId).map((d) => ({ ...d, id: generateId('door'), floorId: activeFloorId }))
+    setPaintedCells((prev) => [...prev.filter((c) => c.floorId !== activeFloorId), ...newCells])
+    setDoors((prev) => [...prev.filter((d) => d.floorId !== activeFloorId), ...newDoors])
     markDirty()
   }
 
@@ -394,11 +436,14 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
             placeholder="Nombre del escenario"
           />
           <div className="floor-switcher">
+            <button type="button" className="button mini" onClick={handleAddFloorBelow} title="Agregar subsuelo (debajo del actual)">
+              -
+            </button>
             <button type="button" className="button mini" onClick={handleFloorDown} disabled={activeFloorIndex <= 0} title="Bajar de piso">
               ↓
             </button>
-            <span className="floor-current" title={floors[activeFloorIndex]?.name}>
-              {floors[activeFloorIndex]?.name ?? '—'}
+            <span className="floor-current" title={activeFloor.name}>
+              {activeFloor.name}
             </span>
             <button
               type="button"
@@ -409,25 +454,36 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
             >
               ↑
             </button>
-            <span className="canvas-stat floor-name">
-              {floors[activeFloorIndex]?.name ?? "Planta Baja"}
-            </span>
-            <button
-              type="button"
-              className="button mini"
-              onClick={handleAddFloorBelow}
-              title="Agregar subsuelo (debajo del actual)"
-            >
-              ↓ +
+            <button type="button" className="button mini" onClick={handleAddFloorAbove} title="Agregar piso arriba del actual">
+              +
             </button>
-            <button
-              type="button"
-              className="button mini"
-              onClick={handleAddFloorAbove}
-              title="Agregar piso arriba del actual"
-            >
-              + ↑
-            </button>
+            <span className="floor-switcher-divider" aria-hidden="true" />
+            {canDeleteFloor ? (
+              <button type="button" className="button mini danger" onClick={handleDeleteFloor} title={`Borrar ${activeFloor.name}`}>
+                ×
+              </button>
+            ) : null}
+            {otherFloors.length > 0 ? (
+              <select
+                className="button mini floor-copy-select"
+                value=""
+                onChange={(e) => {
+                  handleCopyFloorFrom(e.target.value)
+                  e.target.value = '' // reset so the same source can be picked again
+                }}
+                title={`Copiar contenido de otro piso a ${activeFloor.name}`}
+                aria-label="Copiar contenido de otro piso"
+              >
+                <option value="" hidden>
+                  📋 Copiar
+                </option>
+                {otherFloors.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
           <span className="canvas-stat">
             {paintedInFloor} celdas · {doorsInFloor} puertas

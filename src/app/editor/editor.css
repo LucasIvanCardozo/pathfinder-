@@ -109,6 +109,26 @@
   text-overflow: ellipsis;
 }
 
+.floor-switcher-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.floor-copy-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.25rem;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 0.55rem) 50%, calc(100% - 0.3rem) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
 .floor-select {
   padding: 0.3rem 0.5rem;
   background: var(--bg);
