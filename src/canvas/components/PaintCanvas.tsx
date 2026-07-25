@@ -4,7 +4,7 @@ import type Konva from "konva";
 import { memo, useCallback, useMemo, useRef } from "react";
 import { Image as KonvaImage, Layer, Stage } from "react-konva";
 import type { Door, Floor, PaintedCell, SubdivisionConfig, Texture } from "@/pieces";
-import { useTextureImages } from "../useTextureImages";
+import { useTextureImages, type BlurTier } from "../useTextureImages";
 import { doorStateToTextureId } from "../doorTexture";
 import { GridLayer } from "./GridLayer";
 import type { PaintTool } from "./PaintToolbar";
@@ -78,6 +78,21 @@ function PaintCanvasImpl({
 
   const activeIndex = floors.findIndex((f) => f.id === activeFloorId);
 
+  // Cached so the render can derive a cell's floor index from its Z.
+  const subCount = sortedSubs.length;
+
+  // The blur tier depends ONLY on the cell's distance (in floors) below
+  // the active floor. All cells on the same floor share the same blur
+  // regardless of which subdivision they belong to, so changing the active
+  // subdivision never affects how distant floors are rendered.
+  const blurTierFor = (cellFloorIdx: number): BlurTier => {
+    const depth = activeIndex - cellFloorIdx;
+    if (depth <= 0) return 0;
+    if (depth === 1) return 1;
+    if (depth === 2) return 2;
+    return 3;
+  };
+
   // Flat list of cells + doors, all ordered by Z. Z = floorIndex * subCount +
   // sub.order. Doors are treated as a virtual subdivision sitting one slot
   // above the highest subdivision (so they're always on top of walls but
@@ -85,7 +100,6 @@ function PaintCanvasImpl({
   // active floor and the floors BELOW it are rendered.
   const itemsByZ = useMemo(() => {
     if (activeIndex < 0) return [];
-    const subCount = sortedSubs.length;
     // Doors are conceptually one slot above the topmost subdivision.
     // Doors sit between cells of the same floor and cells of the next floor
     // up, so they always render below any cell painted on a higher floor
@@ -242,8 +256,11 @@ function PaintCanvasImpl({
           {itemsByZ.map((item) => {
             if (item.kind === "cell") {
               const cellSize = activeFloor.baseCellSize / item.sub.cellSizeRatio;
-              const img = textureImages.get(item.cell.textureId);
-              if (!img) return null;
+              const variants = textureImages.get(item.cell.textureId);
+              if (!variants) return null;
+              const cellFloorIdx = Math.floor(item.z / subCount);
+              const tier = blurTierFor(cellFloorIdx);
+              const img = variants[tier];
               return (
                 <KonvaImage
                   key={`c-${item.cell.id}`}
@@ -256,9 +273,11 @@ function PaintCanvasImpl({
                 />
               );
             }
-            // door
-            const img = textureImages.get(doorStateToTextureId(item.door.state));
-            if (!img) return null;
+            // door: use the strongest blur tier (Puertas always sits above
+            // every subdivision, so it gets the max blur).
+            const variants = textureImages.get(doorStateToTextureId(item.door.state));
+            if (!variants) return null;
+            const img = variants[3];
             return (
               <KonvaImage
                 key={`d-${item.door.id}`}
