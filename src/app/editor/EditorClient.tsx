@@ -154,6 +154,22 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
         }
         return;
       } else if (activeSub && isDoorsSubdivision(activeSub.name)) {
+        // The user clicked the "Puertas" subdivision. Find any door at this
+        // cell — either on the active floor (open the menu) or on a lower
+        // floor (visible because the active floor cell is empty — ignore
+        // so we don't open a menu for a door we're not standing on).
+        const doorOnActiveFloor = doors.find(
+          (d) => d.floorId === floorId && d.gridX === gridX && d.gridY === gridY,
+        );
+        if (doorOnActiveFloor && !isDragging) {
+          const px = screenPos ? screenPos.x + 12 : gridX * activeFloor.baseCellSize;
+          const py = screenPos ? screenPos.y + 12 : gridY * activeFloor.baseCellSize;
+          setDoorMenu({
+            door: doorOnActiveFloor,
+            position: { x: px, y: py },
+          });
+          return;
+        }
         let doorTexture = activeTextureId;
         if (!doorTexture?.startsWith("door-")) {
           const doorsSub = subdivisions.find((s) => isDoorsSubdivision(s.name));
@@ -163,18 +179,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
         }
         if (!doorTexture) {
           alert("No hay texturas de puerta disponibles.");
-          return;
-        }
-        const existing = doors.find(
-          (d) => d.floorId === floorId && d.gridX === gridX && d.gridY === gridY,
-        );
-        if (existing) {
-          const px = screenPos ? screenPos.x + 12 : gridX * activeFloor.baseCellSize;
-          const py = screenPos ? screenPos.y + 12 : gridY * activeFloor.baseCellSize;
-          setDoorMenu({
-            door: existing,
-            position: { x: px, y: py },
-          });
           return;
         }
         const newDoor: Door = {

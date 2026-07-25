@@ -5,7 +5,7 @@ import { memo, useCallback, useMemo, useRef } from "react";
 import { Image as KonvaImage, Layer, Stage } from "react-konva";
 import type { Door, Floor, PaintedCell, SubdivisionConfig, Texture } from "@/pieces";
 import { useTextureImages } from "../useTextureImages";
-import { DoorLayer } from "./DoorLayer";
+import { doorStateToTextureId } from "../doorTexture";
 import { GridLayer } from "./GridLayer";
 import type { PaintTool } from "./PaintToolbar";
 
@@ -33,6 +33,10 @@ type Props = {
   width?: number;
   height?: number;
 };
+
+type RenderItem =
+  | { kind: "cell"; z: number; cell: PaintedCell; sub: SubdivisionConfig }
+  | { kind: "door"; z: number; door: Door };
 
 function PaintCanvasImpl({
   floors,
@@ -74,26 +78,45 @@ function PaintCanvasImpl({
 
   const activeIndex = floors.findIndex((f) => f.id === activeFloorId);
 
-  // Flat list of painted cells, ordered by Z = floorIndex * subCount + sub.order.
-  // Only cells from the active floor and the floors BELOW it are rendered —
-  // when you stand on PB you don't see what was painted on Piso 1 or Piso 2.
-  const cellsByZ = useMemo(() => {
+  // Flat list of cells + doors, all ordered by Z. Z = floorIndex * subCount +
+  // sub.order. Doors are treated as a virtual subdivision sitting one slot
+  // above the highest subdivision (so they're always on top of walls but
+  // can still be occluded by doors in higher floors). Only items from the
+  // active floor and the floors BELOW it are rendered.
+  const itemsByZ = useMemo(() => {
     if (activeIndex < 0) return [];
     const subCount = sortedSubs.length;
-    type Item = { z: number; cell: PaintedCell; sub: SubdivisionConfig };
-    const items: Item[] = [];
+    // Doors are conceptually one slot above the topmost subdivision.
+    // Doors sit between cells of the same floor and cells of the next floor
+    // up, so they always render below any cell painted on a higher floor
+    // (and above any cell painted on the same or lower floor). The -0.5
+    // avoids Z-ties with Suelo (sub.order=0) cells on the floor above.
+    const doorSubOrder = subCount - 0.5;
+    const items: RenderItem[] = [];
+
+    // Painted cells
     for (let fIdx = 0; fIdx <= activeIndex; fIdx++) {
       const floor = floors[fIdx]!;
       for (const cell of paintedCells) {
         if (cell.floorId !== floor.id) continue;
         const sub = subById.get(cell.subdivisionId);
         if (!sub) continue;
-        items.push({ z: fIdx * subCount + sub.order, cell, sub });
+        items.push({ kind: "cell", z: fIdx * subCount + sub.order, cell, sub });
       }
     }
+
+    // Doors (live on the base grid, Z = floorIndex * subCount + doorSubOrder)
+    for (let fIdx = 0; fIdx <= activeIndex; fIdx++) {
+      const floor = floors[fIdx]!;
+      for (const door of doors) {
+        if (door.floorId !== floor.id) continue;
+        items.push({ kind: "door", z: fIdx * subCount + doorSubOrder, door });
+      }
+    }
+
     items.sort((a, b) => a.z - b.z);
     return items;
-  }, [floors, paintedCells, sortedSubs, subById, activeIndex]);
+  }, [floors, paintedCells, doors, sortedSubs, subById, activeIndex]);
 
   const apply = useCallback(
     (clientX: number, clientY: number, isDragging: boolean) => {
@@ -209,37 +232,46 @@ function PaintCanvasImpl({
         />
 
         {/*
-          Single Layer with every painted cell, sorted by Z. Z = floorIndex *
-          subCount + sub.order. Lower Z renders first (behind); higher Z renders
-          on top. A floor painted on a higher floor correctly occludes the
-          cells of any lower floor at the same position, regardless of
-          subdivision.
+          Single Layer with every cell AND door, sorted by Z. Z = floorIndex *
+          subCount + sub.order (or + doorSubOrder for doors). Lower Z renders
+          first (behind); higher Z renders on top. A door on the active floor
+          occludes everything below it at the same position; a door on a lower
+          floor is occluded by any cell on the active floor at that position.
         */}
         <Layer listening={false}>
-          {cellsByZ.map(({ cell, sub }) => {
-            const cellSize = activeFloor.baseCellSize / sub.cellSizeRatio;
-            const img = textureImages.get(cell.textureId);
+          {itemsByZ.map((item) => {
+            if (item.kind === "cell") {
+              const cellSize = activeFloor.baseCellSize / item.sub.cellSizeRatio;
+              const img = textureImages.get(item.cell.textureId);
+              if (!img) return null;
+              return (
+                <KonvaImage
+                  key={`c-${item.cell.id}`}
+                  image={img}
+                  x={item.cell.gridX * cellSize}
+                  y={item.cell.gridY * cellSize}
+                  width={cellSize}
+                  height={cellSize}
+                  perfectDrawEnabled={false}
+                />
+              );
+            }
+            // door
+            const img = textureImages.get(doorStateToTextureId(item.door.state));
             if (!img) return null;
             return (
               <KonvaImage
-                key={cell.id}
+                key={`d-${item.door.id}`}
                 image={img}
-                x={cell.gridX * cellSize}
-                y={cell.gridY * cellSize}
-                width={cellSize}
-                height={cellSize}
+                x={item.door.gridX * activeFloor.baseCellSize}
+                y={item.door.gridY * activeFloor.baseCellSize}
+                width={activeFloor.baseCellSize}
+                height={activeFloor.baseCellSize}
                 perfectDrawEnabled={false}
               />
             );
           })}
         </Layer>
-
-        {/* Doors layer — only the active floor's doors, not cascaded. */}
-        <DoorLayer
-          doors={doors.filter((d) => d.floorId === activeFloor.id)}
-          cellSize={activeFloor.baseCellSize}
-          baseTextures={textures}
-        />
       </Stage>
     </div>
   );
