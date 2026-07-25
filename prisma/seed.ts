@@ -1,8 +1,8 @@
 // Seed the database with the initial Pathfinder pieces pack.
 // Idempotent: re-running won't duplicate rows.
 
-import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 
 const STARTING_PIECES = [
   {

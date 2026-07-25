@@ -3,28 +3,26 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type { Floor, PaintedCell, Texture, SubdivisionConfig, Door, DoorState } from "@/pieces";
-import { findTexture, findTexturesByIds } from "@/assets";
+import { useCallback, useState, useTransition } from "react";
+import { findTexturesByIds } from "@/assets";
 import {
   DEFAULT_SUBDIVISION_ID,
   DOORS_SUBDIVISION_NAME,
-  isDoorsSubdivision,
   doorStateToTextureId,
-  textureIdToState,
-} from "@/canvas";
-import { saveScenario } from "../actions/scenarios";
-import { reorderSubdivisions } from "../actions/subdivisions";
-import {
+  filterVisibleSubdivisions,
+  isDoorsSubdivision,
+  type PaintTool,
   PaintToolbar,
   SubdivisionTabs,
   TexturePalette,
-  type PaintTool,
+  textureIdToState,
   useKeyboardShortcuts,
-  filterVisibleSubdivisions,
 } from "@/canvas";
-import { SubdivisionManager } from "../components/SubdivisionManager";
 import { DoorMenu } from "@/components/DoorMenu";
+import type { Door, DoorState, Floor, PaintedCell, SubdivisionConfig, Texture } from "@/pieces";
+import { saveScenario } from "../actions/scenarios";
+import { reorderSubdivisions } from "../actions/subdivisions";
+import { SubdivisionManager } from "../components/SubdivisionManager";
 import "./editor.css";
 import "../components/subdivision-manager.css";
 import "../components/form/form.css";
@@ -234,7 +232,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
         ];
       });
     },
-    [activeTextureId, activeFloor, doors, subdivisions, tool, markDirty],
+    [activeTextureId, activeFloor, doors, subdivisions, tool, markDirty, scenarioId],
   );
 
   const handleSubdivisionChange = (id: string) => {
@@ -278,12 +276,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   const activeFloorIndex = floors.findIndex((f) => f.id === activeFloorId);
   const handleFloorUp = () => {
     if (activeFloorIndex < floors.length - 1) {
-      setActiveFloorId(floors[activeFloorIndex + 1]!.id);
+      setActiveFloorId(floors[activeFloorIndex + 1]?.id);
     }
   };
   const handleFloorDown = () => {
     if (activeFloorIndex > 0) {
-      setActiveFloorId(floors[activeFloorIndex - 1]!.id);
+      setActiveFloorId(floors[activeFloorIndex - 1]?.id);
     }
   };
 
@@ -408,15 +406,15 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     setFloors(remaining);
     // Pick the adjacent floor so the user doesn't end up on a stale id.
     const newIdx = Math.min(idx, remaining.length - 1);
-    setActiveFloorId(remaining[newIdx]!.id);
+    setActiveFloorId(remaining[newIdx]?.id);
     markDirty();
   };
 
   // Copy the painted cells + doors of another floor into the active one.
   // Useful for, e.g., duplicating a castle's ground floor up to the next
   // floor so the GM can tweak the upper half without re-painting everything.
-  const otherFloors = floors.filter((f) => f.id !== activeFloorId);
-  const handleCopyFloorFrom = (sourceFloorId: string) => {
+  const _otherFloors = floors.filter((f) => f.id !== activeFloorId);
+  const _handleCopyFloorFrom = (sourceFloorId: string) => {
     if (!sourceFloorId) return;
     const source = floors.find((f) => f.id === sourceFloorId);
     if (!source) return;

@@ -1,7 +1,7 @@
-import { Suspense } from "react";
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { loadScenario } from "../actions/scenarios";
-import { listSubdivisions, listAllTextures } from "../actions/subdivisions";
+import { listAllTextures, listSubdivisions } from "../actions/subdivisions";
 import { EditorClient } from "./EditorClient";
 
 type SearchParams = Promise<{ id?: string }>;

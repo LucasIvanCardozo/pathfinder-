@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db";
-import { ScenarioInputSchema, type Scenario, type Door, type DoorState } from "@/pieces";
+import { type Door, type DoorState, type Scenario, ScenarioInputSchema } from "@/pieces";
 
 export type ScenarioSummary = {
   id: string;

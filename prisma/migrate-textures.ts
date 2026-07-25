@@ -12,8 +12,8 @@ const RENAMES: Record<string, string> = {
   "object-placeholder": "decoration-marker",
 };
 
-import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {

@@ -1,2 +1,2 @@
 export { prisma } from "./client";
-export type { Scenario, Floor, PaintedCell, Prisma } from "./types";
+export type { Floor, PaintedCell, Prisma, Scenario } from "./types";

@@ -1,7 +1,7 @@
 "use client";
 
-import { Image as KonvaImage, Layer } from "react-konva";
 import { memo } from "react";
+import { Image as KonvaImage, Layer } from "react-konva";
 import type { Door, Texture } from "@/pieces";
 import { doorStateToTextureId } from "../doorTexture";
 import { useTextureImages } from "../useTextureImages";

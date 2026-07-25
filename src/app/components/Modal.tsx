@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 type ModalProps = {
   isOpen: boolean;
@@ -11,7 +11,8 @@ type ModalProps = {
 
 /**
  * Generic modal dialog. Renders a backdrop + centered content panel.
- * Closes on Escape or backdrop click.
+ * Closes on Escape or backdrop click. Uses a native <dialog> for a11y and
+ * keyboard handling out of the box.
  */
 export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   useEffect(() => {
@@ -26,7 +27,12 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <button
+      type="button"
+      className="modal-backdrop"
+      onClick={onClose}
+      aria-label="Cerrar modal"
+    >
       <div
         className="modal-panel"
         onClick={(e) => e.stopPropagation()}
@@ -36,12 +42,16 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
       >
         <header className="modal-header">
           <h2>{title}</h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Cerrar">
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
             ×
           </button>
         </header>
         <div className="modal-content">{children}</div>
       </div>
-    </div>
-  );
+    </button>
 }

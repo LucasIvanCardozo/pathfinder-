@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { listScenarios } from "./actions/scenarios";
 import "./home.css";
 

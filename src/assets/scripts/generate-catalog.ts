@@ -13,9 +13,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, relative } from "node:path";
-import { optimize as svgoOptimize } from "svgo";
-import sharp from "sharp";
 import imageSize from "image-size";
+import sharp from "sharp";
+import { optimize as svgoOptimize } from "svgo";
 import type { PieceCategory, Texture } from "@/pieces";
 
 // The script is run from the project root (where public/ and src/ live).
@@ -56,7 +56,7 @@ function readSvgDimensions(file: string): { width: number; height: number } {
   const raw = readFileSync(file, "utf-8");
   const viewBox = raw.match(/viewBox=["']([^"']+)["']/);
   if (viewBox) {
-    const parts = viewBox[1]!.trim().split(/\s+/).map(Number);
+    const parts = viewBox[1]?.trim().split(/\s+/).map(Number);
     if (parts.length === 4) {
       return { width: parts[2]!, height: parts[3]! };
     }
@@ -169,7 +169,7 @@ type ProcessedTexture = {
 };
 
 async function processTexture(category: string, file: string): Promise<ProcessedTexture> {
-  const ext = file.split(".").pop()!.toLowerCase();
+  const ext = file.split(".").pop()?.toLowerCase();
   if (!isImageExt(ext)) {
     throw new Error(`Unsupported extension: ${ext}`);
   }
@@ -244,7 +244,7 @@ function deleteOrphans(
   const all = listFilesRecursive(root, skipDirNames);
   for (const rel of all) {
     if (expected.has(rel)) continue;
-    const ext = rel.split(".").pop()!.toLowerCase();
+    const ext = rel.split(".").pop()?.toLowerCase();
     if (skipExts.includes(ext)) continue;
     if (!isImageExt(ext)) continue;
     const full = join(root, rel);
@@ -286,7 +286,7 @@ async function main() {
   let resized = 0;
   let optimized = 0;
   let webpGenerated = 0;
-  let svgKept = 0;
+  let _svgKept = 0;
 
   const categories = readdirSync(TEXTURES_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith("_"))
@@ -295,7 +295,7 @@ async function main() {
   for (const category of categories) {
     const dir = join(TEXTURES_DIR, category);
     const files = readdirSync(dir).filter((f) => {
-      const ext = f.split(".").pop()!.toLowerCase();
+      const ext = f.split(".").pop()?.toLowerCase();
       return isImageExt(ext);
     });
 
@@ -304,10 +304,10 @@ async function main() {
         const r = await processTexture(category, file);
         processed.push(r);
         if (r.wasResized) resized++;
-        const ext = file.split(".").pop()!.toLowerCase();
+        const ext = file.split(".").pop()?.toLowerCase();
         if (ext === "svg") {
           optimized++;
-          svgKept++;
+          _svgKept++;
         } else {
           webpGenerated++;
         }

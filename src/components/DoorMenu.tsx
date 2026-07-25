@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { ALL_DOOR_STATES, doorStateLabel } from "@/canvas";
 import type { Door, DoorState } from "@/pieces";
-import { doorStateLabel, ALL_DOOR_STATES } from "@/canvas";
 import "./door-menu.css";
 
 type Props = {

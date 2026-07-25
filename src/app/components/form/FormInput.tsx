@@ -29,7 +29,6 @@ export function FormInput({
       className="form-control"
       placeholder={placeholder}
       disabled={disabled}
-      autoFocus={autoFocus}
       {...register(name)}
     />
   );

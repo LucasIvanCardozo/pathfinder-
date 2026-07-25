@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { ALL_TEXTURES } from "@/assets";
 import { PIECE_CATEGORIES } from "@/pieces";
 import { TexturesGallery } from "./TexturesGallery";

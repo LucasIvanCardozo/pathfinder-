@@ -1,12 +1,12 @@
 "use client";
 
-import { Stage, Layer, Image as KonvaImage, Rect } from "react-konva";
-import { memo, useCallback, useMemo, useRef } from "react";
 import type Konva from "konva";
-import type { Floor, PaintedCell, Texture, SubdivisionConfig, Door } from "@/pieces";
-import { GridLayer } from "./GridLayer";
-import { DoorLayer } from "./DoorLayer";
+import { memo, useCallback, useMemo, useRef } from "react";
+import { Image as KonvaImage, Layer, Stage } from "react-konva";
+import type { Door, Floor, PaintedCell, SubdivisionConfig, Texture } from "@/pieces";
 import { useTextureImages } from "../useTextureImages";
+import { DoorLayer } from "./DoorLayer";
+import { GridLayer } from "./GridLayer";
 import type { PaintTool } from "./PaintToolbar";
 
 export type ScreenPos = { x: number; y: number };
@@ -126,7 +126,16 @@ function PaintCanvasImpl({
         isDragging,
       );
     },
-    [activeTextureId, activeSubdivisionId, activeFloor, onPaint, subById],
+    [
+      activeTextureId,
+      activeSubdivisionId,
+      activeFloor,
+      onPaint,
+      subById,
+      tool,
+      stageNativeWidth,
+      stageNativeHeight,
+    ],
   );
 
   const getEventCoords = (
