@@ -14,9 +14,13 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf node_modules .next",
     "gen-cat": "tsx src/assets/scripts/generate-catalog.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "db:reset": "dotenv -e .env -- prisma migrate reset --force && dotenv -e .env -- prisma generate",
+    "db:pr:reset": "dotenv -e .env.production -- prisma migrate reset --force && dotenv -e .env.production -- prisma generate",
+    "db:migrate:local": "dotenv -e .env -- prisma migrate dev",
+    "db:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
+    "db:studio:local": "dotenv -e .env -- prisma studio",
+    "db:studio:prod": "dotenv -e .env.production -- prisma studio",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -38,6 +42,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "dotenv": "^17.4.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.18.0",
     "eslint-config-next": "^16.0.0",
     "image-size": "^1.1.1",

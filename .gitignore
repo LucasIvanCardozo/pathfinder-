@@ -21,7 +21,12 @@ build/
 # Env
 .env
 .env.local
+.env.test
+.env.production
 .env*.local
+
+# Public env example IS versioned (template)
+!.env.example
 
 # IDE
 .vscode/
