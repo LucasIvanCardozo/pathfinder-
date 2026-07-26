@@ -432,11 +432,12 @@ function PaintCanvasImpl({
 
   // Cursor reflects the current interaction: default crosshair (paint), grab
   // when space is held, grabbing while a pan drag is in progress.
+  const baseCursor = tool === "erase" ? "cell" : "crosshair";
   const cursor = isSpaceDown
     ? dragStartRef.current
       ? "grabbing"
       : "grab"
-    : "crosshair";
+    : baseCursor;
 
   return (
     <div ref={containerRef} className={styles.canvas} style={{ cursor }}>
