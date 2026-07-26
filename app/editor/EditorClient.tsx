@@ -446,11 +446,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           >
             🗑 Subcapa
           </Button>
-          {canDeleteFloor ? (
-            <Button type="button" size="mini" variant="danger" onClick={handleDeleteFloor} title={`Borrar el piso "${activeFloor.name}" del scenario`}>
-              × Eliminar piso
-            </Button>
-          ) : null}
+          {
+            /*canDeleteFloor*/ false ? (
+              <Button type="button" size="mini" variant="danger" onClick={handleDeleteFloor} title={`Borrar el piso "${activeFloor.name}" del scenario`}>
+                × Eliminar piso
+              </Button>
+            ) : null
+          }
         </div>
         {activeSubdivision ? <PiecePalette pieces={activePieces} activePieceId={activePieceId} onSelect={setActivePieceId} /> : null}
         <WeatherPanel onChange={setWeatherState} initial={weatherState} />
