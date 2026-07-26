@@ -11,7 +11,7 @@ import {
   type SubdivisionConfig,
   SubdivisionConfigPieceIdsInputSchema,
 } from "@/pieces";
-import { createSubdivision, deleteSubdivision, updateSubdivision } from "../actions/subdivisions";
+import { createSubdivision, deleteSubdivision, updateSubdivision } from "@/lib/server/actions/subdivision.action";
 import { FormField, FormInput, FormNumberInput } from "./form";
 import { Modal } from "./Modal";
 
@@ -127,9 +127,9 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
     }
     if (!confirm(`¿Borrar "${sub.name}"?`)) return;
     startTransition(async () => {
-      const res = await deleteSubdivision(sub.id);
+      const res = await deleteSubdivision({ id: sub.id });
       if (!res.success) {
-        setError(res.error);
+        setError(res.error.message);
       } else {
         setLocal((prev) => prev.filter((s) => s.id !== sub.id));
         if (editingId === sub.id) closeForm();
@@ -141,10 +141,10 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
     startTransition(async () => {
       const isEditing = editingId !== null;
       const action = isEditing
-        ? await updateSubdivision(editingId!, data)
+        ? await updateSubdivision({ id: editingId!, ...data })
         : await createSubdivision(data);
       if (!action.success) {
-        setError(action.error);
+        setError(action.error.message);
         return;
       }
       // Reflect the mutation locally so the list updates without waiting for
@@ -158,8 +158,8 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
               : s,
           ),
         );
-      } else if (action.subdivision) {
-        setLocal((prev) => [...prev, action.subdivision!]);
+      } else if (action.data) {
+        setLocal((prev) => [...prev, action.data]);
       }
       closeForm();
     });

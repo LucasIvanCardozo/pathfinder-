@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { listAllPieces } from "../../actions/subdivisions";
+import { listAllPieces } from "@/lib/server/actions/subdivision.action";
 import { PiecesGallery } from "./PiecesGallery";
 
 export default async function PiecesGalleryPage() {
-  const pieces = await listAllPieces();
+  // listAllPieces is a cached read wrapped by createAction; unwrap the
+  // canonical envelope before handing the data to the client component.
+  const result = await listAllPieces();
+  const pieces = result.success ? result.data : [];
   return (
     <main className="home">
       <header className="home-header">

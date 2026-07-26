@@ -20,8 +20,9 @@ import {
   useWeatherAudio,
 } from "@/canvas";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
-import { saveScenario } from "../actions/scenarios";
-import { reorderSubdivisions } from "../actions/subdivisions";
+import { saveScenario } from "@/lib/server/actions/scenario.action";
+import { reorderSubdivisions } from "@/lib/server/actions/subdivision.action";
+import { generateId } from "@/lib/shared/utils/generateId";
 import { SubdivisionManager } from "../components/SubdivisionManager";
 import "./editor.css";
 import "../components/subdivision-manager.css";
@@ -49,14 +50,6 @@ type Props = {
   initialSubdivisions: SubdivisionConfig[];
   allPieces: Piece[];
 };
-
-function generateId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
-}
-
-function generateFloorId(): string {
-  return `floor_${Math.random().toString(36).slice(2, 10)}`;
-}
 
 export function EditorClient({ initialScenario, initialSubdivisions, allPieces }: Props) {
   const router = useRouter();
@@ -289,7 +282,14 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
 
   const handleCloseManager = async () => {
     setIsManaging(false);
-    const fresh = await import("../actions/subdivisions").then((m) => m.listSubdivisions());
+    // Dynamic import keeps the action bundle out of the initial editor
+    // chunk — the manager only needs it when the user opens the modal.
+    // The action returns the canonical envelope; unwrap here so the rest
+    // of the file deals with DTOs only.
+    const result = await import("@/lib/server/actions/subdivision.action").then(
+      (m) => m.listSubdivisions(),
+    );
+    const fresh = result.success ? result.data : [];
     setSubdivisions(fresh);
     if (!fresh.find((s) => s.id === activeSubdivisionId)) {
       setActiveSubdivisionId(fresh[0]?.id ?? "");
@@ -334,7 +334,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   };
 
   const makeFloor = (): Floor => ({
-    id: generateFloorId(),
+    id: generateId("floor"),
     name: "Piso",
     baseCellSize: activeFloor.baseCellSize,
     width: activeFloor.width,
@@ -421,14 +421,21 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             floors,
             paintedCells,
           });
-          setScenarioId(result.id);
+          // The action returns the canonical envelope; the wrapper already
+          // surfaced any Zod / domain errors. Only transport or framework
+          // failures should land in the catch block now.
+          if (!result.success) {
+            setAutosaveStatus("error");
+            return;
+          }
+          setScenarioId(result.data.id);
           const t = new Date().toLocaleTimeString("es");
           setSavedAt(t);
           setIsDirty(false);
           setAutosaveStatus("saved");
           // Keep the URL in sync with the persisted scenario id so reloads
           // and shared links point at the right place.
-          router.replace(`/editor?id=${result.id}`);
+          router.replace(`/editor?id=${result.data.id}`);
         } catch {
           setAutosaveStatus("error");
         } finally {

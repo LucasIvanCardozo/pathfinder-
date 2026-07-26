@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { createBlankScenario, listScenarios } from "./actions/scenarios";
+import { createBlankScenario, listScenarios } from "@/lib/server/actions/scenario.action";
 import "./home.css";
 
 function HomeFallback() {
@@ -18,7 +18,11 @@ function HomeFallback() {
 
 async function HomeContent() {
   await connection();
-  const scenarios = await listScenarios();
+  const scenariosResult = await listScenarios();
+  // The cached read can fail when the database is down; surface a friendly
+  // empty state instead of throwing into the render tree. The action wrapper
+  // has already logged the underlying error.
+  const scenarios = scenariosResult.success ? scenariosResult.data : [];
 
   return (
     <>

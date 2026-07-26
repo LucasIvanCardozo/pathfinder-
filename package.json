@@ -16,7 +16,7 @@
     "gen-cat": "tsx src/assets/scripts/generate-catalog.ts",
     "db:reset": "dotenv -e .env -- prisma migrate reset --force && dotenv -e .env -- prisma generate",
     "db:pr:reset": "dotenv -e .env.production -- prisma migrate reset --force && dotenv -e .env.production -- prisma generate",
-    "db:migrate:local": "dotenv -e .env -- prisma migrate dev",
+    "db:migrate:local": "dotenv -e .env -- prisma migrate dev && dotenv -e .env -- prisma db seed",
     "db:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
     "db:studio:local": "dotenv -e .env -- prisma studio",
     "db:studio:prod": "dotenv -e .env.production -- prisma studio",
