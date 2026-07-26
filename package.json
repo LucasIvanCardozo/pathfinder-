@@ -23,6 +23,8 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/react-fontawesome": "^3.5.0",
     "@hookform/resolvers": "^3.10.0",
     "konva": "^9.3.18",
     "next": "^16.0.0",
@@ -30,6 +32,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.54.0",
+    "react-hot-toast": "^2.6.0",
     "react-konva": "^19.2.0",
     "zod": "^3.24.0"
   },
