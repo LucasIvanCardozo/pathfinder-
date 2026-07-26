@@ -6,6 +6,7 @@ import type Konva from "konva";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
 import { findInteractiveCellAtPixel, getTrait } from "../traits";
 import { useTextureImages, type BlurTier } from "../useTextureImages";
+import { clientToCanvas } from "../coords";
 import styles from "./PaintCanvas.module.css";
 import { GridLayer } from "./GridLayer";
 
@@ -145,11 +146,10 @@ function PaintCanvasImpl({
     (clientX: number, clientY: number, isDragging: boolean) => {
       const stage = stageRef.current;
       if (!stage) return;
-      const rect = stage.container().getBoundingClientRect();
-      const xInContainer = clientX - rect.left;
-      const yInContainer = clientY - rect.top;
-      const nativeX = (xInContainer / rect.width) * stageNativeWidth;
-      const nativeY = (yInContainer / rect.height) * stageNativeHeight;
+      const pos = clientToCanvas(stage.container(), clientX, clientY);
+      if (!pos) return;
+      const nativeX = pos.x;
+      const nativeY = pos.y;
 
       const sub = subById.get(activeSubdivisionId);
       if (!sub) return;
@@ -172,16 +172,7 @@ function PaintCanvasImpl({
         isDragging,
       );
     },
-    [
-      activePieceId,
-      activeSubdivisionId,
-      activeFloor,
-      onPaint,
-      subById,
-      tool,
-      stageNativeWidth,
-      stageNativeHeight,
-    ],
+    [activePieceId, activeSubdivisionId, activeFloor, onPaint, subById, tool],
   );
 
   const getEventCoords = (
@@ -248,10 +239,14 @@ function PaintCanvasImpl({
     if (!stage) return;
 
     // Map mouse viewport coords to the canvas's internal pixel space.
-    // `getBoundingClientRect()` already accounts for parent scrolling.
-    const rect = stage.container().getBoundingClientRect();
-    const pixelX = coords.x - rect.left;
-    const pixelY = coords.y - rect.top;
+    // `clientToCanvas` reads the inner `<canvas>`'s rect (which moves
+    // with the parent scroll) and divides by any CSS scale applied to
+    // the canvas, so the result is correct regardless of whether the
+    // container is currently scrolled or scaled.
+    const pos = clientToCanvas(stage.container(), coords.x, coords.y);
+    if (!pos) return;
+    const pixelX = pos.x;
+    const pixelY = pos.y;
 
     const found = findInteractiveCellAtPixel({
       cells: paintedCells,
