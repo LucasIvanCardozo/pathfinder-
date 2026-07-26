@@ -12,8 +12,8 @@ type Props = {
 
 export function GridLayer({ config, stroke = "#2a2e36", strokeWidth = 1 }: Props) {
   const lines = gridLines(config);
-  const totalWidth = config.width * lines.spacing;
-  const totalHeight = config.height * lines.spacing;
+  const totalWidth = config.width * config.worldBaseCellSize;
+  const totalHeight = config.height * config.worldBaseCellSize;
   return (
     <Layer listening={false}>
       {lines.vertical.map((x) => (

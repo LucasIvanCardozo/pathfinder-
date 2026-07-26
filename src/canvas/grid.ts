@@ -3,19 +3,22 @@
 
 /**
  * World-space grid configuration. The grid represents the world's cell
- * boundaries — its line spacing is `worldBaseCellSize * zoom`, which is the
- * same formula the renderer uses for painted cells. The grid stays aligned
- * with the world's grid at every zoom level.
+ * boundaries — its line spacing is `worldBaseCellSize`. The Stage applies
+ * the display zoom as a transform, so lines are positioned in world coords
+ * (not display coords) and Konva scales them.
+ *
+ * If `worldBounds` is provided, only lines within that world-coord rect
+ * are generated. This is the viewport-culling path used by the renderer.
  */
 export type GridConfig = {
   /** Cell size in world pixels (e.g., 64). */
   worldBaseCellSize: number;
-  /** Display zoom multiplier. 1 = native (1 world pixel = 1 display pixel). */
-  zoom: number;
   /** World size in cells, horizontal axis. */
   width: number;
   /** World size in cells, vertical axis. */
   height: number;
+  /** Optional world-coord rect for visibility culling. */
+  worldBounds?: { x: number; y: number; width: number; height: number };
 };
 
 /** Convert a pixel coordinate to a grid cell index (floored). */
@@ -50,24 +53,38 @@ export function snapToGridCell(value: number, cellSize: number): number {
 }
 
 /**
- * Generate the line positions for the world grid overlay. Lines are at every
- * `worldBaseCellSize * zoom` pixels, starting from the top-left corner of the
- * world. With `zoom = 1` the grid aligns 1:1 with the world's cells; at other
- * zooms it scales proportionally and stays aligned.
+ * Generate the line positions for the world grid overlay, in world
+ * coordinates. Lines are at every `worldBaseCellSize` pixels, starting from
+ * the top-left corner of the world.
+ *
+ * If `worldBounds` is provided, lines outside that rect are skipped. The
+ * Stage's zoom transform scales them into display pixels; the bounds are
+ * in world coords, so divide the display viewport by zoom to get them.
  */
 export function gridLines(cfg: GridConfig): {
   vertical: number[];
   horizontal: number[];
-  spacing: number;
 } {
-  const spacing = cfg.worldBaseCellSize * cfg.zoom;
+  const { worldBaseCellSize, width, height, worldBounds } = cfg;
+  const startX = worldBounds
+    ? Math.max(0, Math.floor(worldBounds.x / worldBaseCellSize))
+    : 0;
+  const endX = worldBounds
+    ? Math.min(width, Math.ceil((worldBounds.x + worldBounds.width) / worldBaseCellSize))
+    : width;
+  const startY = worldBounds
+    ? Math.max(0, Math.floor(worldBounds.y / worldBaseCellSize))
+    : 0;
+  const endY = worldBounds
+    ? Math.min(height, Math.ceil((worldBounds.y + worldBounds.height) / worldBaseCellSize))
+    : height;
   const vertical: number[] = [];
   const horizontal: number[] = [];
-  for (let i = 0; i <= cfg.width; i++) {
-    vertical.push(i * spacing);
+  for (let i = startX; i <= endX; i++) {
+    vertical.push(i * worldBaseCellSize);
   }
-  for (let i = 0; i <= cfg.height; i++) {
-    horizontal.push(i * spacing);
+  for (let i = startY; i <= endY; i++) {
+    horizontal.push(i * worldBaseCellSize);
   }
-  return { vertical, horizontal, spacing };
+  return { vertical, horizontal };
 }

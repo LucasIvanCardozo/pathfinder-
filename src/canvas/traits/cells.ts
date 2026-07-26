@@ -12,6 +12,10 @@ import { getTrait, type TraitImpl } from "./registry";
  * each cell's own subdivision rule, regardless of which subdivision is
  * currently active in the UI.
  *
+ * Inputs are in **world coords** (not display coords). The caller passes
+ * `stage.getRelativePointerPosition()` for pixelX/Y; Konva already accounts
+ * for the stage transform, so we don't multiply by zoom here.
+ *
  * The "topmost" criterion means the highest-`order` subdivision wins when
  * two cells overlap at the same pixel — which mirrors what the user sees
  * (the door rendered on top of the floor).
@@ -22,11 +26,10 @@ export function findInteractiveCellAtPixel(args: {
   pixelX: number;
   pixelY: number;
   baseCellSize: number;
-  zoom: number;
   subById: Map<string, SubdivisionConfig>;
   pieceById: Map<string, Piece>;
 }): { cell: PaintedCell; piece: Piece; trait: TraitImpl } | null {
-  const { cells, floorId, pixelX, pixelY, baseCellSize, zoom, subById, pieceById } = args;
+  const { cells, floorId, pixelX, pixelY, baseCellSize, subById, pieceById } = args;
 
   let bestZ = -1;
   let best: { cell: PaintedCell; sub: SubdivisionConfig; piece: Piece } | null = null;
@@ -35,7 +38,7 @@ export function findInteractiveCellAtPixel(args: {
     if (cell.floorId !== floorId) continue;
     const sub = subById.get(cell.subdivisionId);
     if (!sub) continue;
-    const cellSize = (baseCellSize * zoom) / sub.cellSizeRatio;
+    const cellSize = baseCellSize / sub.cellSizeRatio;
     const minX = cell.gridX * cellSize;
     const minY = cell.gridY * cellSize;
     if (pixelX < minX || pixelX >= minX + cellSize) continue;

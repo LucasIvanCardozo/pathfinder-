@@ -1,12 +1,11 @@
 "use client";
 
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage } from "react-konva";
 import type Konva from "konva";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
 import { findInteractiveCellAtPixel, getTrait } from "../traits";
 import { useTextureImages, type BlurTier } from "../useTextureImages";
-import { clientToCanvas } from "../coords";
 import styles from "./PaintCanvas.module.css";
 import { GridLayer } from "./GridLayer";
 
@@ -20,8 +19,8 @@ type Props = {
   activeFloorId: string;
   /** Map dimensions shared by every floor in the scenario. */
   mapDims: { baseCellSize: number; width: number; height: number };
-  /** Display zoom multiplier. 1 = 100% (world pixels). Affects stage size,
-   *  grid math, and renderer positions; PaintedCell storage is unchanged. */
+  /** Display zoom multiplier. 1 = 100% (world pixels). The Stage applies
+   *  it as a transform (scaleX/Y); all rendering stays in world coords. */
   zoom: number;
   subdivisions: SubdivisionConfig[];
   paintedCells: PaintedCell[];
@@ -54,7 +53,6 @@ type Props = {
   overlay?: React.ReactNode;
 };
 
-type ScreenPos = { x: number; y: number };
 
 function PaintCanvasImpl({
   floors,
@@ -74,14 +72,99 @@ function PaintCanvasImpl({
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDrawingRef = useRef(false);
+  const dragStartRef = useRef<{
+    mouseX: number;
+    mouseY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
+
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
 
   const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0]!;
 
-  // World size in pixels, scaled by zoom for display. The Stage takes its
-  // intrinsic size from these props; the wrapping `.canvas` div fills the
-  // viewport and scrolls internally when the content overflows.
-  const stageWidth = mapDims.width * mapDims.baseCellSize * zoom;
-  const stageHeight = mapDims.height * mapDims.baseCellSize * zoom;
+  // Track the viewport size via ResizeObserver. The Stage uses these as its
+  // intrinsic dimensions, keeping the canvas at a constant small size
+  // (whatever fits in the editor) regardless of zoom.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setViewportSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    ro.observe(el);
+    setViewportSize({ width: el.clientWidth, height: el.clientHeight });
+    return () => ro.disconnect();
+  }, []);
+
+  // Centre the world on first valid viewport size. Subsequent floor or
+  // zoom changes are handled by the next effect; this one only fires on
+  // mount (via the `initialCenteredRef` guard).
+  const initialCenteredRef = useRef(false);
+  useEffect(() => {
+    if (initialCenteredRef.current) return;
+    if (viewportSize.width === 0 || viewportSize.height === 0) return;
+    const worldWidth = mapDims.width * mapDims.baseCellSize;
+    const worldHeight = mapDims.height * mapDims.baseCellSize;
+    setPan({
+      x: viewportSize.width / 2 - (worldWidth * zoom) / 2,
+      y: viewportSize.height / 2 - (worldHeight * zoom) / 2,
+    });
+    initialCenteredRef.current = true;
+  }, [viewportSize, zoom, mapDims]);
+
+  // Preserve the visual centre on zoom changes. Math: the world point at
+  // the viewport centre before the change is `(viewportCenter - pan) / oldZoom`;
+  // multiply by the new zoom and subtract the viewport half-size to position
+  // the same world point back at the centre.
+  //
+  // We read the latest `pan` from a ref (not the effect dep) so the
+  // effect doesn't refire on every pan change, only on zoom.
+  const panRef = useRef(pan);
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+  const prevZoomRef = useRef(zoom);
+  useEffect(() => {
+    if (!initialCenteredRef.current) return;
+    if (viewportSize.width === 0) return;
+    const prevZoom = prevZoomRef.current;
+    if (prevZoom === zoom) return;
+    const currentPan = panRef.current;
+    const worldCx = (viewportSize.width / 2 - currentPan.x) / prevZoom;
+    const worldCy = (viewportSize.height / 2 - currentPan.y) / prevZoom;
+    setPan({
+      x: viewportSize.width / 2 - worldCx * zoom,
+      y: viewportSize.height / 2 - worldCy * zoom,
+    });
+    prevZoomRef.current = zoom;
+  }, [zoom, viewportSize.width, viewportSize.height]);
+
+  // Visible world rect (world coords) for grid-line culling and bounds
+  // checks. The Stage applies the zoom as a transform, so dividing
+  // viewport size by zoom gives world units.
+  const worldBounds = useMemo(() => {
+    if (viewportSize.width === 0 || viewportSize.height === 0) return null;
+    return {
+      x: -pan.x / zoom,
+      y: -pan.y / zoom,
+      width: viewportSize.width / zoom,
+      height: viewportSize.height / zoom,
+    };
+  }, [
+    pan.x,
+    pan.y,
+    zoom,
+    viewportSize.width,
+    viewportSize.height,
+  ]);
 
   const allImagePaths = useMemo(() => {
     const set = new Set<string>();
@@ -148,22 +231,18 @@ function PaintCanvasImpl({
     return items;
   }, [floors, paintedCells, subById, activeIndex, subCount]);
 
+  // Paint stroke handler. Pointer coords are in WORLD coords (Konva's
+  // `getRelativePointerPosition` accounts for the stage transform).
   const apply = useCallback(
-    (clientX: number, clientY: number, isDragging: boolean) => {
-      const stage = stageRef.current;
-      if (!stage) return;
-      const pos = clientToCanvas(stage.container(), clientX, clientY);
-      if (!pos) return;
-      const nativeX = pos.x;
-      const nativeY = pos.y;
-
+    (pointer: { x: number; y: number }, isDragging: boolean) => {
       const sub = subById.get(activeSubdivisionId);
       if (!sub) return;
-      const cellSize = (mapDims.baseCellSize * zoom) / sub.cellSizeRatio;
+      // World-coord cell size (no zoom multiplier; stage scales the render).
+      const cellSize = mapDims.baseCellSize / sub.cellSizeRatio;
       const maxX = mapDims.width * sub.cellSizeRatio;
       const maxY = mapDims.height * sub.cellSizeRatio;
-      const gridX = Math.floor(nativeX / cellSize);
-      const gridY = Math.floor(nativeY / cellSize);
+      const gridX = Math.floor(pointer.x / cellSize);
+      const gridY = Math.floor(pointer.y / cellSize);
       if (gridX < 0 || gridY < 0 || gridX >= maxX || gridY >= maxY) return;
 
       const pieceId = tool === "paint" ? activePieceId : null;
@@ -174,168 +253,213 @@ function PaintCanvasImpl({
         gridX,
         gridY,
         pieceId,
-        { x: clientX, y: clientY },
+        null,
         isDragging,
       );
     },
-    [activePieceId, activeSubdivisionId, activeFloor.id, mapDims.baseCellSize, mapDims.width, mapDims.height, zoom, onPaint, subById, tool],
+    [
+      activePieceId,
+      activeSubdivisionId,
+      activeFloor.id,
+      mapDims.baseCellSize,
+      mapDims.width,
+      mapDims.height,
+      onPaint,
+      subById,
+      tool,
+    ],
   );
 
-  const getEventCoords = (
-    e: Konva.KonvaEventObject<MouseEvent> | Konva.KonvaEventObject<TouchEvent>,
-  ): ScreenPos | null => {
-    const evt = e.evt as MouseEvent & { touches?: TouchList };
-    if (typeof evt.clientX === "number" && typeof evt.clientY === "number") {
-      return { x: evt.clientX, y: evt.clientY };
-    }
-    if (evt.touches && evt.touches.length > 0) {
-      const t = evt.touches[0]!;
-      return { x: t.clientX, y: t.clientY };
-    }
-    return null;
+  // Track the space key to enable space+drag panning. preventDefault
+  // stops the browser from scrolling the page when space is held.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        e.preventDefault();
+        setIsSpaceDown(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        setIsSpaceDown(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  // Window-level mouse listeners for panning (so drag works even when the
+  // cursor leaves the stage area).
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const drag = dragStartRef.current;
+      setPan({
+        x: drag.panX + (e.clientX - drag.mouseX),
+        y: drag.panY + (e.clientY - drag.mouseY),
+      });
+    };
+    const handleUp = () => {
+      dragStartRef.current = null;
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, []);
+
+  // Touch handling: single-finger drag pans, two-finger gesture reserved
+  // for future zoom (not implemented yet). For now, touch panning lets the
+  // user navigate on mobile without conflicting with paint (paint on
+  // mobile would need a separate UX, deferred).
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragStartRef.current) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const drag = dragStartRef.current;
+      setPan({
+        x: drag.panX + (t.clientX - drag.mouseX),
+        y: drag.panY + (t.clientY - drag.mouseY),
+      });
+    };
+    const handleTouchEnd = () => {
+      dragStartRef.current = null;
+    };
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
+    return () => {
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
+  const getPointer = (): { x: number; y: number } | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    return stage.getRelativePointerPosition();
   };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Right-click is reserved for opening trait menus (see handleContextMenu);
-    // it must not start a paint stroke.
+    // it must not start a paint stroke or pan.
     if (e.evt.button === 2) return;
-    const coords = getEventCoords(e);
-    if (!coords) return;
-    apply(coords.x, coords.y, false);
-    isDrawingRef.current = true;
+    // Left-click + space: pan.
+    if (e.evt.button === 0 && isSpaceDown) {
+      e.evt.preventDefault();
+      dragStartRef.current = {
+        mouseX: e.evt.clientX,
+        mouseY: e.evt.clientY,
+        panX: pan.x,
+        panY: pan.y,
+      };
+      return;
+    }
+    // Left-click without space: paint or erase.
+    if (e.evt.button === 0) {
+      const pointer = getPointer();
+      if (!pointer) return;
+      apply(pointer, false);
+      isDrawingRef.current = true;
+    }
   };
 
-  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Panning is handled by the window-level listener above so the cursor
+    // can leave the stage area without losing the drag.
+    if (dragStartRef.current) return;
     if (!isDrawingRef.current) return;
-    const coords = getEventCoords(e);
-    if (!coords) return;
-    apply(coords.x, coords.y, true);
-  };
-
-  const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    const coords = getEventCoords(e);
-    if (!coords) return;
-    apply(coords.x, coords.y, false);
-    isDrawingRef.current = true;
-  };
-
-  const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    if (!isDrawingRef.current) return;
-    const coords = getEventCoords(e);
-    if (!coords) return;
-    apply(coords.x, coords.y, true);
+    const pointer = getPointer();
+    if (!pointer) return;
+    apply(pointer, true);
   };
 
   const handlePointerUp = () => {
     isDrawingRef.current = false;
   };
 
+  const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    // Single-finger touch pans (consistent with desktop middle-click).
+    const t = e.evt.touches[0];
+    if (!t) return;
+    e.evt.preventDefault();
+    dragStartRef.current = {
+      mouseX: t.clientX,
+      mouseY: t.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+  };
+
+  const handleTouchEnd = () => {
+    dragStartRef.current = null;
+  };
+
   /**
    * Right-click handler. Finds the topmost painted cell under the cursor
-   * in pixel space (so it works across subdivisions with different
+   * in world coords (so it works across subdivisions with different
    * cellSizeRatio) and, if that piece has an interactive trait (e.g.
    * door-states), opens its trait menu. Suppresses the browser's native
    * context menu.
    */
   const handleContextMenu = (e: Konva.KonvaEventObject<MouseEvent>) => {
     e.evt.preventDefault();
-    const coords = getEventCoords(e);
-    if (!coords || !onOpenTraitMenu) return;
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    // Map mouse viewport coords to the canvas's internal pixel space.
-    // `clientToCanvas` reads the inner `<canvas>`'s rect (which moves
-    // with the parent scroll) and divides by any CSS scale applied to
-    // the canvas, so the result is correct regardless of whether the
-    // container is currently scrolled or scaled.
-    const pos = clientToCanvas(stage.container(), coords.x, coords.y);
-    if (!pos) return;
-    const pixelX = pos.x;
-    const pixelY = pos.y;
-
+    if (!onOpenTraitMenu) return;
+    const pointer = getPointer();
+    if (!pointer) return;
     const found = findInteractiveCellAtPixel({
       cells: paintedCells,
       floorId: activeFloor.id,
-      pixelX,
-      pixelY,
+      pixelX: pointer.x,
+      pixelY: pointer.y,
       baseCellSize: mapDims.baseCellSize,
-      zoom,
       subById,
       pieceById,
     });
     if (!found) return;
-
-    onOpenTraitMenu(found.cell.id, found.trait.kind, { x: coords.x, y: coords.y });
+    onOpenTraitMenu(found.cell.id, found.trait.kind, { x: e.evt.clientX, y: e.evt.clientY });
   };
 
-  // Centre the view on the map once when the component mounts. The DOM
-    // container fills the viewport (flex: 1), and the Stage inside it
-    // is `stageWidth × stageHeight` pixels (potentially much larger than
-    // the viewport). Initial scroll position is top-left by default, so
-    // we explicitly centre horizontally and vertically.
-    //
-    // Empty deps: floor changes do NOT recentre (floors share dimensions
-    // structurally, so the same scroll represents the same world point).
-    // Zoom changes are handled by the second effect below.
-    useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
-      el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
-    }, []);
+  // Render-time cellSize helpers (world coords).
+  const cellSizeFor = (sub: SubdivisionConfig) =>
+    mapDims.baseCellSize / sub.cellSizeRatio;
 
-    // Preserve the visual centre on zoom changes. Without this, the scroll
-    // position (in pixels) stays fixed while the stage shrinks/grows, so
-    // the world point at the viewport centre drifts away.
-    //
-    // Math: the viewport centre in stage pixels is `(scrollLeft + clientW/2,
-    // scrollTop + clientH/2)`. Divide by the previous zoom to get the world
-    // coord that was at the centre. Multiply by the new zoom and subtract
-    // half the viewport size to position the same world coord back at the
-    // centre.
-    const prevZoomRef = useRef(zoom);
-    useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      const prevZoom = prevZoomRef.current;
-      if (prevZoom === zoom) return;
-      const cx = el.scrollLeft + el.clientWidth / 2;
-      const cy = el.scrollTop + el.clientHeight / 2;
-      const worldCx = cx / prevZoom;
-      const worldCy = cy / prevZoom;
-      el.scrollLeft = worldCx * zoom - el.clientWidth / 2;
-      el.scrollTop = worldCy * zoom - el.clientHeight / 2;
-      prevZoomRef.current = zoom;
-    }, [zoom]);
+  // Cursor reflects the current interaction: default crosshair (paint), grab
+  // when space is held, grabbing while a pan drag is in progress.
+  const cursor = isSpaceDown
+    ? dragStartRef.current
+      ? "grabbing"
+      : "grab"
+    : "crosshair";
 
-    return (
-      <div ref={containerRef} className={styles.canvas}>
-        <Stage
-          ref={stageRef}
-        width={stageWidth}
-        height={stageHeight}
+  return (
+    <div ref={containerRef} className={styles.canvas} style={{ cursor }}>
+      <Stage
+        ref={stageRef}
+        width={Math.max(1, viewportSize.width)}
+        height={Math.max(1, viewportSize.height)}
+        scaleX={zoom}
+        scaleY={zoom}
+        x={pan.x}
+        y={pan.y}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handlePointerUp}
         onMouseLeave={handlePointerUp}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handlePointerUp}
+        onTouchMove={handleTouchEnd}
+        onTouchEnd={handleTouchEnd}
       >
-        <GridLayer
-          config={{
-            worldBaseCellSize: mapDims.baseCellSize,
-            zoom,
-            width: mapDims.width,
-            height: mapDims.height,
-          }}
-        />
-
         <Layer listening={false}>
           {itemsByZ.map((item) => {
-            const cellSize = (mapDims.baseCellSize * zoom) / item.sub.cellSizeRatio;
+            const cellSize = cellSizeFor(item.sub);
             const piece = pieceById.get(item.cell.pieceId);
             const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
             const fallbackPath = def?.imagePath ?? "";
@@ -374,6 +498,15 @@ function PaintCanvasImpl({
             );
           })}
         </Layer>
+
+        <GridLayer
+          config={{
+            worldBaseCellSize: mapDims.baseCellSize,
+            width: mapDims.width,
+            height: mapDims.height,
+            worldBounds: worldBounds ?? undefined,
+          }}
+        />
       </Stage>
       {overlay}
     </div>
