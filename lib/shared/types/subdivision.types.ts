@@ -19,10 +19,16 @@ export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigInputSchema
  * The default subdivision seed payload. Loaded by `prisma/seed.ts` and by
  * `subdivisionUseCases.seedDefaults(db)` (idempotent app-side repair).
  *
- * Pieces used to be scoped per-subdivision (the "Puertas" subdivision owned
- * the door piece, etc.); that coupling is gone. The door piece is now in the
- * global piece registry and the door trait (`door-states`) is what makes it
- * interactive when painted anywhere.
+ * The four defaults each serve a distinct role in the layering:
+ *
+ *   - "Suelo" (ratio 1, z 0): the base floor texture. Same granularity as
+ *     the floor's own grid (one subdivision cell = one floor cell).
+ *   - "Objetos grandes" (ratio 3, z 1): large objects that occupy several
+ *     floor cells each. 3x finer grid than the floor (9x more cells).
+ *   - "Objetos pequeños" (ratio 6, z 2): small decorations. 6x finer grid
+ *     than the floor (36x more cells).
+ *   - "Estructuras" (ratio 1, z 3): floor-sized structures such as walls
+ *     and doors that always align to the floor's own cell grid.
  */
 export const DEFAULT_SUBDIVISIONS: SubdivisionConfigInput[] = [
   {
@@ -31,13 +37,18 @@ export const DEFAULT_SUBDIVISIONS: SubdivisionConfigInput[] = [
     order: 0,
   },
   {
-    name: "Objetos",
-    cellSizeRatio: 4,
+    name: "Objetos grandes",
+    cellSizeRatio: 3,
     order: 1,
   },
   {
-    name: "Paredes",
-    cellSizeRatio: 8,
+    name: "Objetos pequeños",
+    cellSizeRatio: 6,
     order: 2,
+  },
+  {
+    name: "Estructuras",
+    cellSizeRatio: 1,
+    order: 3,
   },
 ];

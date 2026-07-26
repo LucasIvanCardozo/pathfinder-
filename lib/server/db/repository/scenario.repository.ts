@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { LoadScenarioResult, ScenarioSummary, SaveScenarioInput } from "@/lib/shared/types/scenario.types";
+import { DEFAULT_FLOORS } from "@/lib/shared/types/floor.types";
 import { runInTx } from "@/lib/server/utils/runInTx";
 import { floorRepository } from "@/lib/server/db/repository/floor.repository";
 import { paintedCellRepository } from "@/lib/server/db/repository/paintedCell.repository";
@@ -147,23 +148,26 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       });
     },
 
-    /** Create the "Planta Baja" starter scenario used by `createBlankScenario`. */
-    async createBlank(scenarioId: string, floorId: string) {
+    /**
+     * Create the starter scenario with the default three floors used by
+     * `createBlankScenario`. The floor payload comes from
+     * `DEFAULT_FLOORS` so the defaults live in one place
+     * (shared/types/floor.types) rather than being duplicated here.
+     */
+    async createBlank(scenarioId: string, floorIds: readonly string[]) {
       return db.scenario.create({
         data: {
           id: scenarioId,
           name: "Nuevo escenario",
           floors: {
-            create: [
-              {
-                id: floorId,
-                name: "Planta Baja",
-                baseCellSize: 64,
-                width: 16,
-                height: 12,
-                order: 0,
-              },
-            ],
+            create: DEFAULT_FLOORS.map((f, i) => ({
+              id: floorIds[i]!,
+              name: f.name,
+              baseCellSize: f.baseCellSize,
+              width: f.width,
+              height: f.height,
+              order: i,
+            })),
           },
         },
       });
