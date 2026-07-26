@@ -5,6 +5,9 @@ import type { Floor } from "@/lib/shared/types/floor.types";
  * Thin floor repository. Lives in its own file so transactional reads
  * (scenario save: deleteManyByScenarioInTx) and bulk writes can compose
  * without growing the scenario repository.
+ *
+ * Map dimensions (`baseCellSize`, `width`, `height`) live on the parent
+ * `Scenario`; floors only carry `id` and `name`.
  */
 export function floorRepository(_db: PrismaClient | Prisma.TransactionClient) {
   return {
@@ -16,30 +19,17 @@ export function floorRepository(_db: PrismaClient | Prisma.TransactionClient) {
     /**
      * Bulk-create floors inside an existing transaction. The caller supplies
      * the parent `scenarioId` because `createMany` does not support nested
-     * create under a parent.
+     * create under a parent. Map dimensions are inherited from the scenario.
      */
     async createManyInTx(
       tx: Prisma.TransactionClient,
       scenarioId: string,
-      data: Array<{
-        id: string;
-        name: string;
-        baseCellSize: number;
-        width: number;
-        height: number;
-        order: number;
-      }>,
+      data: Array<{ id: string; name: string }>,
     ): Promise<Floor[]> {
       await tx.floor.createMany({
         data: data.map((f) => ({ ...f, scenarioId })),
       });
-      return data.map((f) => ({
-        id: f.id,
-        name: f.name,
-        baseCellSize: f.baseCellSize,
-        width: f.width,
-        height: f.height,
-      }));
+      return data.map((f) => ({ id: f.id, name: f.name }));
     },
   };
 }

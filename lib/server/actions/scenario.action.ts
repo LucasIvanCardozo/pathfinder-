@@ -38,7 +38,11 @@ export const saveScenario = createAction(ScenarioInputSchema, async ({ data }) =
  */
 export async function createBlankScenario(): Promise<never> {
   const db = (await import("@/lib/server/db/db")).default;
-  const { scenarioId } = await scenarioUseCases.createBlank(db);
+  const { scenarioId } = await scenarioUseCases.createBlank(db, {
+    baseCellSize: 64,
+    width: 100,
+    height: 300,
+  });
   revalidatePath("/");
   redirect(`/editor?id=${scenarioId}`);
 }

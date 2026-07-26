@@ -13,6 +13,9 @@ import { paintedCellRepository } from "@/lib/server/db/repository/paintedCell.re
  * The factory accepts a `PrismaClient` or a `Prisma.TransactionClient`
  * (`tx`) so callers can compose multi-table writes in a transaction via
  * `runInTx`.
+ *
+ * Map dimensions (`baseCellSize`, `width`, `height`) live on the scenario
+ * and are shared by every floor.
  */
 export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) {
   return {
@@ -68,12 +71,12 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       return {
         id: scenario.id,
         name: scenario.name,
+        baseCellSize: scenario.baseCellSize,
+        width: scenario.width,
+        height: scenario.height,
         floors: scenario.floors.map((f) => ({
           id: f.id,
           name: f.name,
-          baseCellSize: f.baseCellSize,
-          width: f.width,
-          height: f.height,
         })),
         activeFloorId: initialFloor.id,
         paintedCells: scenario.floors.flatMap((f) =>
@@ -97,16 +100,14 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
     /**
      * Upsert a scenario in a single transaction: existing floors are
      * deleted, the new floor set is bulk-inserted, painted cells are
-     * bulk-inserted. Branches on `input.id` to update vs. create.
+     * bulk-inserted. Branches on `input.id` to update vs. create. Map
+     * dimensions are persisted on the scenario row.
      */
     upsertInTx(tx: PrismaClient | Prisma.TransactionClient, input: SaveScenarioInput) {
       return runInTx(tx)(async (dbTx) => {
         const floorData = input.floors.map((f, i) => ({
           id: f.id,
           name: f.name,
-          baseCellSize: f.baseCellSize,
-          width: f.width,
-          height: f.height,
           order: i,
         }));
         const cellData = input.paintedCells.map((cell) => ({
@@ -128,7 +129,12 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
           await floorRepository(dbTx).deleteManyByScenarioInTx(dbTx, scenarioId);
           const scenario = await dbTx.scenario.update({
             where: { id: scenarioId },
-            data: { name: input.name },
+            data: {
+              name: input.name,
+              baseCellSize: input.baseCellSize,
+              width: input.width,
+              height: input.height,
+            },
           });
           await floorRepository(dbTx).createManyInTx(dbTx, scenarioId, floorData);
           if (cellData.length > 0) {
@@ -138,7 +144,12 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
         }
 
         const created = await dbTx.scenario.create({
-          data: { name: input.name },
+          data: {
+            name: input.name,
+            baseCellSize: input.baseCellSize,
+            width: input.width,
+            height: input.height,
+          },
         });
         await floorRepository(dbTx).createManyInTx(dbTx, created.id, floorData);
         if (cellData.length > 0) {
@@ -150,22 +161,26 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
 
     /**
      * Create the starter scenario with the default three floors used by
-     * `createBlankScenario`. The floor payload comes from
-     * `DEFAULT_FLOORS` so the defaults live in one place
-     * (shared/types/floor.types) rather than being duplicated here.
+     * `createBlankScenario`. Map dimensions come from `input` so the
+     * scenario-level constants drive both the new scenario row and the
+     * default floors (which inherit them).
      */
-    async createBlank(scenarioId: string, floorIds: readonly string[]) {
+    async createBlank(
+      scenarioId: string,
+      floorIds: readonly string[],
+      mapDims: { baseCellSize: number; width: number; height: number },
+    ) {
       return db.scenario.create({
         data: {
           id: scenarioId,
           name: "Nuevo escenario",
+          baseCellSize: mapDims.baseCellSize,
+          width: mapDims.width,
+          height: mapDims.height,
           floors: {
             create: DEFAULT_FLOORS.map((f, i) => ({
               id: floorIds[i]!,
               name: f.name,
-              baseCellSize: f.baseCellSize,
-              width: f.width,
-              height: f.height,
               order: i,
             })),
           },

@@ -47,6 +47,9 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
           ? {
               id: scenario.id,
               name: scenario.name,
+              baseCellSize: scenario.baseCellSize,
+              width: scenario.width,
+              height: scenario.height,
               floors: scenario.floors,
               activeFloorId: scenario.activeFloorId,
               paintedCells: scenario.paintedCells,

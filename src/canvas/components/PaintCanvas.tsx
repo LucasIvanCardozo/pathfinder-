@@ -18,6 +18,8 @@ const SCALE_PER_TIER = 0;
 type Props = {
   floors: Floor[];
   activeFloorId: string;
+  /** Map dimensions shared by every floor in the scenario. */
+  mapDims: { baseCellSize: number; width: number; height: number };
   subdivisions: SubdivisionConfig[];
   paintedCells: PaintedCell[];
   pieces: Piece[];
@@ -54,6 +56,7 @@ type ScreenPos = { x: number; y: number };
 function PaintCanvasImpl({
   floors,
   activeFloorId,
+  mapDims,
   subdivisions,
   paintedCells,
   pieces,
@@ -69,8 +72,8 @@ function PaintCanvasImpl({
 
   const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0]!;
 
-  const stageNativeWidth = activeFloor.width * activeFloor.baseCellSize;
-  const stageNativeHeight = activeFloor.height * activeFloor.baseCellSize;
+  const stageNativeWidth = mapDims.width * mapDims.baseCellSize;
+  const stageNativeHeight = mapDims.height * mapDims.baseCellSize;
   // Stage is exactly the grid's native pixel size. Cells render at 1:1
   // (no scaling), the container scrolls when the grid overflows the
   // viewport, and the mouse mapping is pixel-perfect.
@@ -153,9 +156,9 @@ function PaintCanvasImpl({
 
       const sub = subById.get(activeSubdivisionId);
       if (!sub) return;
-      const cellSize = activeFloor.baseCellSize / sub.cellSizeRatio;
-      const maxX = activeFloor.width * sub.cellSizeRatio;
-      const maxY = activeFloor.height * sub.cellSizeRatio;
+      const cellSize = mapDims.baseCellSize / sub.cellSizeRatio;
+      const maxX = mapDims.width * sub.cellSizeRatio;
+      const maxY = mapDims.height * sub.cellSizeRatio;
       const gridX = Math.floor(nativeX / cellSize);
       const gridY = Math.floor(nativeY / cellSize);
       if (gridX < 0 || gridY < 0 || gridX >= maxX || gridY >= maxY) return;
@@ -172,7 +175,7 @@ function PaintCanvasImpl({
         isDragging,
       );
     },
-    [activePieceId, activeSubdivisionId, activeFloor, onPaint, subById, tool],
+    [activePieceId, activeSubdivisionId, activeFloor.id, mapDims.baseCellSize, mapDims.width, mapDims.height, onPaint, subById, tool],
   );
 
   const getEventCoords = (
@@ -253,7 +256,7 @@ function PaintCanvasImpl({
       floorId: activeFloor.id,
       pixelX,
       pixelY,
-      baseCellSize: activeFloor.baseCellSize,
+      baseCellSize: mapDims.baseCellSize,
       subById,
       pieceById,
     });
@@ -279,15 +282,15 @@ function PaintCanvasImpl({
       >
         <GridLayer
           config={{
-            baseCellSize: activeFloor.baseCellSize,
-            width: activeFloor.width,
-            height: activeFloor.height,
+            baseCellSize: mapDims.baseCellSize,
+            width: mapDims.width,
+            height: mapDims.height,
           }}
         />
 
         <Layer listening={false}>
           {itemsByZ.map((item) => {
-            const cellSize = activeFloor.baseCellSize / item.sub.cellSizeRatio;
+            const cellSize = mapDims.baseCellSize / item.sub.cellSizeRatio;
             const piece = pieceById.get(item.cell.pieceId);
             const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
             const fallbackPath = def?.imagePath ?? "";

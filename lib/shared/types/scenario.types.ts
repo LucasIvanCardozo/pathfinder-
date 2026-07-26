@@ -23,10 +23,16 @@ export type ScenarioSummary = {
  * Wire shape returned by `scenarioUseCases.findById({ id })`. Mirrors
  * `Scenario` minus the persisted id-bearing floor/cell nesting — only the
  * fields the editor cares about are included.
+ *
+ * The map dimensions (`baseCellSize`, `width`, `height`) live on the
+ * scenario and are shared by every floor in it.
  */
 export type LoadScenarioResult = {
   id: string;
   name: string;
+  baseCellSize: number;
+  width: number;
+  height: number;
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];

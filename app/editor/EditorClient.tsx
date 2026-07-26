@@ -39,6 +39,9 @@ const PaintCanvas = dynamic(() => import("@/canvas/konva").then((m) => m.PaintCa
 type InitialScenario = {
   id: string;
   name: string;
+  baseCellSize: number;
+  width: number;
+  height: number;
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
@@ -89,8 +92,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     if (src.endsWith("thunder.mp3")) setThunderAt(Date.now());
   });
 
-  const fallbackFloor: Floor = { id: "", name: "", baseCellSize: 64, width: 20, height: 15 };
+  const fallbackFloor: Floor = { id: "", name: "" };
   const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0] ?? fallbackFloor;
+  const mapDims = {
+    baseCellSize: initialScenario?.baseCellSize ?? 64,
+    width: initialScenario?.width ?? 100,
+    height: initialScenario?.height ?? 300,
+  };
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
   // Pieces are global — every piece is paintable in any subdivision cell.
   const activePieces = allPieces;
@@ -176,7 +184,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         ];
       });
     },
-    [tool, markDirty, paintedCells, pieceById, activeFloor.baseCellSize],
+    [tool, markDirty, paintedCells, pieceById, mapDims.baseCellSize],
   );
 
   const handleSubdivisionChange = (id: string) => {
@@ -300,17 +308,14 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     return `Piso ${index - plantaBajaIndex}`;
   };
 
-  const makeFloor = (): Floor => ({
+  const makeFloor = (name: string): Floor => ({
     id: generateId("floor"),
-    name: "Piso",
-    baseCellSize: activeFloor.baseCellSize,
-    width: activeFloor.width,
-    height: activeFloor.height,
+    name,
   });
 
   const handleAddFloorAbove = () => {
     const newIndex = floors.length;
-    const newFloor: Floor = { ...makeFloor(), name: floorNameForIndex(newIndex) };
+    const newFloor = makeFloor(floorNameForIndex(newIndex));
     setFloors((prev) => [...prev, newFloor]);
     setActiveFloorId(newFloor.id);
     markDirty();
@@ -318,10 +323,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
 
   const handleAddFloorBelow = () => {
     const newN = plantaBajaIndex + 1;
-    const newFloor: Floor = {
-      ...makeFloor(),
-      name: `Subsuelo ${newN}`,
-    };
+    const newFloor = makeFloor(`Subsuelo ${newN}`);
     setFloors((prev) => [newFloor, ...prev]);
     setActiveFloorId(newFloor.id);
     markDirty();
@@ -543,7 +545,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             {paintedInFloor} celdas · {doorsInFloor} puertas
           </span>
           <span className={styles.canvasStat}>
-            Grilla {activeFloor.width}×{activeFloor.height} · {activeFloor.baseCellSize}px
+            Grilla {mapDims.width}×{mapDims.height} · {mapDims.baseCellSize}px
           </span>
           <span
             className={styles.autosaveStatus}
@@ -638,6 +640,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         <PaintCanvas
           floors={floors}
           activeFloorId={activeFloorId}
+          mapDims={mapDims}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
           pieces={allUsedPieces}

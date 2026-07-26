@@ -12,22 +12,22 @@ datasource db {
 }
 
 model Scenario {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  baseCellSize Int
+  width        Int
+  height       Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   floors Floor[]
 }
 
 model Floor {
-  id           String @id @default(cuid())
-  scenarioId   String
-  name         String
-  baseCellSize Int
-  width        Int
-  height       Int
-  order        Int    @default(0)
+  id         String @id @default(cuid())
+  scenarioId String
+  name       String
+  order      Int    @default(0)
 
   scenario     Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   paintedCells PaintedCell[]

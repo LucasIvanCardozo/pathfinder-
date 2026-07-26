@@ -1,9 +1,9 @@
 // Pure grid math utilities. No React, no DOM.
 // All functions here are deterministic and unit-testable.
 
-import type { Floor } from "@/lib/shared/types";
+import type { Scenario } from "@/lib/shared/types";
 
-export type GridConfig = Pick<Floor, "baseCellSize" | "width" | "height">;
+export type GridConfig = Pick<Scenario, "baseCellSize" | "width" | "height">;
 
 /** Convert a pixel coordinate to a grid cell index (floored). */
 export function worldToGrid(value: number, cellSize: number): number {

@@ -41,14 +41,18 @@ export const scenarioUseCases = {
   },
 
   /**
-   * Create a starter scenario with the default three floors (Subsuelo 1, Planta Baja, Piso 1). Used by the redirect-issuing
-   * `createBlankScenario` action — the redirect signal would be lost if this
-   * were wrapped in `createAction`.
+   * Create a starter scenario with the default three floors (Subsuelo 1,
+   * Planta Baja, Piso 1) and the map dimensions supplied by the caller.
+   * Used by the redirect-issuing `createBlankScenario` action — the
+   * redirect signal would be lost if this were wrapped in `createAction`.
    */
-  async createBlank(db: TxOrClient) {
+  async createBlank(
+    db: TxOrClient,
+    mapDims: { baseCellSize: number; width: number; height: number },
+  ) {
     const scenarioId = generateId("scenario");
     const floorIds = [generateId("floor"), generateId("floor"), generateId("floor")];
-    await scenarioRepository(db).createBlank(scenarioId, floorIds);
+    await scenarioRepository(db).createBlank(scenarioId, floorIds, mapDims);
     return { scenarioId, floorIds };
   },
 };
