@@ -1,19 +1,27 @@
 // Registry of available weathers. Adding a new weather is a 1-line entry here
 // plus (optionally) a new effect component referenced by `animation` and/or
-// a tint overlay referenced by `tint`.
+// a tint overlay referenced by `tint`. Each entry also declares its audio
+// (`sound`) — one or more `WeatherSound` records — so the audio system has a
+// single source of truth.
 //
-// Audio files expected (drop into `public/sounds/`):
-//   - rain.mp3    (loop de lluvia)
-//   - storm.mp3   (loop de lluvia más agresivo para tormenta)
-//   - thunder.mp3 (trueno único ~3-5 s, disparado aleatoriamente en tormenta)
+// Expected audio files in `public/sounds/`:
+//   - sunny.mp3      loop 60-90s   ambiente diurno: brisa, pájaros lejanos
+//   - rain.mp3       loop 30-60s   lluvia suave
+//   - fog.mp3        loop 60-120s  ambiente brumoso
+//   - storm_rain.mp3 loop 30-60s   lluvia intensa (loop base de tormenta)
+//   - thunder.mp3    one-shot      trueno individual, disparado random en tormenta
+//   - night.mp3      loop 90-120s  grillos, búhos ocasionales
+//   - snow.mp3       loop 60-90s   viento helado, crujidos
 //
 // Conventions:
-//   - `sunny` is always the default; `animation: null`, `tint: null`, `sound: null`.
-//   - `animation` is the key into the WeatherOverlay dispatcher.
+//   - `sunny` is always the default; animation=null, tint=null, sound=non-null
+//     (an ambient day requires some breeze/birds or it feels dead).
+//   - `animation` is the key into the WeatherOverlay dispatcher (or storm
+//     which has its own branch there because it needs `thunderAt`).
 //   - `sound` is one or more sound specs (see `WeatherSound`); null = no audio.
 //   - `tint` is a translucent color overlay above the canvas; null = none.
 
-export type WeatherAnimationKind = "rain" | "fog" | "snow" | "storm";
+export type WeatherAnimationKind = "rain" | "fog" | "snow" | "storm" | "night";
 
 export type WeatherSound = {
   src: string;
@@ -38,21 +46,29 @@ export type WeatherDef = {
 };
 
 export const WEATHERS: readonly WeatherDef[] = [
-  { id: "sunny", label: "Soleado", animation: null, sound: null, tint: null },
+  // Audio files expected (drop into `public/sounds/`):
+  //   - sunny.mp3      (loop 60-90s   ambiente diurno: brisa, pájaros lejanos)
+  //   - rain.mp3       (loop 30-60s   lluvia suave)
+  //   - fog.mp3        (loop 60-120s  ambiente brumoso, viento mínimo)
+  //   - storm_rain.mp3 (loop 30-60s   lluvia más intensa, dramática)
+  //   - thunder.mp3    (one-shot 3-5s trueno individual, disparado random en tormenta)
+  //   - night.mp3      (loop 90-120s  grillos, búhos ocasionales)
+  //   - snow.mp3       (loop 60-90s   viento helado, crujidos)
+  { id: "sunny", label: "Soleado", animation: null, sound: { src: "/sounds/sunny.mp3", mode: "loop" }, tint: null },
   { id: "rain", label: "Lluvia", animation: "rain", sound: { src: "/sounds/rain.mp3", mode: "loop" }, tint: "rgba(150, 175, 200, 0.18)" },
-  { id: "fog", label: "Niebla", animation: "fog", sound: null, tint: "rgba(220, 220, 225, 0.28)" },
+  { id: "fog", label: "Niebla", animation: "fog", sound: { src: "/sounds/fog.mp3", mode: "loop" }, tint: "rgba(220, 220, 225, 0.28)" },
   {
     id: "storm",
     label: "Tormenta",
     animation: "storm",
     sound: [
-      { src: "/sounds/rain.mp3", mode: "loop" },
+      { src: "/sounds/storm_rain.mp3", mode: "loop" },
       { src: "/sounds/thunder.mp3", mode: "random", intervalMs: [8_000, 25_000] },
     ],
     tint: "rgba(70, 75, 90, 0.35)",
   },
-  { id: "night", label: "Noche", animation: null, sound: null, tint: "rgba(20, 25, 40, 0.55)" },
-  { id: "snow", label: "Nieve", animation: "snow", sound: null, tint: "rgba(240, 245, 255, 0.20)" },
+  { id: "night", label: "Noche", animation: "night", sound: { src: "/sounds/night.mp3", mode: "loop" }, tint: "rgba(35, 45, 65, 0.40)" },
+  { id: "snow", label: "Nieve", animation: "snow", sound: { src: "/sounds/snow.mp3", mode: "loop" }, tint: "rgba(240, 245, 255, 0.20)" },
 ] as const;
 
 export function getWeather(id: string): WeatherDef {

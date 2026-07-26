@@ -29,25 +29,34 @@ export function WeatherOverlay({
   const hasTint = def.tint !== null;
   if (!hasAnimation && !hasTint) return null;
 
-  // Storm has props (`thunderAt`) and lives outside the prop-less
-  // `ANIMATIONS` map, so we branch on it BEFORE looking up `Animation` —
-  // otherwise the lookup returns `undefined` and the renderer bails.
+  // Branched animations: render with an explicit subtree because they need
+  // extra layers (storm listens for thunder; night stacks vignette + tinted
+  // moonlight). These never go through `ANIMATIONS`.
   const isStorm = def.animation === "storm";
-  const Animation = !isStorm && hasAnimation ? ANIMATIONS[def.animation!] : null;
+  const isNight = def.animation === "night";
+  const Animation = !isStorm && !isNight && hasAnimation ? ANIMATIONS[def.animation!] : null;
 
   return (
     <>
       {isStorm ? (
         <StormEffect thunderAt={thunderAt} />
+      ) : isNight ? (
+        <div className="night-vignette" aria-hidden="true" />
       ) : Animation ? (
         <Animation />
       ) : null}
       {hasTint ? (
-        <div
-          className="weather-tint-overlay"
-          style={{ background: def.tint ?? undefined }}
-          aria-hidden="true"
-        />
+        <>
+          {/* Night also gets a faint warm moonlight glow on top of the
+              base tint — it's the only weather that uses an extra CSS
+              layer beyond the standard tint overlay. */}
+          {isNight ? <div className="moonlight" aria-hidden="true" /> : null}
+          <div
+            className="weather-tint-overlay"
+            style={{ background: def.tint ?? undefined }}
+            aria-hidden="true"
+          />
+        </>
       ) : null}
     </>
   );

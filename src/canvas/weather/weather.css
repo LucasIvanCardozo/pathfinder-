@@ -35,6 +35,61 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 11; /* above weather-overlay (rain/fog canvas) so the tint sits on top */
+  z-index: 10; /* moonlight (z=11) sits on top so screen blending works */
   mix-blend-mode: normal;
+}
+
+/* Night vignette: dark ellipse around the edges of the canvas, transparent
+   in the centre. Sits below weather-overlay z-index so stars render over it. */
+.night-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Moonlight: soft warm-yellow radial gradient that breathes (alpha) and
+   drifts (position) on a slow loop. The drift is intentionally tiny so
+   it reads as "the moon moved slightly", not "the moon is moving".
+   `mix-blend-mode: screen` makes the glow lighten what's behind it
+   instead of just painting on top. */
+.moonlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11; /* sits above tint-overlay so the tint blends under it */
+  mix-blend-mode: screen;
+  background: radial-gradient(ellipse 720px 540px at 30% 22%, rgba(255, 174, 13, 0.18), rgba(255, 172, 6, 0) 70%);
+  animation:
+    moonlight-breath 11s ease-in-out infinite,
+    moonlight-drift 37s ease-in-out infinite;
+}
+
+@keyframes moonlight-breath {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes moonlight-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(36px, -14px);
+  }
+}
+
+/* Respect users with reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .moonlight {
+    animation: none;
+    opacity: 0.9;
+  }
 }
