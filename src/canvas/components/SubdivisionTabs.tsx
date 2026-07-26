@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SubdivisionConfig } from "@/pieces";
+import type { SubdivisionConfig } from "@/lib/shared/types";
 import styles from "./SubdivisionTabs.module.css";
 
 type Props = {

@@ -3,7 +3,7 @@
 import { Fragment, memo, useCallback, useMemo, useRef } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage } from "react-konva";
 import type Konva from "konva";
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
 import { findInteractiveCellAtPixel, getTrait } from "../traits";
 import { useTextureImages, type BlurTier } from "../useTextureImages";
 import styles from "./PaintCanvas.module.css";

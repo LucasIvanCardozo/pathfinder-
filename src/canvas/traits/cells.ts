@@ -1,4 +1,4 @@
-import type { PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
+import type { PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
 import { getTrait, type TraitImpl } from "./registry";
 
 /**

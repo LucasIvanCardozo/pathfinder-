@@ -2,7 +2,7 @@
 // For Konva-dependent components (PaintCanvas, GridLayer),
 // import from "@/canvas/konva" via dynamic({ ssr: false }).
 
-export type { SubdivisionConfig } from "@/pieces";
+export type { SubdivisionConfig } from "@/lib/shared/types";
 export type { PaintTool } from "./components/PaintToolbar";
 export { PaintToolbar } from "./components/PaintToolbar";
 export { SubdivisionTabs } from "./components/SubdivisionTabs";

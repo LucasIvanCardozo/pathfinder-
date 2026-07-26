@@ -19,10 +19,11 @@ import {
   useKeyboardShortcuts,
   useWeatherAudio,
 } from "@/canvas";
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
 import { saveScenario } from "@/lib/server/actions/scenario.action";
 import { reorderSubdivisions } from "@/lib/server/actions/subdivision.action";
 import { generateId } from "@/lib/shared/utils/generateId";
+import { useReload } from "@/hooks";
 import { Button } from "../components/Button";
 import { Empty } from "../components/Empty";
 import { SubdivisionManager } from "../components/SubdivisionManager";
@@ -51,6 +52,7 @@ type Props = {
 
 export function EditorClient({ initialScenario, initialSubdivisions, allPieces }: Props) {
   const router = useRouter();
+  const { startReload } = useReload();
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenario?.id ?? null);
   const [scenarioName, setScenarioName] = useState(initialScenario?.name ?? "");
   const [floors, setFloors] = useState<Floor[]>(initialScenario?.floors ?? []);
@@ -237,9 +239,16 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       const renumbered = without.map((s, i) => ({ ...s, order: i }));
       setSubdivisions(renumbered);
       markDirty();
-      await reorderSubdivisions(renumbered.map((s) => ({ id: s.id, order: s.order })));
+      const result = await reorderSubdivisions(
+        renumbered.map((s) => ({ id: s.id, order: s.order })),
+      );
+      // Re-validate from server: action returns bare void on success;
+      // silent failure would leave local state desynced. startReload
+      // triggers a silent RSC refresh via router.refresh() inside
+      // startTransition (no loading flash).
+      if (result.success) startReload();
     },
-    [subdivisions, markDirty],
+    [subdivisions, markDirty, startReload],
   );
 
   const activeFloorIndex = floors.findIndex((f) => f.id === activeFloorId);

@@ -3,7 +3,7 @@
 //   2. Implement it in `src/canvas/traits/<kind>.ts`.
 //   3. Add the entry to `traitRegistry` below.
 
-import type { PaintedCell, Piece } from "@/pieces";
+import type { PaintedCell, Piece } from "@/lib/shared/types";
 import { doorStatesTrait, type DoorState } from "./door-states";
 import { blocksLightTrait } from "./blocks-light";
 

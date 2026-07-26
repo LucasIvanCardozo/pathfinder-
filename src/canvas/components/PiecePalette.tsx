@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { Piece } from "@/pieces";
+import type { Piece } from "@/lib/shared/types";
 import traitBadgeStyles from "@/app/components/TraitBadge.module.css";
 import styles from "./PiecePalette.module.css";
 

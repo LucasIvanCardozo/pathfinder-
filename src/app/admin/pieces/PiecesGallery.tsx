@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import type { Piece } from "@/pieces";
+import type { Piece } from "@/lib/shared/types";
 import { Empty } from "../../components/Empty";
 import traitBadgeStyles from "../../components/TraitBadge.module.css";
 import styles from "./PiecesGallery.module.css";

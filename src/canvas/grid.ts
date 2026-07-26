@@ -1,7 +1,7 @@
 // Pure grid math utilities. No React, no DOM.
 // All functions here are deterministic and unit-testable.
 
-import type { Floor } from "@/pieces";
+import type { Floor } from "@/lib/shared/types";
 
 export type GridConfig = Pick<Floor, "baseCellSize" | "width" | "height">;
 

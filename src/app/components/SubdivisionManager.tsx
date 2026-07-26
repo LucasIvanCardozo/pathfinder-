@@ -9,8 +9,8 @@ import {
   type Piece,
   PIECE_CATEGORIES,
   type SubdivisionConfig,
-  SubdivisionConfigPieceIdsInputSchema,
-} from "@/pieces";
+} from "@/lib/shared/types";
+import { SubdivisionConfigPieceIdsInputSchema } from "@/lib/shared/schemas";
 import { createSubdivision, deleteSubdivision, updateSubdivision } from "@/lib/server/actions/subdivision.action";
 import traitBadgeStyles from "./TraitBadge.module.css";
 import { Button } from "./Button";

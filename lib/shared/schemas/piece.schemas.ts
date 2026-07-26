@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TextureTraitSchema } from "@/pieces/traits";
+import { TextureTraitSchema } from "./texture-trait.schemas";
 
 /**
  * Texture / Piece category enum. Pieces are the things the GM can paint into
