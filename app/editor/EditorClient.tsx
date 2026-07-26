@@ -391,6 +391,9 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           const result = await saveScenario({
             id: scenarioId ?? undefined,
             name: scenarioName,
+            baseCellSize: mapDims.baseCellSize,
+            width: mapDims.width,
+            height: mapDims.height,
             floors,
             paintedCells,
           });
@@ -417,7 +420,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       };
       doSave();
     },
-    [isDirty, scenarioId, scenarioName, floors, paintedCells, router],
+    [isDirty, scenarioId, scenarioName, mapDims.baseCellSize, mapDims.width, mapDims.height, floors, paintedCells, router],
   );
 
   // Periodic autosave. Runs every AUTOSAVE_INTERVAL_MS while enabled; the

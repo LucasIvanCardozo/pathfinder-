@@ -83,7 +83,6 @@
 .floorSwitcher {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
 }
 
 .floorCurrent {
@@ -111,7 +110,6 @@
 .zoomControls {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
 }
 
 .zoomDisplay {
@@ -136,17 +134,17 @@
   white-space: nowrap;
 }
 
-.autosaveStatus[data-status="saving"] {
+.autosaveStatus[data-status='saving'] {
   color: #7ab3e0;
   border-color: #2a4a6b;
 }
 
-.autosaveStatus[data-status="saved"] {
+.autosaveStatus[data-status='saved'] {
   color: #7adc7a;
   border-color: #2a5a2a;
 }
 
-.autosaveStatus[data-status="error"] {
+.autosaveStatus[data-status='error'] {
   color: #e07a7a;
   border-color: #5a2a2a;
 }
@@ -201,7 +199,7 @@
 
 .subdivisionTabWrapper.dropLeft::before,
 .subdivisionTabWrapper.dropRight::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 4px;
   bottom: 4px;
