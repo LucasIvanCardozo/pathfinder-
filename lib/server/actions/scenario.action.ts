@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import createAction from "@/lib/server/actions/createAction";
 import { scenarioUseCases } from "@/lib/server/useCases";
+import { DEFAULT_MAP_DIMS } from "@/lib/shared/constants/map";
 import { ScenarioInputSchema } from "@/lib/shared/schemas/scenario.schemas";
 
 /** Cached list of all scenarios as flat summaries. */
@@ -38,11 +39,7 @@ export const saveScenario = createAction(ScenarioInputSchema, async ({ data }) =
  */
 export async function createBlankScenario(): Promise<never> {
   const db = (await import("@/lib/server/db/db")).default;
-  const { scenarioId } = await scenarioUseCases.createBlank(db, {
-    baseCellSize: 64,
-    width: 100,
-    height: 300,
-  });
+  const { scenarioId } = await scenarioUseCases.createBlank(db, DEFAULT_MAP_DIMS);
   revalidatePath("/");
   redirect(`/editor?id=${scenarioId}`);
 }

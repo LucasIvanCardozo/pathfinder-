@@ -4,12 +4,12 @@
   border-radius: 8px;
   position: relative;
   overflow: auto;
-  width: max-content;
-  max-width: 100%;
-  max-height: calc(100vh - 200px);
-  align-self: flex-start;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
   /* Hide scrollbars visually but keep the scroll functionality
-     (pan via spacebar will replace scrolling in commit 2+). */
+     (pan via spacebar will replace scrolling in a later commit). */
   scrollbar-width: none;
 }
 

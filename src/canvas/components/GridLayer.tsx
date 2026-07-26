@@ -12,12 +12,14 @@ type Props = {
 
 export function GridLayer({ config, stroke = "#2a2e36", strokeWidth = 1 }: Props) {
   const lines = gridLines(config);
+  const totalWidth = config.width * lines.spacing;
+  const totalHeight = config.height * lines.spacing;
   return (
     <Layer listening={false}>
       {lines.vertical.map((x) => (
         <Line
           key={`v-${x}`}
-          points={[x, 0, x, lines.totalHeight]}
+          points={[x, 0, x, totalHeight]}
           stroke={stroke}
           strokeWidth={strokeWidth}
           perfectDrawEnabled={false}
@@ -26,7 +28,7 @@ export function GridLayer({ config, stroke = "#2a2e36", strokeWidth = 1 }: Props
       {lines.horizontal.map((y) => (
         <Line
           key={`h-${y}`}
-          points={[0, y, lines.totalWidth, y]}
+          points={[0, y, totalWidth, y]}
           stroke={stroke}
           strokeWidth={strokeWidth}
           perfectDrawEnabled={false}

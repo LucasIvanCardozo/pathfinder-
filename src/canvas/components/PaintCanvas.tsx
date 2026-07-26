@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useCallback, useMemo, useRef } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { Image as KonvaImage, Layer, Rect, Stage } from "react-konva";
 import type Konva from "konva";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
@@ -20,6 +20,9 @@ type Props = {
   activeFloorId: string;
   /** Map dimensions shared by every floor in the scenario. */
   mapDims: { baseCellSize: number; width: number; height: number };
+  /** Display zoom multiplier. 1 = 100% (world pixels). Affects stage size,
+   *  grid math, and renderer positions; PaintedCell storage is unchanged. */
+  zoom: number;
   subdivisions: SubdivisionConfig[];
   paintedCells: PaintedCell[];
   pieces: Piece[];
@@ -57,6 +60,7 @@ function PaintCanvasImpl({
   floors,
   activeFloorId,
   mapDims,
+  zoom,
   subdivisions,
   paintedCells,
   pieces,
@@ -68,17 +72,16 @@ function PaintCanvasImpl({
   overlay,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isDrawingRef = useRef(false);
 
   const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0]!;
 
-  const stageNativeWidth = mapDims.width * mapDims.baseCellSize;
-  const stageNativeHeight = mapDims.height * mapDims.baseCellSize;
-  // Stage is exactly the grid's native pixel size. Cells render at 1:1
-  // (no scaling), the container scrolls when the grid overflows the
-  // viewport, and the mouse mapping is pixel-perfect.
-  const stageWidth = stageNativeWidth;
-  const stageHeight = stageNativeHeight;
+  // World size in pixels, scaled by zoom for display. The Stage takes its
+  // intrinsic size from these props; the wrapping `.canvas` div fills the
+  // viewport and scrolls internally when the content overflows.
+  const stageWidth = mapDims.width * mapDims.baseCellSize * zoom;
+  const stageHeight = mapDims.height * mapDims.baseCellSize * zoom;
 
   const allImagePaths = useMemo(() => {
     const set = new Set<string>();
@@ -156,7 +159,7 @@ function PaintCanvasImpl({
 
       const sub = subById.get(activeSubdivisionId);
       if (!sub) return;
-      const cellSize = mapDims.baseCellSize / sub.cellSizeRatio;
+      const cellSize = (mapDims.baseCellSize * zoom) / sub.cellSizeRatio;
       const maxX = mapDims.width * sub.cellSizeRatio;
       const maxY = mapDims.height * sub.cellSizeRatio;
       const gridX = Math.floor(nativeX / cellSize);
@@ -175,7 +178,7 @@ function PaintCanvasImpl({
         isDragging,
       );
     },
-    [activePieceId, activeSubdivisionId, activeFloor.id, mapDims.baseCellSize, mapDims.width, mapDims.height, onPaint, subById, tool],
+    [activePieceId, activeSubdivisionId, activeFloor.id, mapDims.baseCellSize, mapDims.width, mapDims.height, zoom, onPaint, subById, tool],
   );
 
   const getEventCoords = (
@@ -257,6 +260,7 @@ function PaintCanvasImpl({
       pixelX,
       pixelY,
       baseCellSize: mapDims.baseCellSize,
+      zoom,
       subById,
       pieceById,
     });
@@ -265,10 +269,50 @@ function PaintCanvasImpl({
     onOpenTraitMenu(found.cell.id, found.trait.kind, { x: coords.x, y: coords.y });
   };
 
-  return (
-    <div className={styles.canvas} style={{ width: stageWidth, height: stageHeight }}>
-      <Stage
-        ref={stageRef}
+  // Centre the view on the map once when the component mounts. The DOM
+    // container fills the viewport (flex: 1), and the Stage inside it
+    // is `stageWidth × stageHeight` pixels (potentially much larger than
+    // the viewport). Initial scroll position is top-left by default, so
+    // we explicitly centre horizontally and vertically.
+    //
+    // Empty deps: floor changes do NOT recentre (floors share dimensions
+    // structurally, so the same scroll represents the same world point).
+    // Zoom changes are handled by the second effect below.
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+      el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+    }, []);
+
+    // Preserve the visual centre on zoom changes. Without this, the scroll
+    // position (in pixels) stays fixed while the stage shrinks/grows, so
+    // the world point at the viewport centre drifts away.
+    //
+    // Math: the viewport centre in stage pixels is `(scrollLeft + clientW/2,
+    // scrollTop + clientH/2)`. Divide by the previous zoom to get the world
+    // coord that was at the centre. Multiply by the new zoom and subtract
+    // half the viewport size to position the same world coord back at the
+    // centre.
+    const prevZoomRef = useRef(zoom);
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      const prevZoom = prevZoomRef.current;
+      if (prevZoom === zoom) return;
+      const cx = el.scrollLeft + el.clientWidth / 2;
+      const cy = el.scrollTop + el.clientHeight / 2;
+      const worldCx = cx / prevZoom;
+      const worldCy = cy / prevZoom;
+      el.scrollLeft = worldCx * zoom - el.clientWidth / 2;
+      el.scrollTop = worldCy * zoom - el.clientHeight / 2;
+      prevZoomRef.current = zoom;
+    }, [zoom]);
+
+    return (
+      <div ref={containerRef} className={styles.canvas}>
+        <Stage
+          ref={stageRef}
         width={stageWidth}
         height={stageHeight}
         onMouseDown={handleMouseDown}
@@ -282,7 +326,8 @@ function PaintCanvasImpl({
       >
         <GridLayer
           config={{
-            baseCellSize: mapDims.baseCellSize,
+            worldBaseCellSize: mapDims.baseCellSize,
+            zoom,
             width: mapDims.width,
             height: mapDims.height,
           }}
@@ -290,7 +335,7 @@ function PaintCanvasImpl({
 
         <Layer listening={false}>
           {itemsByZ.map((item) => {
-            const cellSize = mapDims.baseCellSize / item.sub.cellSizeRatio;
+            const cellSize = (mapDims.baseCellSize * zoom) / item.sub.cellSizeRatio;
             const piece = pieceById.get(item.cell.pieceId);
             const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
             const fallbackPath = def?.imagePath ?? "";

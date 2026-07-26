@@ -22,10 +22,11 @@ export function findInteractiveCellAtPixel(args: {
   pixelX: number;
   pixelY: number;
   baseCellSize: number;
+  zoom: number;
   subById: Map<string, SubdivisionConfig>;
   pieceById: Map<string, Piece>;
 }): { cell: PaintedCell; piece: Piece; trait: TraitImpl } | null {
-  const { cells, floorId, pixelX, pixelY, baseCellSize, subById, pieceById } = args;
+  const { cells, floorId, pixelX, pixelY, baseCellSize, zoom, subById, pieceById } = args;
 
   let bestZ = -1;
   let best: { cell: PaintedCell; sub: SubdivisionConfig; piece: Piece } | null = null;
@@ -34,7 +35,7 @@ export function findInteractiveCellAtPixel(args: {
     if (cell.floorId !== floorId) continue;
     const sub = subById.get(cell.subdivisionId);
     if (!sub) continue;
-    const cellSize = baseCellSize / sub.cellSizeRatio;
+    const cellSize = (baseCellSize * zoom) / sub.cellSizeRatio;
     const minX = cell.gridX * cellSize;
     const minY = cell.gridY * cellSize;
     if (pixelX < minX || pixelX >= minX + cellSize) continue;

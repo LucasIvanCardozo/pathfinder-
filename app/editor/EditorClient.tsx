@@ -27,6 +27,7 @@ import { useReload } from "@/hooks";
 import { Button } from "@/components/Button";
 import { Empty } from "@/components/Empty";
 import { SubdivisionManager } from "@/components/SubdivisionManager";
+import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "@/lib/shared/constants/map";
 import styles from "./Editor.module.css";
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
@@ -99,6 +100,9 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     width: initialScenario?.width ?? 100,
     height: initialScenario?.height ?? 300,
   };
+  const [zoom, setZoom] = useState(1);
+  const handleZoomIn = () => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+  const handleZoomOut = () => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
   // Pieces are global — every piece is paintable in any subdivision cell.
   const activePieces = allPieces;
@@ -529,7 +533,39 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
               +↑
             </Button>
             <span className={styles.floorSwitcherDivider} aria-hidden="true" />
-            {canDeleteFloor ? (
+          </div>
+
+          <div className={styles.zoomControls}>
+            <Button
+              type="button"
+              size="mini"
+              onClick={handleZoomOut}
+              disabled={zoom <= MIN_ZOOM}
+              title="Reducir zoom"
+            >
+              −
+            </Button>
+            <span className={styles.zoomDisplay} aria-live="polite">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              type="button"
+              size="mini"
+              onClick={handleZoomIn}
+              disabled={zoom >= MAX_ZOOM}
+              title="Aumentar zoom"
+            >
+              +
+            </Button>
+          </div>
+
+          <span className={styles.canvasStat}>
+            {paintedInFloor} celdas · {doorsInFloor} puertas
+          </span>
+          <span className={styles.canvasStat}>
+            Grilla {mapDims.width}×{mapDims.height} · {mapDims.baseCellSize}px
+          </span>
+          {canDeleteFloor ? (
               <Button
                 type="button"
                 size="mini"
@@ -540,7 +576,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
                 ×
               </Button>
             ) : null}
-          </div>
           <span className={styles.canvasStat}>
             {paintedInFloor} celdas · {doorsInFloor} puertas
           </span>
@@ -641,6 +676,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           floors={floors}
           activeFloorId={activeFloorId}
           mapDims={mapDims}
+          zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
           pieces={allUsedPieces}
