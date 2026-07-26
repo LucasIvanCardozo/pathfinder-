@@ -4,6 +4,7 @@
   gap: 0.25rem;
   padding: 0.25rem;
   background: var(--bg-elevated);
+  align-self: center;
   border: 1px solid var(--border);
   border-radius: 6px;
   width: fit-content;
@@ -16,7 +17,7 @@
 
 .tabWrapper.dropLeft::before,
 .tabWrapper.dropRight::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 4px;
   bottom: 4px;
