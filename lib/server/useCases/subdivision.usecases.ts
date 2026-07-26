@@ -1,6 +1,4 @@
-import { ALL_PIECES } from "@/assets";
-import { Prisma } from "@/generated/prisma/client";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Piece } from "@/lib/shared/types/piece.types";
 import {
@@ -37,22 +35,21 @@ export const subdivisionUseCases = {
     "use cache";
     cacheLife("hours");
     cacheTag("pathfinder:pieces");
+    const { ALL_PIECES } = await import("@/assets");
     return ALL_PIECES;
   },
 
-  /** Create a subdivision after validating every piece id against the catalog. */
+  /** Create a subdivision. Pieces are global — no per-subdivision validation. */
   async create(db: PrismaClient | Prisma.TransactionClient, input: SubdivisionConfigInput) {
-    assertPieceIdsValid(input.pieceIds);
     return subdivisionRepository(db).create(input);
   },
 
-  /** Update a subdivision after validating every piece id against the catalog. */
+  /** Update a subdivision. Pieces are global — no per-subdivision validation. */
   async update(
     db: PrismaClient | Prisma.TransactionClient,
     id: string,
     input: SubdivisionConfigInput,
   ) {
-    assertPieceIdsValid(input.pieceIds);
     return subdivisionRepository(db).update(id, input);
   },
 
@@ -88,11 +85,3 @@ export const subdivisionUseCases = {
   },
 };
 
-function assertPieceIdsValid(pieceIds: string[]): void {
-  const validIds = new Set(ALL_PIECES.map((p) => p.id));
-  for (const id of pieceIds) {
-    if (!validIds.has(id)) {
-      throw new Error(`Pieza inválida: ${id}`);
-    }
-  }
-}

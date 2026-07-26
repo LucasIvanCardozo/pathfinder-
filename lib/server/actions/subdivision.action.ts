@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import createAction from "@/lib/server/actions/createAction";
 import { subdivisionUseCases } from "@/lib/server/useCases";
-import { SubdivisionConfigPieceIdsInputSchema } from "@/lib/shared/schemas/subdivision.schemas";
+import { SubdivisionConfigInputSchema } from "@/lib/shared/schemas/subdivision.schemas";
 
 /** Cached piece catalog used by the admin gallery. */
 export const listAllPieces = createAction(null, async () => subdivisionUseCases.getAllPieces());
@@ -14,7 +14,7 @@ export const listSubdivisions = createAction(null, async () => subdivisionUseCas
 
 /** Create a subdivision. */
 export const createSubdivision = createAction(
-  SubdivisionConfigPieceIdsInputSchema,
+  SubdivisionConfigInputSchema,
   async ({ data }) => {
     const db = (await import("@/lib/server/db/db")).default;
     const sub = await subdivisionUseCases.create(db, data);
@@ -28,7 +28,7 @@ export const createSubdivision = createAction(
 export const updateSubdivision = createAction(
   z
     .object({ id: z.string().min(1) })
-    .extend(SubdivisionConfigPieceIdsInputSchema.shape),
+    .extend(SubdivisionConfigInputSchema.shape),
   async ({ data }) => {
     const db = (await import("@/lib/server/db/db")).default;
     const { id, ...input } = data;

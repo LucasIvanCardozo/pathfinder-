@@ -1,44 +1,42 @@
 import type { z } from "zod";
 import type {
-  SubdivisionConfigPieceIdsInputSchema,
+  SubdivisionConfigInputSchema,
   SubdivisionConfigSchema,
 } from "@/lib/shared/schemas/subdivision.schemas";
 
 /**
  * A subdivision config describes one kind of layer inside a floor (ground,
- * objects, walls, etc.). Subdivision configs are GLOBAL — every floor in
- * every scenario shares the same set. They are stored in the database and
- * can be managed at runtime via the admin UI.
+ * objects, walls, etc.). Pieces are global — any piece can be painted into
+ * any subdivision cell. The `cellSizeRatio` controls how granular the layer
+ * is (ratio 4 has 16x more cells per floor cell than ratio 1), and `order`
+ * controls the Z-stack.
  */
 export type SubdivisionConfig = z.infer<typeof SubdivisionConfigSchema>;
 
-export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigPieceIdsInputSchema>;
+export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigInputSchema>;
 
 /**
  * The default subdivision seed payload. Loaded by `prisma/seed.ts` and by
  * `subdivisionUseCases.seedDefaults(db)` (idempotent app-side repair).
  *
- * The door piece is in `Paredes` — it has the door-states trait and behaves
- * like a door when painted. door-closed / door-open / door-locked are
- * visualStates of that single Piece; the trait decides which state to
- * render.
+ * Pieces used to be scoped per-subdivision (the "Puertas" subdivision owned
+ * the door piece, etc.); that coupling is gone. The door piece is now in the
+ * global piece registry and the door trait (`door-states`) is what makes it
+ * interactive when painted anywhere.
  */
 export const DEFAULT_SUBDIVISIONS: SubdivisionConfigInput[] = [
   {
     name: "Suelo",
-    pieceIds: ["floor-stone", "floor-wood", "floor-sand", "water-plain", "lava-plain", "floor-pasto"],
     cellSizeRatio: 1,
     order: 0,
   },
   {
     name: "Objetos",
-    pieceIds: ["decoration-marker"],
     cellSizeRatio: 4,
     order: 1,
   },
   {
     name: "Paredes",
-    pieceIds: ["wall-stone", "door"],
     cellSizeRatio: 8,
     order: 2,
   },

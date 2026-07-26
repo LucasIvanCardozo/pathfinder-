@@ -3,22 +3,20 @@ import type { SubdivisionConfig, SubdivisionConfigInput } from "@/lib/shared/typ
 import { runInTx } from "@/lib/server/utils/runInTx";
 
 /**
- * Subdivision repository. The `pieceIds` column is stored as a JSON-encoded
- * string in Postgres; this is the only place that touches the encode/decode.
- * Everything else in the app sees `pieceIds: string[]`.
+ * Subdivision repository. Pieces are NOT scoped to a subdivision, so the
+ * repository doesn't need to validate or transform any piece-id list. The
+ * CRUD here is a thin pass-through to Prisma plus the reorder transaction.
  */
 export function subdivisionRepository(db: PrismaClient | Prisma.TransactionClient) {
   function rowToConfig(row: {
     id: string;
     name: string;
-    pieceIds: string;
     cellSizeRatio: number;
     order: number;
   }): SubdivisionConfig {
     return {
       id: row.id,
       name: row.name,
-      pieceIds: JSON.parse(row.pieceIds) as string[],
       cellSizeRatio: row.cellSizeRatio,
       order: row.order,
     };
@@ -27,7 +25,6 @@ export function subdivisionRepository(db: PrismaClient | Prisma.TransactionClien
   function payloadToRow(input: SubdivisionConfigInput) {
     return {
       name: input.name,
-      pieceIds: JSON.stringify(input.pieceIds),
       cellSizeRatio: input.cellSizeRatio,
       order: input.order,
     };

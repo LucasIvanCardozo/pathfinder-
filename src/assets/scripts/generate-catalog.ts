@@ -461,16 +461,6 @@ export function findTexture(pieceId: string): Piece | undefined {
   return findPiece(pieceId);
 }
 
-export function findPiecesByIds(ids: string[]): Piece[] {
-  return ids
-    .map((id) => findPiece(id))
-    .filter((p): p is Piece => p !== undefined);
-}
-
-/** @deprecated use findPiecesByIds. */
-export function findTexturesByIds(ids: string[]): Piece[] {
-  return findPiecesByIds(ids);
-}
 `;
 
   writeFileSync(CATALOG_PATH, catalogContent, "utf-8");

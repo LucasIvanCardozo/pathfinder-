@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { findPiecesByIds } from "@/assets";
 import {
   type PaintTool,
   PaintToolbar,
@@ -93,18 +92,17 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const fallbackFloor: Floor = { id: "", name: "", baseCellSize: 64, width: 20, height: 15 };
   const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0] ?? fallbackFloor;
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
-  const activePieces = useMemo(
-    () => (activeSubdivision ? findPiecesByIds(activeSubdivision.pieceIds) : []),
-    [activeSubdivision],
-  );
+  // Pieces are global — every piece is paintable in any subdivision cell.
+  const activePieces = allPieces;
 
-  const usedPieceIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const sub of subdivisions) {
-      for (const id of sub.pieceIds) ids.add(id);
-    }
-    return ids;
-  }, [subdivisions]);
+  // Derive the "used" set from the actual painted cells (not from the
+  // subdivision declarations). The previous implementation used
+  // `subdivisions[i].pieceIds`, which over-reported (declared but unpainted)
+  // and missed anything painted that wasn't pre-declared.
+  const usedPieceIds = useMemo(
+    () => new Set(paintedCells.map((c) => c.pieceId)),
+    [paintedCells],
+  );
   const allUsedPieces = useMemo(
     () => allPieces.filter((p) => usedPieceIds.has(p.id)),
     [allPieces, usedPieceIds],
@@ -186,19 +184,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     setActivePieceId(null);
   };
 
-  const handleSelectDoorPiece = useCallback(() => {
-    for (const sub of subdivisions) {
-      for (const id of sub.pieceIds) {
-        const p = pieceById.get(id);
-        if (p && getTextureTraits(p).some((tr) => tr.kind === "door-states")) {
-          setActiveSubdivisionId(sub.id);
-          setActivePieceId(id);
-          return;
-        }
-      }
-    }
-  }, [subdivisions, pieceById]);
-
   const handleReorder = useCallback(
     async (fromId: string, toId: string, side: "left" | "right") => {
       if (fromId === toId) return;
@@ -242,7 +227,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   useKeyboardShortcuts([
     { key: "b", handler: () => setTool("paint") },
     { key: "e", handler: () => setTool("erase") },
-    { key: "d", handler: handleSelectDoorPiece },
     {
       key: "s",
       ctrl: true,
@@ -670,7 +654,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         isOpen={isManaging}
         onClose={handleCloseManager}
         subdivisions={subdivisions}
-        allPieces={allPieces}
       />
 
       {traitMenuNode}

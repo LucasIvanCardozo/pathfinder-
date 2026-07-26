@@ -1,25 +1,23 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { Controller, FormProvider, useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import type { z } from "zod";
+import type { SubdivisionConfig } from "@/lib/shared/types";
+import { SubdivisionConfigInputSchema } from "@/lib/shared/schemas";
 import {
-  type Piece,
-  PIECE_CATEGORIES,
-  type SubdivisionConfig,
-} from "@/lib/shared/types";
-import { SubdivisionConfigPieceIdsInputSchema } from "@/lib/shared/schemas";
-import { createSubdivision, deleteSubdivision, updateSubdivision } from "@/lib/server/actions/subdivision.action";
-import traitBadgeStyles from "@/components/TraitBadge.module.css";
+  createSubdivision,
+  deleteSubdivision,
+  updateSubdivision,
+} from "@/lib/server/actions/subdivision.action";
 import { Button } from "@/components/Button";
 import { Empty } from "@/components/Empty";
 import { FormField, FormInput, FormNumberInput } from "@/components/form";
 import { Modal } from "@/components/Modal";
 import styles from "./SubdivisionManager.module.css";
 
-const FormSchema = SubdivisionConfigPieceIdsInputSchema;
+const FormSchema = SubdivisionConfigInputSchema;
 type FormValues = z.infer<typeof FormSchema>;
 
 type Props = {
@@ -29,30 +27,18 @@ type Props = {
    * as an initial snapshot and maintains its own local copy while open so
    * create/update/delete can reflect immediately without round-tripping. */
   subdivisions: SubdivisionConfig[];
-  allPieces: Piece[];
 };
 
 const DEFAULT_FORM_VALUES: FormValues = {
   name: "",
-  pieceIds: [],
   cellSizeRatio: 1,
   order: 0,
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  floor: "Suelo",
-  wall: "Paredes",
-  door: "Puertas",
-  water: "Agua",
-  lava: "Lava",
-  decoration: "Decoración",
-  other: "Otros",
 };
 
 /** Form-mode controls whether the right-hand panel is rendered. */
 type Mode = "idle" | "creating" | "editing";
 
-export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }: Props) {
+export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
   // Local copy of subdivisions. Synced with the parent prop on every modal
   // open so external changes (e.g. another tab) still show up next time the
   // user opens the manager.
@@ -60,7 +46,6 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
   const [mode, setMode] = useState<Mode>("idle");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pieceSearch, setPieceSearch] = useState("");
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -70,24 +55,6 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
       setEditingId(null);
     }
   }, [isOpen, subdivisions]);
-
-
-  const piecesByCategory = useMemo(() => {
-    const groups = new Map<string, Piece[]>();
-    for (const cat of PIECE_CATEGORIES) groups.set(cat, []);
-    for (const p of allPieces) {
-      groups.get(p.category)?.push(p);
-    }
-    return groups;
-  }, [allPieces]);
-
-  const filteredPieces = useMemo(() => {
-    const q = pieceSearch.trim().toLowerCase();
-    if (!q) return allPieces;
-    return allPieces.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.id.includes(q),
-    );
-  }, [allPieces, pieceSearch]);
 
   const methods = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -114,21 +81,13 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
     setError(null);
     methods.reset({
       name: sub.name,
-      pieceIds: sub.pieceIds,
       cellSizeRatio: sub.cellSizeRatio,
       order: sub.order,
     });
     setMode("editing");
   };
 
-  const handleDelete = async (sub: SubdivisionConfig) => {
-    const used = sub.pieceIds.length > 0;
-    if (used) {
-      alert(
-        `"${sub.name}" no se puede borrar: tiene ${sub.pieceIds.length} pieza(s) usada(s). Primero quitá las piezas.`,
-      );
-      return;
-    }
+  const handleDelete = (sub: SubdivisionConfig) => {
     if (!confirm(`¿Borrar "${sub.name}"?`)) return;
     startTransition(async () => {
       const res = await deleteSubdivision({ id: sub.id });
@@ -157,9 +116,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
       if (isEditing) {
         setLocal((prev) =>
           prev.map((s) =>
-            s.id === editingId
-              ? { ...s, ...data, id: editingId! }
-              : s,
+            s.id === editingId ? { ...s, ...data, id: editingId! } : s,
           ),
         );
       } else if (action.data) {
@@ -192,7 +149,6 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
           ) : (
             <ul className={styles.subdivisionListItems}>
               {local.map((sub) => {
-                const used = sub.pieceIds.length > 0;
                 const isEditing = editingId === sub.id;
                 const itemClass = isEditing
                   ? `${styles.subdivisionListItem} ${styles.editing}`
@@ -207,17 +163,9 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                       <div className={styles.subdivisionListCardMain}>
                         <strong>{sub.name}</strong>
                         <span className={styles.subdivisionListMeta}>
-                          {sub.pieceIds.length} pieza(s) · ratio {sub.cellSizeRatio} · z{" "}
-                          {sub.order}
+                          ratio {sub.cellSizeRatio} · z {sub.order}
                         </span>
                       </div>
-                      <span
-                        className={`${styles.subdivisionListBadge} ${
-                          used ? styles.inUse : styles.free
-                        }`}
-                      >
-                        {used ? "En uso" : "Libre"}
-                      </span>
                     </button>
                     <div className={styles.subdivisionListActions}>
                       <Button
@@ -273,108 +221,11 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                 </FormField>
               </div>
 
-              <section className={styles.piecePicker}>
-                <header className={styles.piecePickerHeader}>
-                  <h4>Piezas disponibles</h4>
-                  <span className={styles.piecePickerCount}>
-                    {methods.watch("pieceIds")?.length ?? 0} seleccionada(s) ·{" "}
-                    {allPieces.length} total
-                  </span>
-                </header>
-
-                <input
-                  type="search"
-                  placeholder="Buscar piezas…"
-                  value={pieceSearch}
-                  onChange={(e) => setPieceSearch(e.target.value)}
-                  className={styles.piecePickerSearch}
-                />
-
-                <Controller
-                  control={methods.control}
-                  name="pieceIds"
-                  render={({ field }) => {
-                    const selected = new Set(field.value);
-                    return (
-                      <div className={styles.piecePickerGrid}>
-                        {PIECE_CATEGORIES.map((cat) => {
-                          const inCat =
-                            pieceSearch.trim() === ""
-                              ? (piecesByCategory.get(cat) ?? [])
-                              : filteredPieces.filter((p) => p.category === cat);
-                          if (inCat.length === 0) return null;
-                          return (
-                            <div key={cat}>
-                              <h5 className={styles.piecePickerGroupTitle}>
-                                {CATEGORY_LABELS[cat] ?? cat}
-                              </h5>
-                              <div className={styles.piecePickerCards}>
-                                {inCat.map((piece) => {
-                                  const checked = selected.has(piece.id);
-                                  const def =
-                                    piece.visualStates.find((v) => v.isDefault) ??
-                                    piece.visualStates[0];
-                                  if (!def) return null;
-                                  const cardClass = checked
-                                    ? `${styles.piecePickerCard} ${styles.selected}`
-                                    : styles.piecePickerCard;
-                                  return (
-                                    <label key={piece.id} className={cardClass}>
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={() => {
-                                          const next = new Set(selected);
-                                          if (next.has(piece.id)) next.delete(piece.id);
-                                          else next.add(piece.id);
-                                          field.onChange(Array.from(next));
-                                        }}
-                                      />
-                                      <div className={styles.piecePickerPreview}>
-                                        <Image
-                                          src={def.imagePath}
-                                          alt={piece.name}
-                                          width={piece.width}
-                                          height={piece.height}
-                                          sizes="64px"
-                                          draggable={false}
-                                        />
-                                      </div>
-                                      <div className={styles.piecePickerInfo}>
-                                        <span className={styles.piecePickerName}>
-                                          {piece.name}
-                                        </span>
-                                        {piece.visualStates.length > 1 ? (
-                                          <small className={styles.piecePickerStates}>
-                                            {piece.visualStates.length} estados
-                                          </small>
-                                        ) : null}
-                                        {piece.traits && piece.traits.length > 0 ? (
-                                          <div className={styles.piecePickerTraits}>
-                                            {piece.traits.map((t) => (
-                                              <span
-                                                key={t.kind}
-                                                className={traitBadgeStyles.traitBadge}
-                                                title={t.kind}
-                                              >
-                                                {t.kind}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  }}
-                />
-              </section>
+              <p className={styles.subdivisionFormNote}>
+                Las piezas son globales: cualquier pieza puede pintarse en
+                cualquier subdivision. Administra las piezas en{" "}
+                <strong>Administrar piezas</strong> (en la página principal).
+              </p>
 
               <footer className={styles.subdivisionFormActions}>
                 <Button type="button" onClick={closeForm}>

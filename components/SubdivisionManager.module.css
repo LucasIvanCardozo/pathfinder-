@@ -108,26 +108,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.subdivisionListBadge {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 0.15rem 0.4rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-  font-weight: 600;
-}
-
-.subdivisionListBadge.free {
-  background: rgba(120, 180, 100, 0.15);
-  color: rgb(150, 210, 130);
-}
-
-.subdivisionListBadge.inUse {
-  background: rgba(180, 100, 100, 0.15);
-  color: rgb(220, 150, 150);
-}
-
 .subdivisionListActions {
   display: flex;
   gap: 0.35rem;
@@ -168,150 +148,15 @@
   }
 }
 
-.piecePicker {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+.subdivisionFormNote {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.75rem;
-  min-height: 0;
-  flex: 1;
-}
-
-.piecePickerHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.piecePickerHeader h4 {
-  margin: 0;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--fg-muted);
-}
-
-.piecePickerCount {
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.piecePickerSearch {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.4rem 0.6rem;
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.85rem;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.piecePickerSearch:focus {
-  border-color: var(--accent);
-}
-
-.piecePickerGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  overflow-y: auto;
-  max-height: 320px;
-  padding-right: 4px;
-}
-
-.piecePickerGroupTitle {
-  margin: 0 0 0.4rem 0;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--fg-muted);
-  border-bottom: 1px dashed var(--border);
-  padding-bottom: 0.25rem;
-}
-
-.piecePickerCard {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  cursor: pointer;
   font-size: 0.8rem;
-  transition:
-    border-color 0.15s,
-    background 0.15s;
-  user-select: none;
-}
-
-.piecePickerCard:hover {
-  border-color: var(--accent);
-}
-
-.piecePickerCard.selected {
-  border-color: var(--accent);
-  background: rgba(201, 168, 106, 0.12);
-}
-
-.piecePickerCard input[type="checkbox"] {
-  accent-color: var(--accent);
-  margin: 0;
-  flex-shrink: 0;
-}
-
-.piecePickerPreview {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  border-radius: 4px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.piecePickerPreview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.piecePickerInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.piecePickerName {
-  color: var(--fg);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.piecePickerStates {
-  color: var(--fg-muted);
-  font-size: 0.65rem;
-}
-
-.piecePickerTraits {
-  display: flex;
-  gap: 0.2rem;
-  flex-wrap: wrap;
-  margin-top: 0.15rem;
+  line-height: 1.4;
 }
 
 .subdivisionFormActions {
