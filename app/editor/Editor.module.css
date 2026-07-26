@@ -62,9 +62,8 @@
 }
 
 .scenarioNameInput {
-  flex: 1;
-  min-width: 200px;
-  max-width: 360px;
+  width: 240px;
+  flex: none;
   padding: 0.4rem 0.6rem;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -147,6 +146,23 @@
 .autosaveStatus[data-status='error'] {
   color: #e07a7a;
   border-color: #5a2a2a;
+}
+
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.dangerZoneHeader {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  margin-bottom: 0.25rem;
 }
 
 .paintToolbar {

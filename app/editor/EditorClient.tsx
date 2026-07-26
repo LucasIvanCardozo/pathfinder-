@@ -73,7 +73,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const [, startSaveTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const [traitMenu, setTraitMenu] = useState<{
@@ -423,23 +422,17 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     [isDirty, scenarioId, scenarioName, mapDims.baseCellSize, mapDims.width, mapDims.height, floors, paintedCells, router],
   );
 
-  // Periodic autosave. Runs every AUTOSAVE_INTERVAL_MS while enabled; the
-  // tick is a no-op when there's nothing dirty to save.
+  // Periodic autosave. Always on; the tick is a no-op when there's nothing
+  // dirty to save.
   useEffect(() => {
-    if (!autosaveEnabled) return;
     const id = setInterval(() => {
       if (!isDirty) return;
       startSaveTransition(() => handleSave(true));
     }, AUTOSAVE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [autosaveEnabled, isDirty, handleSave]);
+  }, [isDirty, handleSave]);
 
   const paintedInFloor = paintedCells.filter((c) => c.floorId === activeFloorId).length;
-  const doorsInFloor = paintedCells.filter((c) => {
-    if (c.floorId !== activeFloorId) return false;
-    const p = pieceById.get(c.pieceId);
-    return p ? getTextureTraits(p).some((tr) => tr.kind === "door-states") : false;
-  }).length;
 
   const traitMenuNode = useMemo(() => {
     if (!traitMenu) return null;
@@ -485,8 +478,15 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             onSelect={setActivePieceId}
           />
         ) : null}
-        <WeatherPanel onChange={setWeatherState} initial={weatherState} />
-      </aside>
+            <WeatherPanel onChange={setWeatherState} initial={weatherState} />
+            <div className={styles.dangerZone}>
+              <div className={styles.dangerZoneHeader}>Eliminar contenido</div>
+              <Button type="button" size="mini" variant="danger" onClick={handleClearAll} disabled={paintedCells.length === 0} title="Borrar TODO el scenario">🗑 Borrar todo</Button>
+              <Button type="button" size="mini" variant="danger" onClick={handleClearFloor} disabled={paintedInFloor === 0} title={`Borrar todo "${activeFloor.name}"`}>🗑 Borrar piso actual</Button>
+              <Button type="button" size="mini" variant="danger" onClick={handleClearSubdivision} disabled={!activeSubdivision || paintedCells.filter((c) => c.floorId === activeFloorId && c.subdivisionId === activeSubdivisionId).length === 0} title={activeSubdivision ? `Borrar "${activeSubdivision.name}" de "${activeFloor.name}"` : "Sin subcapa activa"}>🗑 Borrar subcapa activa</Button>
+              {canDeleteFloor ? <Button type="button" size="mini" variant="danger" onClick={handleDeleteFloor} title={`Borrar el piso "${activeFloor.name}" del scenario`}>× Eliminar piso</Button> : null}
+            </div>
+          </aside>
 
       <main className={styles.canvasArea}>
         <header className={styles.canvasHeader}>
@@ -562,93 +562,16 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             </Button>
           </div>
 
-          <span className={styles.canvasStat}>
-            {paintedInFloor} celdas · {doorsInFloor} puertas
-          </span>
-          <span className={styles.canvasStat}>
-            Grilla {mapDims.width}×{mapDims.height} · {mapDims.baseCellSize}px
-          </span>
-          {canDeleteFloor ? (
-              <Button
-                type="button"
-                size="mini"
-                variant="danger"
-                onClick={handleDeleteFloor}
-                title={`Borrar ${activeFloor.name}`}
-              >
-                ×
-              </Button>
-            ) : null}
-          <span className={styles.canvasStat}>
-            {paintedInFloor} celdas · {doorsInFloor} puertas
-          </span>
-          <span className={styles.canvasStat}>
-            Grilla {mapDims.width}×{mapDims.height} · {mapDims.baseCellSize}px
-          </span>
           <span
             className={styles.autosaveStatus}
             data-status={autosaveStatus}
-            title={
-              autosaveEnabled
-                ? `Autoguardado cada ${AUTOSAVE_INTERVAL_MS / 60_000} min`
-                : "Autoguardado desactivado"
-            }
+            title={`Autoguardado cada ${AUTOSAVE_INTERVAL_MS / 60_000} min`}
           >
             {autosaveStatus === "saving" && "⟳ Guardando…"}
             {autosaveStatus === "saved" && savedAt && `✓ Guardado ${savedAt}`}
             {autosaveStatus === "error" && "✗ Error al guardar"}
             {autosaveStatus === "idle" && (savedAt ? `Guardado ${savedAt}` : "○")}
           </span>
-          <Button
-            type="button"
-            size="mini"
-            variant={autosaveEnabled ? "primary" : "default"}
-            onClick={() => setAutosaveEnabled((v) => !v)}
-            title={autosaveEnabled ? "Desactivar autoguardado" : "Activar autoguardado"}
-          >
-            {autosaveEnabled ? "Autoguardado ON" : "Autoguardado OFF"}
-          </Button>
-          <div>
-            <Button
-              type="button"
-              size="mini"
-              variant="danger"
-              onClick={handleClearAll}
-              disabled={paintedCells.length === 0}
-              title="Borrar TODO el scenario"
-            >
-              🗑 Todo
-            </Button>
-            <Button
-              type="button"
-              size="mini"
-              variant="danger"
-              onClick={handleClearFloor}
-              disabled={paintedInFloor === 0}
-              title={`Borrar todo "${activeFloor.name}"`}
-            >
-              🗑 Piso
-            </Button>
-            <Button
-              type="button"
-              size="mini"
-              variant="danger"
-              onClick={handleClearSubdivision}
-              disabled={
-                !activeSubdivision ||
-                paintedCells.filter(
-                  (c) => c.floorId === activeFloorId && c.subdivisionId === activeSubdivisionId,
-                ).length === 0
-              }
-              title={
-                activeSubdivision
-                  ? `Borrar "${activeSubdivision.name}" de "${activeFloor.name}"`
-                  : "Sin subcapa activa"
-              }
-            >
-              🗑 Sub
-            </Button>
-          </div>
           <Button
             type="button"
             variant="primary"
