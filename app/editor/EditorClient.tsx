@@ -13,6 +13,7 @@ import {
   WeatherOverlay,
   WeatherPanel,
   type WeatherState,
+  WEATHER_DEFAULT,
   getInteractiveTrait,
   getTextureTraits,
   getWeather,
@@ -80,10 +81,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
 
   // Weather state is ephemeral (not persisted). Panel writes to here; audio
   // and overlay read from here.
-  const [weatherState, setWeatherState] = useState<WeatherState>({
-    weatherId: "none",
-    volume: 50,
-  });
+  const [weatherState, setWeatherState] = useState<WeatherState>(WEATHER_DEFAULT);
   // When the storm's thunder audio fires, the audio hook calls back here
   // and we forward the timestamp to StormEffect for a synced flash.
   const [thunderAt, setThunderAt] = useState<number | null>(null);
@@ -145,28 +143,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           ),
         );
         return;
-      }
-
-      // Find any existing cell at this position in the active subdivision. If
-      // it has an interactive trait (e.g. door-states), open the trait menu
-      // instead of overwriting it (unless we're dragging).
-      const existingCell = paintedCells.find(
-        (c) => c.floorId === floorId && c.gridX === gridX && c.gridY === gridY,
-      );
-
-      if (existingCell && !isDragging) {
-        const existingPiece = pieceById.get(existingCell.pieceId);
-        const interactiveTrait = existingPiece ? getInteractiveTrait(existingPiece) : undefined;
-        if (interactiveTrait?.getMenu) {
-          const px = screenPos ? screenPos.x + 12 : gridX * activeFloor.baseCellSize;
-          const py = screenPos ? screenPos.y + 12 : gridY * activeFloor.baseCellSize;
-          setTraitMenu({
-            cellId: existingCell.id,
-            traitKind: interactiveTrait.kind,
-            position: { x: px, y: py },
-          });
-          return;
-        }
       }
 
       if (!pieceId) return;

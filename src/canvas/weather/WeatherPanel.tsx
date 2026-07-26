@@ -15,7 +15,8 @@ type Props = {
   initial?: WeatherState;
 };
 
-const DEFAULT: WeatherState = { weatherId: "none", volume: 50 };
+const DEFAULT: WeatherState = { weatherId: "none", volume: 100 };
+export const WEATHER_DEFAULT: WeatherState = DEFAULT;
 
 export function WeatherPanel({ onChange, initial }: Props) {
   const methods = useForm<WeatherState>({

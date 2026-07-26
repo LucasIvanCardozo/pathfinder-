@@ -21,7 +21,7 @@ export {
 } from "./traits";
 export type { TraitImpl, TraitKind, DoorState } from "./traits";
 
-export { WeatherPanel, type WeatherState } from "./weather/WeatherPanel";
+export { WeatherPanel, WEATHER_DEFAULT, type WeatherState } from "./weather/WeatherPanel";
 export { WeatherOverlay } from "./weather/WeatherOverlay";
 export { useWeatherAudio } from "./weather/useWeatherAudio";
 export { WEATHERS, getWeather } from "./weather/registry";

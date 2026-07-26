@@ -8,4 +8,11 @@
   max-width: 100%;
   max-height: calc(100vh - 200px);
   align-self: flex-start;
+  /* Hide scrollbars visually but keep the scroll functionality
+     (pan via spacebar will replace scrolling in commit 2+). */
+  scrollbar-width: none;
+}
+
+.canvas::-webkit-scrollbar {
+  display: none;
 }

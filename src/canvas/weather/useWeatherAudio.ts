@@ -42,6 +42,16 @@ export function useWeatherAudio(
     onTriggerRef.current = onTrigger;
   }, [onTrigger]);
 
+  // Mirror `volume` into a ref so the audio-creation effect below can read
+  // the current volume synchronously when it first calls `a.play()`.
+  // Without this, the audio plays at the HTMLAudioElement's default volume
+  // (1.0) until the dedicated volume-sync effect runs, causing a brief
+  // burst at max before dropping to the slider's value.
+  const volumeRef = useRef(volume);
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+
   const audiosRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const triggersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -73,7 +83,11 @@ export function useWeatherAudio(
         a.preload = "auto";
         audiosRef.current.set(s.src, a);
       }
-      // Initial volume is set by the dedicated volume-sync effect below.
+      // Sync volume BEFORE play(): the dedicated volume-sync effect runs
+      // after this one, so without this set the audio would briefly play
+      // at the HTMLAudioElement's default volume (1.0) before being
+      // dropped to the slider's value.
+      a.volume = Math.max(0, Math.min(1, volumeRef.current));
 
       if (s.mode === "loop") {
         // Best-effort start. Any rejection (autoplay block) is silently
