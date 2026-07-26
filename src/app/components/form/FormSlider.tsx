@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import styles from "./FormSlider.module.css";
 
 type FormSliderProps = {
   name: string;
@@ -28,7 +29,7 @@ export function FormSlider({
     <input
       id={name}
       type="range"
-      className="form-slider"
+      className={styles.slider}
       min={min}
       max={max}
       step={step}

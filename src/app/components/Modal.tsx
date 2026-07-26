@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect } from "react";
+import styles from "./Modal.module.css";
 
 type ModalProps = {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop intentionally closes on click.
     <div
-      className="modal-backdrop"
+      className={styles.modalBackdrop}
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
@@ -38,25 +39,25 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
       role="presentation"
     >
       <div
-        className="modal-panel"
+        className={styles.modalPanel}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <header className="modal-header">
+        <header className={styles.modalHeader}>
           <h2>{title}</h2>
           <button
             type="button"
-            className="modal-close"
+            className={styles.modalClose}
             onClick={onClose}
             aria-label="Cerrar"
           >
             ×
           </button>
         </header>
-        <div className="modal-content">{children}</div>
+        <div className={styles.modalContent}>{children}</div>
       </div>
     </div>
   );

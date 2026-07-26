@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import styles from "./FormNumberInput.module.css";
 
 type FormNumberInputProps = {
   name: string;
@@ -28,7 +29,7 @@ export function FormNumberInput({
     <input
       id={name}
       type="number"
-      className="form-control"
+      className={styles.control}
       inputMode="numeric"
       min={min}
       max={max}

@@ -5,14 +5,15 @@ import {
   listAllPieces,
   listSubdivisions,
 } from "@/lib/server/actions/subdivision.action";
+import styles from "./Editor.module.css";
 import { EditorClient } from "./EditorClient";
 
 type SearchParams = Promise<{ id?: string }>;
 
 function EditorFallback() {
   return (
-    <div className="editor">
-      <div className="canvas-loading">Cargando editor…</div>
+    <div className={styles.editor}>
+      <div className={styles.canvasLoading}>Cargando editor…</div>
     </div>
   );
 }

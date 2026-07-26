@@ -1,8 +1,4 @@
-/* ─────────────────────────────────────────────
-   Subdivision manager modal — layout
-   ───────────────────────────────────────────── */
-
-.subdivision-manager {
+.subdivisionManager {
   display: grid;
   grid-template-columns: minmax(220px, 280px) 1fr;
   gap: 1.5rem;
@@ -10,9 +6,7 @@
   font-size: 0.9rem;
 }
 
-/* When only the list is visible the right column is gone, so collapse the
-   grid to one centered track and let the list breathe inside the panel. */
-.subdivision-manager--mode-idle {
+.subdivisionManager[data-mode="idle"] {
   grid-template-columns: minmax(0, 1fr);
   max-width: 520px;
   margin-inline: auto;
@@ -20,21 +14,19 @@
 }
 
 @media (max-width: 720px) {
-  .subdivision-manager {
+  .subdivisionManager {
     grid-template-columns: 1fr;
   }
 }
 
-/* ─── LIST ─── */
-
-.subdivision-list {
+.subdivisionList {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
 }
 
-.subdivision-list-header {
+.subdivisionListHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -43,7 +35,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.subdivision-list-header h3 {
+.subdivisionListHeader h3 {
   margin: 0;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -51,7 +43,7 @@
   color: var(--fg-muted);
 }
 
-.subdivision-list-items {
+.subdivisionListItems {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -63,7 +55,7 @@
   padding-right: 4px;
 }
 
-.subdivision-list-item {
+.subdivisionListItem {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -71,16 +63,18 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
-.subdivision-list-item.editing {
+.subdivisionListItem.editing {
   border-color: var(--accent);
   background: rgba(201, 168, 106, 0.08);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-.subdivision-list-card {
+.subdivisionListCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -95,26 +89,26 @@
   width: 100%;
 }
 
-.subdivision-list-card-main {
+.subdivisionListCardMain {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.subdivision-list-card-main strong {
+.subdivisionListCardMain strong {
   color: var(--fg);
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-.subdivision-list-meta {
+.subdivisionListMeta {
   color: var(--fg-muted);
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
 }
 
-.subdivision-list-badge {
+.subdivisionListBadge {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -124,38 +118,36 @@
   font-weight: 600;
 }
 
-.subdivision-list-badge.free {
+.subdivisionListBadge.free {
   background: rgba(120, 180, 100, 0.15);
   color: rgb(150, 210, 130);
 }
 
-.subdivision-list-badge.in-use {
+.subdivisionListBadge.inUse {
   background: rgba(180, 100, 100, 0.15);
   color: rgb(220, 150, 150);
 }
 
-.subdivision-list-actions {
+.subdivisionListActions {
   display: flex;
   gap: 0.35rem;
   justify-content: flex-end;
 }
 
-/* ─── FORM ─── */
-
-.subdivision-form {
+.subdivisionForm {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   min-width: 0;
 }
 
-.subdivision-form-header h3 {
+.subdivisionFormHeader h3 {
   margin: 0 0 0.25rem 0;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.subdivision-form-header .error {
+.subdivisionFormHeader .error {
   margin: 0.25rem 0 0;
   padding: 0.4rem 0.6rem;
   background: rgba(220, 100, 100, 0.15);
@@ -164,21 +156,19 @@
   font-size: 0.8rem;
 }
 
-.subdivision-form-grid {
+.subdivisionFormGrid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   gap: 0.75rem;
 }
 
 @media (max-width: 560px) {
-  .subdivision-form-grid {
+  .subdivisionFormGrid {
     grid-template-columns: 1fr;
   }
 }
 
-/* ─── PIECE PICKER ─── */
-
-.piece-picker {
+.piecePicker {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -190,14 +180,14 @@
   flex: 1;
 }
 
-.piece-picker-header {
+.piecePickerHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
-.piece-picker-header h4 {
+.piecePickerHeader h4 {
   margin: 0;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -205,13 +195,13 @@
   color: var(--fg-muted);
 }
 
-.piece-picker-count {
+.piecePickerCount {
   font-size: 0.75rem;
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.piece-picker-search {
+.piecePickerSearch {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -223,11 +213,11 @@
   transition: border-color 0.15s;
 }
 
-.piece-picker-search:focus {
+.piecePickerSearch:focus {
   border-color: var(--accent);
 }
 
-.piece-picker-grid {
+.piecePickerGrid {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -236,7 +226,7 @@
   padding-right: 4px;
 }
 
-.piece-picker-group-title {
+.piecePickerGroupTitle {
   margin: 0 0 0.4rem 0;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -246,13 +236,7 @@
   padding-bottom: 0.25rem;
 }
 
-.piece-picker-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.5rem;
-}
-
-.piece-picker-card {
+.piecePickerCard {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -262,26 +246,28 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.8rem;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   user-select: none;
 }
 
-.piece-picker-card:hover {
+.piecePickerCard:hover {
   border-color: var(--accent);
 }
 
-.piece-picker-card.selected {
+.piecePickerCard.selected {
   border-color: var(--accent);
   background: rgba(201, 168, 106, 0.12);
 }
 
-.piece-picker-card input[type="checkbox"] {
+.piecePickerCard input[type="checkbox"] {
   accent-color: var(--accent);
   margin: 0;
   flex-shrink: 0;
 }
 
-.piece-picker-preview {
+.piecePickerPreview {
   width: 40px;
   height: 40px;
   display: flex;
@@ -293,14 +279,14 @@
   overflow: hidden;
 }
 
-.piece-picker-preview img {
+.piecePickerPreview img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   pointer-events: none;
 }
 
-.piece-picker-info {
+.piecePickerInfo {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -308,7 +294,7 @@
   flex: 1;
 }
 
-.piece-picker-name {
+.piecePickerName {
   color: var(--fg);
   font-weight: 500;
   white-space: nowrap;
@@ -316,30 +302,19 @@
   text-overflow: ellipsis;
 }
 
-.piece-picker-states {
+.piecePickerStates {
   color: var(--fg-muted);
   font-size: 0.65rem;
 }
 
-.piece-picker-traits {
+.piecePickerTraits {
   display: flex;
   gap: 0.2rem;
   flex-wrap: wrap;
   margin-top: 0.15rem;
 }
 
-.trait-badge {
-  font-size: 0.6rem;
-  padding: 0.1rem 0.35rem;
-  background: rgba(100, 150, 200, 0.2);
-  color: rgb(150, 200, 240);
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-/* ─── FORM ACTIONS ─── */
-
-.subdivision-form-actions {
+.subdivisionFormActions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;

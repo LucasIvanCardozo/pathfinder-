@@ -1,5 +1,4 @@
-/* Generic state menu used by traits (door-states, future ones). */
-.state-menu {
+.menu {
   position: fixed;
   z-index: 1000;
   background: #1e1e1e;
@@ -12,7 +11,7 @@
   color: #e8e8e8;
 }
 
-.state-menu-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -23,7 +22,7 @@
   font-size: 13px;
 }
 
-.state-menu-close {
+.close {
   background: none;
   border: none;
   color: #999;
@@ -33,15 +32,15 @@
   line-height: 1;
 }
 
-.state-menu-close:hover {
+.close:hover {
   color: #fff;
 }
 
-.state-menu-section {
+.section {
   padding: 4px 0;
 }
 
-.state-menu-label {
+.label {
   display: block;
   font-size: 11px;
   color: #888;
@@ -50,13 +49,13 @@
   letter-spacing: 0.5px;
 }
 
-.state-menu-states {
+.states {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
 }
 
-.state-btn {
+.stateBtn {
   flex: 1;
   min-width: 60px;
   background: #2a2a2a;
@@ -66,15 +65,17 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
-  transition: background 0.1s, border-color 0.1s;
+  transition:
+    background 0.1s,
+    border-color 0.1s;
 }
 
-.state-btn:hover {
+.stateBtn:hover {
   background: #353535;
   border-color: #555;
 }
 
-.state-btn.active {
+.stateBtn.active {
   background: #4a7fb8;
   border-color: #5a8fc8;
   color: #fff;

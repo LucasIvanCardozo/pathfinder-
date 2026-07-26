@@ -2,16 +2,18 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { createBlankScenario, listScenarios } from "@/lib/server/actions/scenario.action";
-import "./home.css";
+import { Button } from "./components/Button";
+import { Empty } from "./components/Empty";
+import styles from "./page.module.css";
 
 function HomeFallback() {
   return (
-    <main className="home">
-      <header className="home-header">
+    <main className={styles.home}>
+      <header className={styles.homeHeader}>
         <h1>Pathfinder</h1>
         <p>Battle Map — editor de escenarios</p>
       </header>
-      <p className="empty">Cargando escenarios…</p>
+      <Empty>Cargando escenarios…</Empty>
     </main>
   );
 }
@@ -26,38 +28,38 @@ async function HomeContent() {
 
   return (
     <>
-      <header className="home-header">
+      <header className={styles.homeHeader}>
         <h1>Pathfinder</h1>
         <p>Battle Map — editor de escenarios</p>
-        <nav className="home-nav">
-          <Link href="/admin/pieces" className="home-nav-link">
+        <nav className={styles.homeNav}>
+          <Link href="/admin/pieces" className={styles.homeNavLink}>
             🎨 Galería de texturas
           </Link>
         </nav>
       </header>
 
-      <section className="home-section">
-        <div className="home-section-header">
+      <section className={styles.homeSection}>
+        <div className={styles.homeSectionHeader}>
           <h2>Escenarios</h2>
           <form action={createBlankScenario}>
-            <button type="submit" className="button primary">
+            <Button type="submit" variant="primary">
               + Nuevo
-            </button>
+            </Button>
           </form>
         </div>
         {scenarios.length === 0 ? (
-          <p className="empty">No hay escenarios guardados. Creá uno para empezar.</p>
+          <Empty>No hay escenarios guardados. Creá uno para empezar.</Empty>
         ) : (
-          <ul className="scenario-list">
+          <ul className={styles.scenarioList}>
             {scenarios.map((s) => (
-              <li key={s.id} className="scenario-card">
-                <Link href={`/editor?id=${s.id}`} className="scenario-link">
-                  <span className="scenario-name">{s.name}</span>
-                  <span className="scenario-meta">
+              <li key={s.id} className={styles.scenarioCard}>
+                <Link href={`/editor?id=${s.id}`} className={styles.scenarioLink}>
+                  <span className={styles.scenarioName}>{s.name}</span>
+                  <span className={styles.scenarioMeta}>
                     {s.floorCount} {s.floorCount === 1 ? "piso" : "pisos"} · {s.paintedCellCount}{" "}
                     celdas pintadas
                   </span>
-                  <span className="scenario-date">
+                  <span className={styles.scenarioDate}>
                     {new Date(s.updatedAt).toLocaleString("es")}
                   </span>
                 </Link>
@@ -72,7 +74,7 @@ async function HomeContent() {
 
 export default function HomePage() {
   return (
-    <main className="home">
+    <main className={styles.home}>
       <Suspense fallback={<HomeFallback />}>
         <HomeContent />
       </Suspense>

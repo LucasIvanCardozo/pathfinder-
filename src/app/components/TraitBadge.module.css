@@ -1,0 +1,8 @@
+.trait-badge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  background: rgba(100, 150, 200, 0.2);
+  color: rgb(150, 200, 240);
+  border-radius: 999px;
+  white-space: nowrap;
+}

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import type { Piece } from "@/pieces";
+import traitBadgeStyles from "@/app/components/TraitBadge.module.css";
+import styles from "./PiecePalette.module.css";
 
 type Props = {
   pieces: Piece[];
@@ -18,9 +20,9 @@ type Props = {
  */
 export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
   return (
-    <div className="texture-palette">
-      <h3 className="texture-palette-title">Piezas</h3>
-      <div className="texture-palette-grid">
+    <div className={styles.palette}>
+      <h3 className={styles.paletteTitle}>Piezas</h3>
+      <div className={styles.paletteGrid}>
         {pieces.map((piece) => {
           const def = piece.visualStates.find((v) => v.isDefault) ?? piece.visualStates[0];
           if (!def) return null;
@@ -29,7 +31,7 @@ export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
             <button
               key={piece.id}
               type="button"
-              className={`texture-palette-card ${piece.id === activePieceId ? "active" : ""}`}
+              className={`${styles.card} ${piece.id === activePieceId ? styles.active : ""}`}
               onClick={() => onSelect(piece.id)}
               title={
                 multipleStates
@@ -37,37 +39,19 @@ export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
                   : piece.name
               }
             >
-              <div className="texture-palette-preview">
-                <Image
-                  src={def.imagePath}
-                  alt={piece.name}
-                  width={piece.width}
-                  height={piece.height}
-                  sizes="128px"
-                  draggable={false}
-                />
-                {multipleStates ? (
-                  <div className="texture-palette-states">
-                    {piece.visualStates.slice(0, 4).map((v) => (
-                      <Image
-                        key={v.id}
-                        src={v.imagePath}
-                        alt={v.id}
-                        width={24}
-                        height={24}
-                        sizes="24px"
-                        className="texture-palette-state"
-                        draggable={false}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              <Image
+                src={def.imagePath}
+                alt={piece.name}
+                width={piece.width}
+                height={piece.height}
+                sizes="128px"
+                draggable={false}
+              />
               <span>{piece.name}</span>
               {piece.traits && piece.traits.length > 0 ? (
-                <div className="texture-palette-traits">
+                <div>
                   {piece.traits.map((t) => (
-                    <span key={t.kind} className="trait-badge" title={t.kind}>
+                    <span key={t.kind} className={traitBadgeStyles.traitBadge} title={t.kind}>
                       {t.kind}
                     </span>
                   ))}

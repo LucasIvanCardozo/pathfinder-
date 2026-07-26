@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import overlayStyles from "./weather-overlay.module.css";
 
 /**
  * Slow-falling snowflakes. Each flake is a soft white dot with subtle drift.
@@ -83,5 +84,5 @@ export function SnowEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="weather-overlay weather-snow" tabIndex={-1} aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
 }

@@ -2,6 +2,7 @@
 
 import { FormProvider, useForm } from "react-hook-form";
 import { FormField, FormSelect, FormSlider } from "@/app/components/form";
+import styles from "./WeatherPanel.module.css";
 import { WEATHERS, type WeatherDef } from "./registry";
 
 export type WeatherState = {
@@ -38,8 +39,8 @@ export function WeatherPanel({ onChange, initial }: Props) {
 
   return (
     <FormProvider {...methods}>
-      <section className="weather-panel">
-        <h3 className="weather-panel-title">Clima</h3>
+      <section className={styles.panel}>
+        <h3 className={styles.panelTitle}>Clima</h3>
         <FormField label="Seleccionar clima" htmlFor="weatherId">
           <FormSelect name="weatherId" options={options} />
         </FormField>

@@ -23,18 +23,16 @@ import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
 import { saveScenario } from "@/lib/server/actions/scenario.action";
 import { reorderSubdivisions } from "@/lib/server/actions/subdivision.action";
 import { generateId } from "@/lib/shared/utils/generateId";
+import { Button } from "../components/Button";
+import { Empty } from "../components/Empty";
 import { SubdivisionManager } from "../components/SubdivisionManager";
-import "./editor.css";
-import "../components/subdivision-manager.css";
-import "../components/form/form.css";
-import "../components/modal.css";
-import "@/canvas/weather/weather.css";
+import styles from "./Editor.module.css";
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 
 const PaintCanvas = dynamic(() => import("@/canvas/konva").then((m) => m.PaintCanvas), {
   ssr: false,
-  loading: () => <div className="canvas-loading">Cargando canvas…</div>,
+  loading: () => <div className={styles.canvasLoading}>Cargando canvas…</div>,
 });
 
 type InitialScenario = {
@@ -482,10 +480,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     );
     if (!trait?.getMenu) return null;
     return (
-      <div
-        className="state-menu-wrapper"
-        style={{ left: traitMenu.position.x, top: traitMenu.position.y, position: "fixed" }}
-      >
+      <div style={{ left: traitMenu.position.x, top: traitMenu.position.y, position: "fixed" }}>
         {trait.getMenu({
           cell,
           onChangeState: handleChangeTraitState,
@@ -496,15 +491,15 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   }, [traitMenu, paintedCells, pieceById, handleChangeTraitState, handleCloseTraitMenu]);
 
   return (
-    <div className="editor">
-      <aside className="paint-sidebar">
-        <Link href="/" className="back-link">
+    <div className={styles.editor}>
+      <aside className={styles.paintSidebar}>
+        <Link href="/" className={styles.backLink}>
           ← Escenarios
         </Link>
         <PaintToolbar tool={tool} onChange={handleToolChange} />
-        <button type="button" className="button" onClick={() => setIsManaging(true)}>
+        <Button type="button" onClick={() => setIsManaging(true)}>
           ⚙ Administrar subdivisions
-        </button>
+        </Button>
         {activeSubdivision ? (
           <PiecePalette
             pieces={activePieces}
@@ -515,73 +510,74 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         <WeatherPanel onChange={setWeatherState} initial={weatherState} />
       </aside>
 
-      <main className="canvas-area">
-        <header className="canvas-header">
+      <main className={styles.canvasArea}>
+        <header className={styles.canvasHeader}>
           <input
             type="text"
             value={scenarioName}
             onChange={(e) => setScenarioName(e.target.value)}
-            className="scenario-name-input"
+            className={styles.scenarioNameInput}
             placeholder="Nombre del escenario"
           />
-          <div className="floor-switcher">
-            <button
+          <div className={styles.floorSwitcher}>
+            <Button
               type="button"
-              className="button mini"
+              size="mini"
               onClick={handleAddFloorBelow}
               title="Agregar subsuelo (debajo del actual)"
             >
               ↓+
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="button mini"
+              size="mini"
               onClick={handleFloorDown}
               disabled={activeFloorIndex <= 0}
               title="Bajar de piso"
             >
               ↓
-            </button>
-            <span className="floor-current" title={activeFloor.name}>
+            </Button>
+            <span className={styles.floorCurrent} title={activeFloor.name}>
               {activeFloor.name}
             </span>
-            <button
+            <Button
               type="button"
-              className="button mini"
+              size="mini"
               onClick={handleFloorUp}
               disabled={activeFloorIndex < 0 || activeFloorIndex >= floors.length - 1}
               title="Subir de piso"
             >
               ↑
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="button mini"
+              size="mini"
               onClick={handleAddFloorAbove}
               title="Agregar piso arriba del actual"
             >
               +↑
-            </button>
-            <span className="floor-switcher-divider" aria-hidden="true" />
+            </Button>
+            <span className={styles.floorSwitcherDivider} aria-hidden="true" />
             {canDeleteFloor ? (
-              <button
+              <Button
                 type="button"
-                className="button mini danger"
+                size="mini"
+                variant="danger"
                 onClick={handleDeleteFloor}
                 title={`Borrar ${activeFloor.name}`}
               >
                 ×
-              </button>
+              </Button>
             ) : null}
           </div>
-          <span className="canvas-stat">
+          <span className={styles.canvasStat}>
             {paintedInFloor} celdas · {doorsInFloor} puertas
           </span>
-          <span className="canvas-stat">
+          <span className={styles.canvasStat}>
             Grilla {activeFloor.width}×{activeFloor.height} · {activeFloor.baseCellSize}px
           </span>
           <span
-            className="autosave-status"
+            className={styles.autosaveStatus}
             data-status={autosaveStatus}
             title={
               autosaveEnabled
@@ -594,36 +590,40 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             {autosaveStatus === "error" && "✗ Error al guardar"}
             {autosaveStatus === "idle" && (savedAt ? `Guardado ${savedAt}` : "○")}
           </span>
-          <button
+          <Button
             type="button"
-            className={`button mini ${autosaveEnabled ? "active" : ""}`}
+            size="mini"
+            variant={autosaveEnabled ? "primary" : "default"}
             onClick={() => setAutosaveEnabled((v) => !v)}
             title={autosaveEnabled ? "Desactivar autoguardado" : "Activar autoguardado"}
           >
             {autosaveEnabled ? "Autoguardado ON" : "Autoguardado OFF"}
-          </button>
-          <div className="clear-buttons">
-            <button
+          </Button>
+          <div>
+            <Button
               type="button"
-              className="button mini danger"
+              size="mini"
+              variant="danger"
               onClick={handleClearAll}
               disabled={paintedCells.length === 0}
               title="Borrar TODO el scenario"
             >
               🗑 Todo
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="button mini danger"
+              size="mini"
+              variant="danger"
               onClick={handleClearFloor}
               disabled={paintedInFloor === 0}
               title={`Borrar todo "${activeFloor.name}"`}
             >
               🗑 Piso
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="button mini danger"
+              size="mini"
+              variant="danger"
               onClick={handleClearSubdivision}
               disabled={
                 !activeSubdivision ||
@@ -638,16 +638,16 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
               }
             >
               🗑 Sub
-            </button>
+            </Button>
           </div>
-          <button
+          <Button
             type="button"
-            className="button primary"
+            variant="primary"
             onClick={() => handleSave(false)}
             disabled={isSaving}
           >
             {isSaving ? "Guardando…" : scenarioId ? "Guardar" : "Crear"}
-          </button>
+          </Button>
         </header>
 
         {subdivisions.length > 0 ? (
@@ -658,12 +658,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
             onReorder={handleReorder}
           />
         ) : (
-          <p className="empty">
+          <Empty>
             No hay subdivisions.{" "}
-            <button type="button" className="button" onClick={() => setIsManaging(true)}>
+            <Button type="button" onClick={() => setIsManaging(true)}>
               Crear la primera
-            </button>
-          </p>
+            </Button>
+          </Empty>
         )}
 
         <PaintCanvas

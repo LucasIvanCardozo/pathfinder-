@@ -5,6 +5,7 @@ import { RainEffect } from "./RainEffect";
 import { SnowEffect } from "./SnowEffect";
 import { StormEffect } from "./StormEffect";
 import { getWeather } from "./registry";
+import styles from "./WeatherOverlay.module.css";
 
 /**
  * Maps animation kinds to their prop-less canvas overlay components. Adding
@@ -41,7 +42,7 @@ export function WeatherOverlay({
       {isStorm ? (
         <StormEffect thunderAt={thunderAt} />
       ) : isNight ? (
-        <div className="night-vignette" aria-hidden="true" />
+        <div className={styles.nightVignette} aria-hidden="true" />
       ) : Animation ? (
         <Animation />
       ) : null}
@@ -50,9 +51,9 @@ export function WeatherOverlay({
           {/* Night also gets a faint warm moonlight glow on top of the
               base tint — it's the only weather that uses an extra CSS
               layer beyond the standard tint overlay. */}
-          {isNight ? <div className="moonlight" aria-hidden="true" /> : null}
+          {isNight ? <div className={styles.moonlight} aria-hidden="true" /> : null}
           <div
-            className="weather-tint-overlay"
+            className={styles.tintOverlay}
             style={{ background: def.tint ?? undefined }}
             aria-hidden="true"
           />

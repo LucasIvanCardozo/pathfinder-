@@ -1,0 +1,21 @@
+.control {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

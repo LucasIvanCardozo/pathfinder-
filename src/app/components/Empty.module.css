@@ -1,0 +1,10 @@
+.empty {
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}

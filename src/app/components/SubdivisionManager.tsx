@@ -12,8 +12,12 @@ import {
   SubdivisionConfigPieceIdsInputSchema,
 } from "@/pieces";
 import { createSubdivision, deleteSubdivision, updateSubdivision } from "@/lib/server/actions/subdivision.action";
+import traitBadgeStyles from "./TraitBadge.module.css";
+import { Button } from "./Button";
+import { Empty } from "./Empty";
 import { FormField, FormInput, FormNumberInput } from "./form";
 import { Modal } from "./Modal";
+import styles from "./SubdivisionManager.module.css";
 
 const FormSchema = SubdivisionConfigPieceIdsInputSchema;
 type FormValues = z.infer<typeof FormSchema>;
@@ -174,58 +178,63 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
         onClose();
       }}
     >
-      <div className={`subdivision-manager subdivision-manager--mode-${mode}`}>
+      <div className={styles.subdivisionManager} data-mode={mode}>
         {/* ─── LISTA (siempre visible) ─── */}
-        <aside className="subdivision-list">
-          <div className="subdivision-list-header">
+        <aside className={styles.subdivisionList}>
+          <div className={styles.subdivisionListHeader}>
             <h3>Subdivisions</h3>
-            <button type="button" className="button primary mini" onClick={handleNew}>
+            <Button type="button" variant="primary" size="mini" onClick={handleNew}>
               + Nueva
-            </button>
+            </Button>
           </div>
           {local.length === 0 ? (
-            <p className="empty">No hay subdivisions todavía.</p>
+            <Empty>No hay subdivisions todavía.</Empty>
           ) : (
-            <ul className="subdivision-list-items">
+            <ul className={styles.subdivisionListItems}>
               {local.map((sub) => {
                 const used = sub.pieceIds.length > 0;
                 const isEditing = editingId === sub.id;
+                const itemClass = isEditing
+                  ? `${styles.subdivisionListItem} ${styles.editing}`
+                  : styles.subdivisionListItem;
                 return (
-                  <li
-                    key={sub.id}
-                    className={`subdivision-list-item ${isEditing ? "editing" : ""}`}
-                  >
+                  <li key={sub.id} className={itemClass}>
                     <button
                       type="button"
-                      className="subdivision-list-card"
+                      className={styles.subdivisionListCard}
                       onClick={() => handleEdit(sub)}
                     >
-                      <div className="subdivision-list-card-main">
+                      <div className={styles.subdivisionListCardMain}>
                         <strong>{sub.name}</strong>
-                        <span className="subdivision-list-meta">
+                        <span className={styles.subdivisionListMeta}>
                           {sub.pieceIds.length} pieza(s) · ratio {sub.cellSizeRatio} · z{" "}
                           {sub.order}
                         </span>
                       </div>
-                      <span className={`subdivision-list-badge ${used ? "in-use" : "free"}`}>
+                      <span
+                        className={`${styles.subdivisionListBadge} ${
+                          used ? styles.inUse : styles.free
+                        }`}
+                      >
                         {used ? "En uso" : "Libre"}
                       </span>
                     </button>
-                    <div className="subdivision-list-actions">
-                      <button
+                    <div className={styles.subdivisionListActions}>
+                      <Button
                         type="button"
-                        className="button mini"
+                        size="mini"
                         onClick={() => handleEdit(sub)}
                       >
                         Editar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
-                        className="button mini danger"
+                        size="mini"
+                        variant="danger"
                         onClick={() => handleDelete(sub)}
                       >
                         Borrar
-                      </button>
+                      </Button>
                     </div>
                   </li>
                 );
@@ -237,22 +246,22 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
         {/* ─── FORM (solo al crear/editar) ─── */}
         {mode !== "idle" ? (
           <FormProvider {...methods}>
-            <form onSubmit={onSubmit} className="subdivision-form">
-              <header className="subdivision-form-header">
+            <form onSubmit={onSubmit} className={styles.subdivisionForm}>
+              <header className={styles.subdivisionFormHeader}>
                 <h3>{editingId ? "Editar" : "Nueva"} subdivision</h3>
-                <button
+                <Button
                   type="button"
-                  className="button mini"
+                  size="mini"
                   onClick={closeForm}
                   aria-label="Volver a la lista"
                 >
                   ← Volver
-                </button>
+                </Button>
               </header>
 
-              {error ? <p className="error">{error}</p> : null}
+              {error ? <p className={styles.error}>{error}</p> : null}
 
-              <div className="subdivision-form-grid">
+              <div className={styles.subdivisionFormGrid}>
                 <FormField label="Nombre" htmlFor="name">
                   <FormInput name="name" placeholder="Ej: Suelo, Objetos…" />
                 </FormField>
@@ -264,10 +273,10 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                 </FormField>
               </div>
 
-              <section className="piece-picker">
-                <header className="piece-picker-header">
+              <section className={styles.piecePicker}>
+                <header className={styles.piecePickerHeader}>
                   <h4>Piezas disponibles</h4>
-                  <span className="piece-picker-count">
+                  <span className={styles.piecePickerCount}>
                     {methods.watch("pieceIds")?.length ?? 0} seleccionada(s) ·{" "}
                     {allPieces.length} total
                   </span>
@@ -278,7 +287,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                   placeholder="Buscar piezas…"
                   value={pieceSearch}
                   onChange={(e) => setPieceSearch(e.target.value)}
-                  className="piece-picker-search"
+                  className={styles.piecePickerSearch}
                 />
 
                 <Controller
@@ -287,7 +296,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                   render={({ field }) => {
                     const selected = new Set(field.value);
                     return (
-                      <div className="piece-picker-grid">
+                      <div className={styles.piecePickerGrid}>
                         {PIECE_CATEGORIES.map((cat) => {
                           const inCat =
                             pieceSearch.trim() === ""
@@ -295,22 +304,22 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                               : filteredPieces.filter((p) => p.category === cat);
                           if (inCat.length === 0) return null;
                           return (
-                            <div key={cat} className="piece-picker-group">
-                              <h5 className="piece-picker-group-title">
+                            <div key={cat}>
+                              <h5 className={styles.piecePickerGroupTitle}>
                                 {CATEGORY_LABELS[cat] ?? cat}
                               </h5>
-                              <div className="piece-picker-cards">
+                              <div className={styles.piecePickerCards}>
                                 {inCat.map((piece) => {
                                   const checked = selected.has(piece.id);
                                   const def =
                                     piece.visualStates.find((v) => v.isDefault) ??
                                     piece.visualStates[0];
                                   if (!def) return null;
+                                  const cardClass = checked
+                                    ? `${styles.piecePickerCard} ${styles.selected}`
+                                    : styles.piecePickerCard;
                                   return (
-                                    <label
-                                      key={piece.id}
-                                      className={`piece-picker-card ${checked ? "selected" : ""}`}
-                                    >
+                                    <label key={piece.id} className={cardClass}>
                                       <input
                                         type="checkbox"
                                         checked={checked}
@@ -321,7 +330,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                                           field.onChange(Array.from(next));
                                         }}
                                       />
-                                      <div className="piece-picker-preview">
+                                      <div className={styles.piecePickerPreview}>
                                         <Image
                                           src={def.imagePath}
                                           alt={piece.name}
@@ -331,19 +340,21 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                                           draggable={false}
                                         />
                                       </div>
-                                      <div className="piece-picker-info">
-                                        <span className="piece-picker-name">{piece.name}</span>
+                                      <div className={styles.piecePickerInfo}>
+                                        <span className={styles.piecePickerName}>
+                                          {piece.name}
+                                        </span>
                                         {piece.visualStates.length > 1 ? (
-                                          <small className="piece-picker-states">
+                                          <small className={styles.piecePickerStates}>
                                             {piece.visualStates.length} estados
                                           </small>
                                         ) : null}
                                         {piece.traits && piece.traits.length > 0 ? (
-                                          <div className="piece-picker-traits">
+                                          <div className={styles.piecePickerTraits}>
                                             {piece.traits.map((t) => (
                                               <span
                                                 key={t.kind}
-                                                className="trait-badge"
+                                                className={traitBadgeStyles.traitBadge}
                                                 title={t.kind}
                                               >
                                                 {t.kind}
@@ -365,13 +376,13 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                 />
               </section>
 
-              <footer className="subdivision-form-actions">
-                <button type="button" className="button" onClick={closeForm}>
+              <footer className={styles.subdivisionFormActions}>
+                <Button type="button" onClick={closeForm}>
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="button primary"
+                  variant="primary"
                   disabled={methods.formState.isSubmitting}
                 >
                   {methods.formState.isSubmitting
@@ -379,7 +390,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions, allPieces }:
                     : editingId
                       ? "Guardar cambios"
                       : "Crear subdivision"}
-                </button>
+                </Button>
               </footer>
             </form>
           </FormProvider>

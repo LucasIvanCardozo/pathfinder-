@@ -6,6 +6,7 @@ import type Konva from "konva";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
 import { findInteractiveCellAtPixel, getTrait } from "../traits";
 import { useTextureImages, type BlurTier } from "../useTextureImages";
+import styles from "./PaintCanvas.module.css";
 import { GridLayer } from "./GridLayer";
 
 // Depth-based visual effects applied to cells on floors below the active one.
@@ -40,12 +41,12 @@ type Props = {
     cellId: string,
     traitKind: string,
     screenPos: { x: number; y: number },
-      ) => void;
+  ) => void;
   /** Optional overlay rendered inside the paint container, after the
    *  Stage. Used e.g. by the weather overlay so it fills the same
    *  fixed-size container as the Konva stage. */
   overlay?: React.ReactNode;
-}
+};
 
 type ScreenPos = { x: number; y: number };
 
@@ -267,7 +268,7 @@ function PaintCanvasImpl({
   };
 
   return (
-    <div className="paint-canvas-container" style={{ width: stageWidth, height: stageHeight }}>
+    <div className={styles.canvas} style={{ width: stageWidth, height: stageHeight }}>
       <Stage
         ref={stageRef}
         width={stageWidth}
@@ -304,35 +305,35 @@ function PaintCanvasImpl({
             const scale = DEPTH_EFFECTS.scale ? 1 - tier * SCALE_PER_TIER : 1;
             const offset = (cellSize * (1 - scale)) / 2;
             return (
-                  <Fragment key={`c-${item.cell.id}`}>
-                    <KonvaImage
-                      image={img}
-                      x={item.cell.gridX * cellSize + offset}
-                      y={item.cell.gridY * cellSize + offset}
-                      width={cellSize}
-                      height={cellSize}
-                      scaleX={scale}
-                      scaleY={scale}
-                      perfectDrawEnabled={false}
-                    />
-                    {DEPTH_EFFECTS.darken && tier > 0 ? (
-                      <Rect
-                        x={item.cell.gridX * cellSize}
-                        y={item.cell.gridY * cellSize}
-                        width={cellSize}
-                        height={cellSize}
-                        fill="rgba(0,0,0,1)"
-                        opacity={tier * DARKEN_PER_TIER}
-                        listening={false}
-                      />
-                    ) : null}
-                  </Fragment>
+              <Fragment key={`c-${item.cell.id}`}>
+                <KonvaImage
+                  image={img}
+                  x={item.cell.gridX * cellSize + offset}
+                  y={item.cell.gridY * cellSize + offset}
+                  width={cellSize}
+                  height={cellSize}
+                  scaleX={scale}
+                  scaleY={scale}
+                  perfectDrawEnabled={false}
+                />
+                {DEPTH_EFFECTS.darken && tier > 0 ? (
+                  <Rect
+                    x={item.cell.gridX * cellSize}
+                    y={item.cell.gridY * cellSize}
+                    width={cellSize}
+                    height={cellSize}
+                    fill="rgba(0,0,0,1)"
+                    opacity={tier * DARKEN_PER_TIER}
+                    listening={false}
+                  />
+                ) : null}
+              </Fragment>
             );
           })}
         </Layer>
       </Stage>
-          {overlay}
-        </div>
-      );
-    }
+      {overlay}
+    </div>
+  );
+}
 export const PaintCanvas = memo(PaintCanvasImpl);

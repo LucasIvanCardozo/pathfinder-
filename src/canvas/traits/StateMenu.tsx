@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import "./state-menu.css";
+import styles from "./StateMenu.module.css";
 
 type StateMenuProps = {
   /** All valid state values for this trait. */
@@ -23,6 +23,11 @@ type StateMenuProps = {
 /**
  * Generic state-picker menu. Any trait with a finite set of states can use
  * this component via `getMenu` in the trait registry.
+ *
+ * The root div carries a `data-state-menu` attribute (not just a CSS class)
+ * so the outside-click handler can identify it via `closest("[data-state-menu]")`.
+ * The selector-based class name no longer leaks through CSS Modules' scoped
+ * hashing, so the data-attribute pattern keeps the click-outside test stable.
  */
 export function StateMenu({
   states,
@@ -37,7 +42,7 @@ export function StateMenu({
     const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (!target.closest(".state-menu")) onClose();
+      if (!target.closest("[data-state-menu]")) onClose();
     };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -53,29 +58,30 @@ export function StateMenu({
     };
   }, [onClose]);
 
+  const menuClass = className ? `${styles.menu} ${className}` : styles.menu;
   return (
-    <div className={`state-menu ${className ?? ""}`}>
-      <div className="state-menu-header">
+    <div className={menuClass} data-state-menu>
+      <div className={styles.header}>
         <span>
           {title} · {labels[current ?? states[0] ?? ""] ?? current}
         </span>
         <button
           type="button"
-          className="state-menu-close"
+          className={styles.close}
           onClick={onClose}
           aria-label="Cerrar menú"
         >
           ×
         </button>
       </div>
-      <div className="state-menu-section">
-        <span className="state-menu-label">Cambiar estado</span>
-        <div className="state-menu-states">
+      <div className={styles.section}>
+        <span className={styles.label}>Cambiar estado</span>
+        <div className={styles.states}>
           {states.map((s) => (
             <button
               key={s}
               type="button"
-              className={`state-btn ${s === current ? "active" : ""}`}
+              className={`${styles.stateBtn} ${s === current ? styles.active : ""}`}
               onClick={() => onChange(s)}
               data-state={s}
             >

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listAllPieces } from "@/lib/server/actions/subdivision.action";
+import styles from "../../page.module.css";
 import { PiecesGallery } from "./PiecesGallery";
 
 export default async function PiecesGalleryPage() {
@@ -8,12 +9,12 @@ export default async function PiecesGalleryPage() {
   const result = await listAllPieces();
   const pieces = result.success ? result.data : [];
   return (
-    <main className="home">
-      <header className="home-header">
+    <main className={styles.home}>
+      <header className={styles.homeHeader}>
         <h1>Pathfinder</h1>
         <p>Battle Map — editor de escenarios</p>
-        <nav className="home-nav">
-          <Link href="/" className="home-nav-link">
+        <nav className={styles.homeNav}>
+          <Link href="/" className={styles.homeNavLink}>
             ← Escenarios
           </Link>
         </nav>

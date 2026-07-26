@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import overlayStyles from "./weather-overlay.module.css";
 
 type Props = {
   /** Timestamp (ms) of the most recent thunder trigger. When this value
@@ -88,25 +89,25 @@ export function StormEffect({ thunderAt }: Props) {
       const flashStart = flashStartRef.current;
       if (flashStart !== null) {
         const elapsed = performance.now() - flashStart;
-            if (elapsed >= 600) {
-              flashStartRef.current = null;
-            } else {
-              // Mimics a natural lightning strike: bright primary
-              // discharge, brief gap, secondary lobe, smaller tertiary
-              // pulse, then a long afterglow. Slightly bluish tint —
-              // real lightning reads faintly violet-white, not pure
-              // white.
-              let alpha = 0;
-              if (elapsed < 50) alpha = 0.95;       // primary discharge
-              else if (elapsed < 110) alpha = 0;     // gap
-              else if (elapsed < 200) alpha = 0.65;  // secondary lobe
-              else if (elapsed < 260) alpha = 0.05;  // small gap
-              else if (elapsed < 380) alpha = 0.35;  // tertiary pulse
-              else alpha = 0.12;                     // afterglow tail
-              if (alpha > 0) {
-                ctx.fillStyle = `rgba(225, 232, 250, ${alpha})`;
-                ctx.fillRect(0, 0, width, height);
-              }
+        if (elapsed >= 600) {
+          flashStartRef.current = null;
+        } else {
+          // Mimics a natural lightning strike: bright primary
+          // discharge, brief gap, secondary lobe, smaller tertiary
+          // pulse, then a long afterglow. Slightly bluish tint —
+          // real lightning reads faintly violet-white, not pure
+          // white.
+          let alpha = 0;
+          if (elapsed < 50) alpha = 0.95; // primary discharge
+          else if (elapsed < 110) alpha = 0; // gap
+          else if (elapsed < 200) alpha = 0.65; // secondary lobe
+          else if (elapsed < 260) alpha = 0.05; // small gap
+          else if (elapsed < 380) alpha = 0.35; // tertiary pulse
+          else alpha = 0.12; // afterglow tail
+          if (alpha > 0) {
+            ctx.fillStyle = `rgba(225, 232, 250, ${alpha})`;
+            ctx.fillRect(0, 0, width, height);
+          }
         }
       }
 
@@ -133,7 +134,7 @@ export function StormEffect({ thunderAt }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      className="weather-overlay weather-storm"
+      className={overlayStyles.overlay}
       tabIndex={-1}
       aria-hidden="true"
     />

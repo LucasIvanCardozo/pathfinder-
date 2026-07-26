@@ -1,0 +1,11 @@
+.canvas {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  position: relative;
+  overflow: auto;
+  width: max-content;
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  align-self: flex-start;
+}

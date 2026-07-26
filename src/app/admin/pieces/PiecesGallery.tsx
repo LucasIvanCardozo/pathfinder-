@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import type { Piece } from "@/pieces";
-import "./gallery.css";
+import { Empty } from "../../components/Empty";
+import traitBadgeStyles from "../../components/TraitBadge.module.css";
+import styles from "./PiecesGallery.module.css";
 
 type Props = {
   pieces: Piece[];
@@ -27,51 +29,45 @@ export function PiecesGallery({ pieces }: Props) {
   }, [pieces, search, filter]);
 
   return (
-    <section className="gallery">
-      <header className="gallery-header">
+    <section className={styles.gallery}>
+      <header className={styles.galleryHeader}>
         <h1>Galería de objetos</h1>
         <p>
           {pieces.length} objeto(s). Cada objeto tiene uno o más <em>estados visuales</em>{" "}
           (ej: la puerta tiene cerrado, abierto y bloqueada).
         </p>
-        <div className="gallery-toolbar">
+        <div>
           <input
             type="search"
             placeholder="Buscar por nombre…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="gallery-search"
+            className={styles.gallerySearch}
           />
-          <div className="gallery-filters">
-            <FilterPill active={filter === "all"} onClick={() => setFilter("all")}>
+          <div className={styles.galleryFilters}>
+            <FilterPill onClick={() => setFilter("all")}>
               Todos
             </FilterPill>
-            <FilterPill active={filter === "single"} onClick={() => setFilter("single")}>
+            <FilterPill onClick={() => setFilter("single")}>
               Simples
             </FilterPill>
-            <FilterPill
-              active={filter === "multi-state"}
-              onClick={() => setFilter("multi-state")}
-            >
+            <FilterPill onClick={() => setFilter("multi-state")}>
               Multi-estado
             </FilterPill>
-            <FilterPill
-              active={filter === "with-traits"}
-              onClick={() => setFilter("with-traits")}
-            >
+            <FilterPill onClick={() => setFilter("with-traits")}>
               Con traits
             </FilterPill>
           </div>
         </div>
       </header>
 
-      <ul className="gallery-grid">
+      <ul className={styles.galleryGrid}>
         {filtered.map((piece) => {
           const def = piece.visualStates.find((v) => v.isDefault) ?? piece.visualStates[0];
           if (!def) return null;
           return (
-            <li key={piece.id} className="gallery-card">
-              <div className="gallery-card-image">
+            <li key={piece.id} className={styles.galleryCard}>
+              <div className={styles.galleryCardImage}>
                 <Image
                   src={def.imagePath}
                   alt={piece.name}
@@ -79,36 +75,20 @@ export function PiecesGallery({ pieces }: Props) {
                   height={piece.height}
                   sizes="128px"
                 />
-                {piece.visualStates.length > 1 ? (
-                  <div className="gallery-card-states">
-                    {piece.visualStates.map((v) => (
-                      <Image
-                        key={v.id}
-                        src={v.imagePath}
-                        alt={v.id}
-                        width={32}
-                        height={32}
-                        sizes="32px"
-                        className="gallery-card-state"
-                        title={v.id}
-                      />
-                    ))}
-                  </div>
-                ) : null}
               </div>
-              <div className="gallery-card-body">
+              <div className={styles.galleryCardBody}>
                 <h3>{piece.name}</h3>
-                <p className="gallery-card-id">{piece.id}</p>
-                <p className="gallery-card-meta">
+                <p className={styles.galleryCardId}>{piece.id}</p>
+                <p className={styles.galleryCardMeta}>
                   {piece.width}×{piece.height}px · {piece.category}
                   {piece.visualStates.length > 1
                     ? ` · ${piece.visualStates.length} estados`
                     : ""}
                 </p>
                 {piece.traits && piece.traits.length > 0 ? (
-                  <ul className="gallery-card-traits">
+                  <ul>
                     {piece.traits.map((t) => (
-                      <li key={t.kind} className="trait-badge" title={JSON.stringify(t)}>
+                      <li key={t.kind} className={traitBadgeStyles.traitBadge} title={JSON.stringify(t)}>
                         {t.kind}
                       </li>
                     ))}
@@ -119,7 +99,7 @@ export function PiecesGallery({ pieces }: Props) {
                 href={def.imagePath}
                 target="_blank"
                 rel="noreferrer"
-                className="gallery-card-link"
+                className={styles.galleryCardLink}
                 title="Ver imagen por defecto"
               >
                 Ver →
@@ -130,27 +110,21 @@ export function PiecesGallery({ pieces }: Props) {
       </ul>
 
       {filtered.length === 0 ? (
-        <p className="empty">No hay objetos que coincidan con el filtro.</p>
+        <Empty>No hay objetos que coincidan con el filtro.</Empty>
       ) : null}
     </section>
   );
 }
 
 function FilterPill({
-  active,
   onClick,
   children,
 }: {
-  active: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      className={`gallery-filter-pill ${active ? "active" : ""}`}
-      onClick={onClick}
-    >
+    <button type="button" onClick={onClick}>
       {children}
     </button>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import overlayStyles from "./weather-overlay.module.css";
 
 /**
  * Lightweight canvas-overlay rain animation. Uses a single <canvas> sized to
@@ -81,5 +82,5 @@ export function RainEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="weather-overlay weather-rain" tabIndex={-1} aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
 }

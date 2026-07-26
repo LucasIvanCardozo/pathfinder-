@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "./PaintToolbar.module.css";
+
 export type PaintTool = "paint" | "erase";
 
 type Props = {
@@ -9,10 +11,10 @@ type Props = {
 
 export function PaintToolbar({ tool, onChange }: Props) {
   return (
-    <div className="paint-toolbar">
+    <div className={styles.toolbar}>
       <button
         type="button"
-        className={`paint-tool ${tool === "paint" ? "active" : ""}`}
+        className={`${styles.tool} ${tool === "paint" ? styles.active : ""}`}
         onClick={() => onChange("paint")}
         title="Pintar (click + drag)"
       >
@@ -20,7 +22,7 @@ export function PaintToolbar({ tool, onChange }: Props) {
       </button>
       <button
         type="button"
-        className={`paint-tool ${tool === "erase" ? "active" : ""}`}
+        className={`${styles.tool} ${tool === "erase" ? styles.active : ""}`}
         onClick={() => onChange("erase")}
         title="Borrar (click + drag)"
       >

@@ -1,4 +1,4 @@
-.modal-backdrop {
+.modalBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -9,7 +9,7 @@
   padding: 1rem;
 }
 
-.modal-panel {
+.modalPanel {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -21,7 +21,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-.modal-header {
+.modalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -29,13 +29,13 @@
   border-bottom: 1px solid var(--border);
 }
 
-.modal-header h2 {
+.modalHeader h2 {
   margin: 0;
   font-size: 1.1rem;
   color: var(--fg);
 }
 
-.modal-close {
+.modalClose {
   background: transparent;
   border: none;
   color: var(--fg-muted);
@@ -49,33 +49,11 @@
     background 0.15s;
 }
 
-.modal-close:hover {
+.modalClose:hover {
   color: var(--fg);
   background: var(--bg);
 }
 
-.modal-content {
+.modalContent {
   padding: 1.25rem;
-}
-
-/* PieceForm-specific styles (the form composes the generic form components). */
-.piece-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
 }

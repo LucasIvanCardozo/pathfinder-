@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import styles from "./FormField.module.css";
 
 type FormFieldProps = {
   /** Field label shown above the input. */
@@ -29,16 +30,16 @@ export function FormField({
   children,
 }: FormFieldProps) {
   return (
-    <div className="form-field">
-      <label className="form-label" htmlFor={htmlFor}>
+    <div className={styles.field}>
+      <label className={styles.label} htmlFor={htmlFor}>
         {label}
-        {required ? <span className="form-required"> *</span> : null}
+        {required ? <span className={styles.required}> *</span> : null}
       </label>
       {children}
       {error ? (
-        <span className="form-error">{error}</span>
+        <span className={styles.error}>{error}</span>
       ) : hint ? (
-        <span className="form-hint">{hint}</span>
+        <span className={styles.hint}>{hint}</span>
       ) : null}
     </div>
   );

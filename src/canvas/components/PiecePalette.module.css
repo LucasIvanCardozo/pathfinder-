@@ -1,0 +1,59 @@
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.paletteTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+}
+
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--fg);
+  font-size: 0.7rem;
+  transition:
+    border-color 0.15s,
+    transform 0.05s;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.card.active {
+  border-color: var(--accent);
+  background: rgba(201, 168, 106, 0.1);
+}
+
+.card img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.card span {
+  text-align: center;
+  color: var(--fg-muted);
+}

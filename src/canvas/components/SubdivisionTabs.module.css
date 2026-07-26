@@ -1,0 +1,69 @@
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.tabWrapper {
+  display: inline-flex;
+  position: relative;
+}
+
+.tabWrapper.dropLeft::before,
+.tabWrapper.dropRight::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.tabWrapper.dropLeft::before {
+  left: -3px;
+}
+
+.tabWrapper.dropRight::after {
+  right: -3px;
+}
+
+.tab[draggable] {
+  cursor: grab;
+}
+
+.tab.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.tab {
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab.active {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}

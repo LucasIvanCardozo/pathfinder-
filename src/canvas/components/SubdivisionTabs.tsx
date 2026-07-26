@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SubdivisionConfig } from "@/pieces";
+import styles from "./SubdivisionTabs.module.css";
 
 type Props = {
   subdivisions: SubdivisionConfig[];
@@ -57,22 +58,25 @@ export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }:
   };
 
   return (
-    <div className="subdivision-tabs" role="tablist">
+    <div className={styles.tabs} role="tablist">
       {subdivisions.map((sub) => {
         const isDragging = draggingId === sub.id;
         const indicatorHere =
           dropIndicator && dropIndicator.id === sub.id ? dropIndicator.side : null;
+        const wrapperClass = indicatorHere
+          ? `${styles.tabWrapper} ${indicatorHere === "left" ? styles.dropLeft : styles.dropRight}`
+          : styles.tabWrapper;
+        const tabClass = `${styles.tab} ${sub.id === activeId ? styles.active : ""} ${
+          isDragging ? styles.dragging : ""
+        }`;
         return (
-          <div
-            key={sub.id}
-            className={`subdivision-tab-wrapper ${indicatorHere ? `drop-${indicatorHere}` : ""}`}
-          >
+          <div key={sub.id} className={wrapperClass}>
             <button
               type="button"
               role="tab"
               aria-selected={sub.id === activeId}
               draggable
-              className={`subdivision-tab ${sub.id === activeId ? "active" : ""} ${isDragging ? "dragging" : ""}`}
+              className={tabClass}
               onClick={() => onChange(sub.id)}
               onDragStart={(e) => handleDragStart(e, sub.id)}
               onDragOver={(e) => handleDragOver(e, sub.id)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import overlayStyles from "./weather-overlay.module.css";
 
 /**
  * Translucent fog with two perceptual layers:
@@ -113,5 +114,5 @@ export function FogEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="weather-overlay weather-fog" tabIndex={-1} aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
 }

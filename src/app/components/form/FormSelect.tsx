@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import styles from "./FormSelect.module.css";
 
 type Option = {
   value: string;
@@ -23,7 +24,7 @@ export function FormSelect({ name, options, placeholder, disabled = false }: For
   return (
     <select
       id={name}
-      className="form-control"
+      className={styles.control}
       disabled={disabled}
       defaultValue=""
       {...register(name)}

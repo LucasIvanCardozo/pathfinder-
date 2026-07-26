@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import styles from "./FormInput.module.css";
 
 type FormInputProps = {
   name: string;
@@ -24,7 +25,7 @@ export function FormInput({
     <input
       id={name}
       type={type}
-      className="form-control"
+      className={styles.control}
       placeholder={placeholder}
       disabled={disabled}
       {...register(name)}
