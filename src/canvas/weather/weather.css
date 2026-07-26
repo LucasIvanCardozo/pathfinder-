@@ -1,0 +1,40 @@
+/* ─────────────────────────────────────────────
+   Weather panel + overlays
+   ───────────────────────────────────────────── */
+
+.weather-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.weather-panel-title {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+}
+
+/* The overlay canvas sits on top of the paint canvas, fills it, but
+   doesn't capture mouse events so painting still works. */
+.weather-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Color tint layer that sits over the paint canvas to give the atmosphere a
+   "color cast" — cool blue for rain, soft grey for fog, etc. No interaction,
+   no animation. */
+.weather-tint-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11; /* above weather-overlay (rain/fog canvas) so the tint sits on top */
+  mix-blend-mode: normal;
+}

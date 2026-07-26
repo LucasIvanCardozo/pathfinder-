@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { DisableContextMenu } from "./components/DisableContextMenu";
 
 export const metadata: Metadata = {
   title: "Pathfinder — Battle Map",
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <DisableContextMenu />
+        {children}
+      </body>
     </html>
   );
 }

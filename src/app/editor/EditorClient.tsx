@@ -3,23 +3,23 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
-import { findTexturesByIds } from "@/assets";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { findPiecesByIds } from "@/assets";
 import {
-  DEFAULT_SUBDIVISION_ID,
-  DOORS_SUBDIVISION_NAME,
-  doorStateToTextureId,
-  filterVisibleSubdivisions,
-  isDoorsSubdivision,
   type PaintTool,
   PaintToolbar,
+  PiecePalette,
   SubdivisionTabs,
-  TexturePalette,
-  textureIdToState,
+  WeatherOverlay,
+  WeatherPanel,
+  type WeatherState,
+  getInteractiveTrait,
+  getTextureTraits,
+  getWeather,
   useKeyboardShortcuts,
+  useWeatherAudio,
 } from "@/canvas";
-import { DoorMenu } from "@/components/DoorMenu";
-import type { Door, DoorState, Floor, PaintedCell, SubdivisionConfig, Texture } from "@/pieces";
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/pieces";
 import { saveScenario } from "../actions/scenarios";
 import { reorderSubdivisions } from "../actions/subdivisions";
 import { SubdivisionManager } from "../components/SubdivisionManager";
@@ -27,7 +27,7 @@ import "./editor.css";
 import "../components/subdivision-manager.css";
 import "../components/form/form.css";
 import "../components/modal.css";
-import "../../components/door-menu.css";
+import "@/canvas/weather/weather.css";
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 
@@ -42,80 +42,90 @@ type InitialScenario = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
-  doors: Door[];
 };
 
 type Props = {
   initialScenario: InitialScenario | null;
   initialSubdivisions: SubdivisionConfig[];
-  allTextures: Texture[];
+  allPieces: Piece[];
 };
 
-function makeDefaultFloor(): Floor {
-  return {
-    id: generateId("floor"),
-    name: "Planta Baja",
-    baseCellSize: 64,
-    width: 20,
-    height: 14,
-  };
+function generateId(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
-function generateId(prefix: "cell" | "door" | "floor"): string {
-  return `${prefix}-${crypto.randomUUID()}`;
+function generateFloorId(): string {
+  return `floor_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const generateFloorId = () => generateId("floor");
-
-export function EditorClient({ initialScenario, initialSubdivisions, allTextures }: Props) {
+export function EditorClient({ initialScenario, initialSubdivisions, allPieces }: Props) {
   const router = useRouter();
-  const [isSaving, startSaveTransition] = useTransition();
-
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenario?.id ?? null);
-  const [scenarioName, setScenarioName] = useState<string>(
-    initialScenario?.name ?? "Nuevo escenario",
-  );
-  const [floors, setFloors] = useState<Floor[]>(initialScenario?.floors ?? [makeDefaultFloor()]);
-  const [activeFloorId, setActiveFloorId] = useState<string>(
-    initialScenario?.activeFloorId ?? floors[0]?.id ?? "",
-  );
-  const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(
-    initialScenario?.paintedCells ?? [],
-  );
-  const [doors, setDoors] = useState<Door[]>(initialScenario?.doors ?? []);
+  const [scenarioName, setScenarioName] = useState(initialScenario?.name ?? "");
+  const [floors, setFloors] = useState<Floor[]>(initialScenario?.floors ?? []);
+  const [activeFloorId, setActiveFloorId] = useState(initialScenario?.activeFloorId ?? "");
   const [subdivisions, setSubdivisions] = useState<SubdivisionConfig[]>(initialSubdivisions);
-  const [isManaging, setIsManaging] = useState(false);
-  // True when there are unsaved changes since the last save.
-  const [isDirty, setIsDirty] = useState(false);
-  const markDirty = useCallback(() => setIsDirty(true), []);
-
+  const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(initialScenario?.paintedCells ?? []);
+  const [activeSubdivisionId, setActiveSubdivisionId] = useState(
+    initialSubdivisions[0]?.id ?? "",
+  );
+  const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>("paint");
-  const [activeSubdivisionId, setActiveSubdivisionId] = useState<string>(
-    initialSubdivisions.find((s) => s.name !== DOORS_SUBDIVISION_NAME)?.id ??
-      DEFAULT_SUBDIVISION_ID,
-  );
-  const [activeTextureId, setActiveTextureId] = useState<string | null>(null);
-  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle",
-  );
+  const [isManaging, setIsManaging] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [, startSaveTransition] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  // Door menu state
-  const [doorMenu, setDoorMenu] = useState<{
-    door: Door;
+  const [traitMenu, setTraitMenu] = useState<{
+    cellId: string;
+    traitKind: string;
     position: { x: number; y: number };
   } | null>(null);
 
-  const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0]!;
-  const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
-  const activeTextures = activeSubdivision ? findTexturesByIds(activeSubdivision.textureIds) : [];
+  // Weather state is ephemeral (not persisted). Panel writes to here; audio
+  // and overlay read from here.
+  const [weatherState, setWeatherState] = useState<WeatherState>({
+    weatherId: "none",
+    volume: 50,
+  });
+  // When the storm's thunder audio fires, the audio hook calls back here
+  // and we forward the timestamp to StormEffect for a synced flash.
+  const [thunderAt, setThunderAt] = useState<number | null>(null);
+  const weatherDef = getWeather(weatherState.weatherId);
+  useWeatherAudio(weatherDef.sound, weatherState.volume / 100, (src) => {
+    if (src.endsWith("thunder.mp3")) setThunderAt(Date.now());
+  });
 
-  const usedTextureIds = new Set<string>();
-  for (const sub of subdivisions) {
-    for (const id of sub.textureIds) usedTextureIds.add(id);
-  }
-  const allUsedTextures = allTextures.filter((t) => usedTextureIds.has(t.id));
+  const fallbackFloor: Floor = { id: "", name: "", baseCellSize: 64, width: 20, height: 15 };
+  const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0] ?? fallbackFloor;
+  const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
+  const activePieces = useMemo(
+    () => (activeSubdivision ? findPiecesByIds(activeSubdivision.pieceIds) : []),
+    [activeSubdivision],
+  );
+
+  const usedPieceIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sub of subdivisions) {
+      for (const id of sub.pieceIds) ids.add(id);
+    }
+    return ids;
+  }, [subdivisions]);
+  const allUsedPieces = useMemo(
+    () => allPieces.filter((p) => usedPieceIds.has(p.id)),
+    [allPieces, usedPieceIds],
+  );
+
+  const pieceById = useMemo(() => {
+    const m = new Map<string, Piece>();
+    for (const p of allPieces) m.set(p.id, p);
+    return m;
+  }, [allPieces]);
+
+  const markDirty = useCallback(() => setIsDirty(true), []);
 
   const handlePaint = useCallback(
     (
@@ -123,17 +133,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
       subdivisionId: string,
       gridX: number,
       gridY: number,
-      textureId: string | null,
+      pieceId: string | null,
       screenPos: { x: number; y: number } | null,
       isDragging: boolean,
     ) => {
-      // The "Puertas" subdivision is special: clicks on it create Door
-      // entities instead of PaintedCells.
-      const activeSub = subdivisions.find((s) => s.id === subdivisionId);
       markDirty();
 
       if (tool === "erase") {
-        // Erase the painted cell of the active subdivision (if any).
         setPaintedCells((prev) =>
           prev.filter(
             (c) =>
@@ -145,73 +151,40 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               ),
           ),
         );
-        // If the active subdivision is "Puertas", also erase the door
-        // at this cell (if any). Drag erase hits this branch as well.
-        if (activeSub && isDoorsSubdivision(activeSub.name)) {
-          setDoors((prev) =>
-            prev.filter((d) => !(d.floorId === floorId && d.gridX === gridX && d.gridY === gridY)),
-          );
-        }
-        return;
-      } else if (activeSub && isDoorsSubdivision(activeSub.name)) {
-        // The user clicked the "Puertas" subdivision. Find any door at this
-        // cell — either on the active floor (open the menu) or on a lower
-        // floor (visible because the active floor cell is empty — ignore
-        // so we don't open a menu for a door we're not standing on).
-        const doorOnActiveFloor = doors.find(
-          (d) => d.floorId === floorId && d.gridX === gridX && d.gridY === gridY,
-        );
-        if (doorOnActiveFloor && !isDragging) {
-          const px = screenPos ? screenPos.x + 12 : gridX * activeFloor.baseCellSize;
-          const py = screenPos ? screenPos.y + 12 : gridY * activeFloor.baseCellSize;
-          setDoorMenu({
-            door: doorOnActiveFloor,
-            position: { x: px, y: py },
-          });
-          return;
-        }
-        let doorTexture = activeTextureId;
-        if (!doorTexture?.startsWith("door-")) {
-          const doorsSub = subdivisions.find((s) => isDoorsSubdivision(s.name));
-          if (doorsSub) {
-            doorTexture = doorsSub.textureIds.find((id) => id.startsWith("door-")) ?? null;
-          }
-        }
-        if (!doorTexture) {
-          alert("No hay texturas de puerta disponibles.");
-          return;
-        }
-        const newDoor: Door = {
-          id: generateId("door"),
-          scenarioId: scenarioId ?? "",
-          floorId,
-          textureId: doorTexture,
-          gridX,
-          gridY,
-          state: textureIdToState(doorTexture),
-          orientation: 0,
-        };
-        setDoors((prev) => [...prev, newDoor]);
         return;
       }
-      // From any non-Puertas subdivision, a single-click on a cell
-      // that already has a door opens its menu (so the GM can tweak
-      // state without switching tabs). Drag-paint ignores doors:
-      // paint over the door cell the same as any other cell.
-      if (tool === "paint" && activeSub && !isDoorsSubdivision(activeSub.name) && !isDragging) {
-        const existingDoor = doors.find(
-          (d) => d.floorId === floorId && d.gridX === gridX && d.gridY === gridY,
-        );
-        if (existingDoor) {
+
+      // Find any existing cell at this position in the active subdivision. If
+      // it has an interactive trait (e.g. door-states), open the trait menu
+      // instead of overwriting it (unless we're dragging).
+      const existingCell = paintedCells.find(
+        (c) => c.floorId === floorId && c.gridX === gridX && c.gridY === gridY,
+      );
+
+      if (existingCell && !isDragging) {
+        const existingPiece = pieceById.get(existingCell.pieceId);
+        const interactiveTrait = existingPiece ? getInteractiveTrait(existingPiece) : undefined;
+        if (interactiveTrait?.getMenu) {
           const px = screenPos ? screenPos.x + 12 : gridX * activeFloor.baseCellSize;
           const py = screenPos ? screenPos.y + 12 : gridY * activeFloor.baseCellSize;
-          setDoorMenu({
-            door: existingDoor,
+          setTraitMenu({
+            cellId: existingCell.id,
+            traitKind: interactiveTrait.kind,
             position: { x: px, y: py },
           });
           return;
         }
       }
+
+      if (!pieceId) return;
+
+      const newPiece = pieceById.get(pieceId);
+      const traits = newPiece ? getTextureTraits(newPiece) : [];
+      const statefulTrait = traits.find((t) => t.defaultState);
+      const entityState = statefulTrait?.defaultState
+        ? { [statefulTrait.kind]: statefulTrait.defaultState() }
+        : undefined;
+
       setPaintedCells((prev) => {
         const filtered = prev.filter(
           (c) =>
@@ -222,7 +195,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               c.gridY === gridY
             ),
         );
-        if (!textureId) return filtered;
         return [
           ...filtered,
           {
@@ -231,26 +203,32 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
             subdivisionId,
             gridX,
             gridY,
-            textureId,
+            pieceId,
+            entityState: entityState as Record<string, string | number | boolean> | undefined,
           },
         ];
       });
     },
-    [activeTextureId, activeFloor, doors, subdivisions, tool, markDirty, scenarioId],
+    [tool, markDirty, paintedCells, pieceById, activeFloor.baseCellSize],
   );
 
   const handleSubdivisionChange = (id: string) => {
     setActiveSubdivisionId(id);
-    setActiveTextureId(null);
+    setActivePieceId(null);
   };
 
-  const handleSelectDoors = useCallback(() => {
-    const doorsSub = subdivisions.find((s) => isDoorsSubdivision(s.name));
-    if (!doorsSub) return;
-    setActiveSubdivisionId(doorsSub.id);
-    const firstDoorTexture = doorsSub.textureIds.find((id) => id.startsWith("door-"));
-    setActiveTextureId(firstDoorTexture ?? null);
-  }, [subdivisions]);
+  const handleSelectDoorPiece = useCallback(() => {
+    for (const sub of subdivisions) {
+      for (const id of sub.pieceIds) {
+        const p = pieceById.get(id);
+        if (p && getTextureTraits(p).some((tr) => tr.kind === "door-states")) {
+          setActiveSubdivisionId(sub.id);
+          setActivePieceId(id);
+          return;
+        }
+      }
+    }
+  }, [subdivisions, pieceById]);
 
   const handleReorder = useCallback(
     async (fromId: string, toId: string, side: "left" | "right") => {
@@ -259,14 +237,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
       const toIdx = subdivisions.findIndex((s) => s.id === toId);
       if (fromIdx === -1 || toIdx === -1) return;
 
-      // Reorder: pull `from` out, insert it before or after `to`.
       const moved = subdivisions[fromIdx]!;
       const without = subdivisions.filter((_, i) => i !== fromIdx);
       const newToIdx = without.findIndex((s) => s.id === toId);
       const insertAt = side === "left" ? newToIdx : newToIdx + 1;
       without.splice(insertAt, 0, moved);
 
-      // Persist new order locally first (instant feedback), then on the server.
       const renumbered = without.map((s, i) => ({ ...s, order: i }));
       setSubdivisions(renumbered);
       markDirty();
@@ -275,8 +251,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     [subdivisions, markDirty],
   );
 
-  // Global keyboard shortcuts. See useKeyboardShortcuts for the contract.
-  // Tier 1: B/E tools, D subdivision Puertas, Ctrl/Cmd+S save, Esc close menu.
   const activeFloorIndex = floors.findIndex((f) => f.id === activeFloorId);
   const handleFloorUp = () => {
     if (activeFloorIndex < floors.length - 1) {
@@ -290,10 +264,9 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   };
 
   useKeyboardShortcuts([
-    // Tier 1
     { key: "b", handler: () => setTool("paint") },
     { key: "e", handler: () => setTool("erase") },
-    { key: "d", handler: handleSelectDoors },
+    { key: "d", handler: handleSelectDoorPiece },
     {
       key: "s",
       ctrl: true,
@@ -304,23 +277,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     },
     {
       key: "Escape",
-      handler: () => setDoorMenu(null),
+      handler: () => setTraitMenu(null),
     },
-    // Tier 2: 1-4 select subdivision by position (visible tabs first, then Puertas).
-    // Numbers are 1-indexed so 1=Suelo (or first visible), 2=next, etc.
-    ...[1, 2, 3, 4].map((n) => ({
-      key: String(n),
-      handler: () => {
-        const ordered = [
-          ...filterVisibleSubdivisions(subdivisions),
-          ...subdivisions.filter((s) => isDoorsSubdivision(s.name)),
-        ];
-        const target = ordered[n - 1];
-        if (target) handleSubdivisionChange(target.id);
-      },
+    ...subdivisions.map((sub, i) => ({
+      key: String(i + 1),
+      handler: () => handleSubdivisionChange(sub.id),
     })),
-    // Tier 2: Shift+ArrowUp/Down change the active floor. Shift avoids the
-    // browser's native arrow-key scrolling. ArrowUp = up, ArrowDown = down.
     { key: "ArrowUp", shift: true, handler: handleFloorUp },
     { key: "ArrowDown", shift: true, handler: handleFloorDown },
   ]);
@@ -330,50 +292,56 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     const fresh = await import("../actions/subdivisions").then((m) => m.listSubdivisions());
     setSubdivisions(fresh);
     if (!fresh.find((s) => s.id === activeSubdivisionId)) {
-      setActiveSubdivisionId(fresh[0]?.id ?? DEFAULT_SUBDIVISION_ID);
+      setActiveSubdivisionId(fresh[0]?.id ?? "");
     }
   };
 
-  const handleChangeDoorState = useCallback(
-    (state: DoorState) => {
-      if (!doorMenu) return;
-      const newTextureId = doorStateToTextureId(state);
-      setDoors((prev) =>
-        prev.map((d) =>
-          d.id === doorMenu.door.id ? { ...d, state, textureId: newTextureId ?? d.textureId } : d,
+  const handleOpenTraitMenu = useCallback(
+    (cellId: string, traitKind: string, position: { x: number; y: number }) => {
+      setTraitMenu({ cellId, traitKind, position });
+    },
+    [],
+  );
+
+  const handleChangeTraitState = useCallback(
+    (newState: unknown) => {
+      if (!traitMenu) return;
+      setPaintedCells((prev) =>
+        prev.map((c) =>
+          c.id === traitMenu.cellId
+            ? { ...c, entityState: { ...c.entityState, [traitMenu.traitKind]: newState as string } }
+            : c,
         ),
       );
       markDirty();
-      setDoorMenu(null);
+      setTraitMenu(null);
     },
-    [doorMenu, markDirty],
+    [traitMenu, markDirty],
   );
+
+  const handleCloseTraitMenu = useCallback(() => setTraitMenu(null), []);
 
   const handleToolChange = (newTool: PaintTool) => {
     setTool(newTool);
   };
 
-  // Naming convention: distance to the Planta Baja determines the name,
-  // not the absolute array index. pbIndex is looked up by name because the
-  // user might rename floors later.
   const plantaBajaIndex = floors.findIndex((f) => f.name.toLowerCase() === "planta baja");
   const floorNameForIndex = (index: number): string => {
     if (index === plantaBajaIndex) return "Planta Baja";
-    if (plantaBajaIndex === -1) return `Piso ${index}`; // no pb yet, fallback
+    if (plantaBajaIndex === -1) return `Piso ${index}`;
     if (index < plantaBajaIndex) return `Subsuelo ${plantaBajaIndex - index}`;
     return `Piso ${index - plantaBajaIndex}`;
   };
 
   const makeFloor = (): Floor => ({
     id: generateFloorId(),
-    name: "Piso", // overwritten by the caller with the right index
+    name: "Piso",
     baseCellSize: activeFloor.baseCellSize,
     width: activeFloor.width,
     height: activeFloor.height,
   });
 
   const handleAddFloorAbove = () => {
-    // Appended at the end → it's the new top floor.
     const newIndex = floors.length;
     const newFloor: Floor = { ...makeFloor(), name: floorNameForIndex(newIndex) };
     setFloors((prev) => [...prev, newFloor]);
@@ -382,8 +350,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
   };
 
   const handleAddFloorBelow = () => {
-    // Prepended. After prepend, the new floor sits at index 0 and the
-    // Planta Baja shifts down by one. Subsuelo N where N = old pbIndex + 1.
     const newN = plantaBajaIndex + 1;
     const newFloor: Floor = {
       ...makeFloor(),
@@ -394,8 +360,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
     markDirty();
   };
 
-  // Delete the active floor if it's the topmost or bottommost (but never
-  // the Planta Baja — that's the scenario's anchor).
   const isAtTop = activeFloorIndex === floors.length - 1;
   const isAtBottom = activeFloorIndex === 0;
   const isPlantaBaja = activeFloor.name.toLowerCase() === "planta baja";
@@ -403,62 +367,41 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
 
   const handleDeleteFloor = () => {
     if (!canDeleteFloor) return;
-    if (!confirm(`¿Borrar "${activeFloor.name}"? Las celdas y puertas de este piso se perderán.`))
+    if (!confirm(`¿Borrar "${activeFloor.name}"? Las celdas pintadas de este piso se perderán.`))
       return;
     const idx = activeFloorIndex;
     const remaining = floors.filter((_, i) => i !== idx);
     setFloors(remaining);
-    // Pick the adjacent floor so the user doesn't end up on a stale id.
     const newIdx = Math.min(idx, remaining.length - 1);
     setActiveFloorId(remaining[newIdx]!.id);
     markDirty();
   };
 
-  // Copy the painted cells + doors of another floor into the active one.
-  // Useful for, e.g., duplicating a castle's ground floor up to the next
-  // floor so the GM can tweak the upper half without re-painting everything.
-  const _otherFloors = floors.filter((f) => f.id !== activeFloorId);
-  const _handleCopyFloorFrom = (sourceFloorId: string) => {
-    if (!sourceFloorId) return;
-    const source = floors.find((f) => f.id === sourceFloorId);
-    if (!source) return;
-    if (
-      !confirm(
-        `¿Copiar "${source.name}" a "${activeFloor.name}"? El contenido actual de "${activeFloor.name}" será reemplazado.`,
-      )
-    )
-      return;
-    // Copy painted cells with regenerated IDs to avoid collisions.
-    const newCells = paintedCells
-      .filter((c) => c.floorId === sourceFloorId)
-      .map((c) => ({ ...c, id: generateId("cell"), floorId: activeFloorId }));
-    const newDoors = doors
-      .filter((d) => d.floorId === sourceFloorId)
-      .map((d) => ({ ...d, id: generateId("door"), floorId: activeFloorId }));
-    setPaintedCells((prev) => [...prev.filter((c) => c.floorId !== activeFloorId), ...newCells]);
-    setDoors((prev) => [...prev.filter((d) => d.floorId !== activeFloorId), ...newDoors]);
-    markDirty();
-  };
-
-  // Three granularities of "clear", each with its own confirmation.
   const handleClearAll = () => {
-    if (!confirm("¿Borrar TODO el scenario (pintadas + puertas de todos los pisos)? No se puede deshacer.")) return;
+    if (!confirm("¿Borrar TODO el scenario (pintadas de todos los pisos)? No se puede deshacer."))
+      return;
     setPaintedCells([]);
-    setDoors([]);
     markDirty();
   };
 
   const handleClearFloor = () => {
-    if (!confirm(`¿Borrar todas las celdas pintadas y puertas de "${activeFloor.name}"? No se puede deshacer.`)) return;
+    if (
+      !confirm(`¿Borrar todas las celdas pintadas de "${activeFloor.name}"? No se puede deshacer.`)
+    )
+      return;
     const fid = activeFloor.id;
     setPaintedCells((prev) => prev.filter((c) => c.floorId !== fid));
-    setDoors((prev) => prev.filter((d) => d.floorId !== fid));
     markDirty();
   };
 
   const handleClearSubdivision = () => {
     if (!activeSubdivision) return;
-    if (!confirm(`¿Borrar todas las celdas pintadas de "${activeSubdivision.name}" en "${activeFloor.name}"? No se puede deshacer.`)) return;
+    if (
+      !confirm(
+        `¿Borrar todas las celdas pintadas de "${activeSubdivision.name}" en "${activeFloor.name}"? No se puede deshacer.`,
+      )
+    )
+      return;
     const fid = activeFloor.id;
     const sid = activeSubdivisionId;
     setPaintedCells((prev) => prev.filter((c) => !(c.floorId === fid && c.subdivisionId === sid)));
@@ -470,31 +413,80 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
       const doSave = async () => {
         if (isAutosave && !isDirty) return;
         setAutosaveStatus("saving");
+        setIsSaving(true);
         try {
           const result = await saveScenario({
             id: scenarioId ?? undefined,
             name: scenarioName,
             floors,
             paintedCells,
-            doors,
           });
           setScenarioId(result.id);
           const t = new Date().toLocaleTimeString("es");
           setSavedAt(t);
           setIsDirty(false);
           setAutosaveStatus("saved");
-          router.refresh();
+          // Keep the URL in sync with the persisted scenario id so reloads
+          // and shared links point at the right place.
+          router.replace(`/editor?id=${result.id}`);
         } catch {
           setAutosaveStatus("error");
+        } finally {
+          setIsSaving(false);
         }
       };
       doSave();
     },
-    [isDirty, scenarioId, scenarioName, floors, paintedCells, doors, router],
+    [isDirty, scenarioId, scenarioName, floors, paintedCells, router],
   );
 
+  // Periodic autosave. Runs every AUTOSAVE_INTERVAL_MS while enabled; the
+  // tick is a no-op when there's nothing dirty to save.
+  useEffect(() => {
+    if (!autosaveEnabled) return;
+    const id = setInterval(() => {
+      if (!isDirty) return;
+      startSaveTransition(() => handleSave(true));
+    }, AUTOSAVE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [autosaveEnabled, isDirty, handleSave]);
+
   const paintedInFloor = paintedCells.filter((c) => c.floorId === activeFloorId).length;
-  const doorsInFloor = doors.filter((d) => d.floorId === activeFloorId).length;
+  const doorsInFloor = paintedCells.filter((c) => {
+    if (c.floorId !== activeFloorId) return false;
+    const p = pieceById.get(c.pieceId);
+    return p ? getTextureTraits(p).some((tr) => tr.kind === "door-states") : false;
+  }).length;
+
+  const traitMenuNode = useMemo(() => {
+    if (!traitMenu) return null;
+    const cell = paintedCells.find((c) => c.id === traitMenu.cellId);
+    if (!cell) return null;
+    const trait = getInteractiveTrait(
+      pieceById.get(cell.pieceId) ?? {
+        id: "",
+        name: "",
+        category: "other" as const,
+        visualStates: [],
+        width: 0,
+        height: 0,
+        tags: [] as string[],
+      },
+    );
+    if (!trait?.getMenu) return null;
+    return (
+      <div
+        className="state-menu-wrapper"
+        style={{ left: traitMenu.position.x, top: traitMenu.position.y, position: "fixed" }}
+      >
+        {trait.getMenu({
+          cell,
+          onChangeState: handleChangeTraitState,
+          onClose: handleCloseTraitMenu,
+        })}
+      </div>
+    );
+  }, [traitMenu, paintedCells, pieceById, handleChangeTraitState, handleCloseTraitMenu]);
 
   return (
     <div className="editor">
@@ -507,12 +499,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
           ⚙ Administrar subdivisions
         </button>
         {activeSubdivision ? (
-          <TexturePalette
-            textures={activeTextures}
-            activeTextureId={activeTextureId}
-            onSelect={setActiveTextureId}
+          <PiecePalette
+            pieces={activePieces}
+            activePieceId={activePieceId}
+            onSelect={setActivePieceId}
           />
         ) : null}
+        <WeatherPanel onChange={setWeatherState} initial={weatherState} />
       </aside>
 
       <main className="canvas-area">
@@ -531,7 +524,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               onClick={handleAddFloorBelow}
               title="Agregar subsuelo (debajo del actual)"
             >
-              -
+              ↓+
             </button>
             <button
               type="button"
@@ -560,7 +553,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               onClick={handleAddFloorAbove}
               title="Agregar piso arriba del actual"
             >
-              +
+              +↑
             </button>
             <span className="floor-switcher-divider" aria-hidden="true" />
             {canDeleteFloor ? (
@@ -607,7 +600,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               type="button"
               className="button mini danger"
               onClick={handleClearAll}
-              disabled={paintedCells.length === 0 && doors.length === 0}
+              disabled={paintedCells.length === 0}
               title="Borrar TODO el scenario"
             >
               🗑 Todo
@@ -616,10 +609,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
               type="button"
               className="button mini danger"
               onClick={handleClearFloor}
-              disabled={
-                paintedCells.filter((c) => c.floorId === activeFloorId).length === 0 &&
-                doors.filter((d) => d.floorId === activeFloorId).length === 0
-              }
+              disabled={paintedInFloor === 0}
               title={`Borrar todo "${activeFloor.name}"`}
             >
               🗑 Piso
@@ -674,12 +664,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
           activeFloorId={activeFloorId}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
-          doors={doors}
-          textures={allUsedTextures}
+          pieces={allUsedPieces}
           activeSubdivisionId={activeSubdivisionId}
-          activeTextureId={activeTextureId}
+          activePieceId={activePieceId}
           tool={tool}
           onPaint={handlePaint}
+          onOpenTraitMenu={handleOpenTraitMenu}
+          overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </main>
 
@@ -687,17 +678,10 @@ export function EditorClient({ initialScenario, initialSubdivisions, allTextures
         isOpen={isManaging}
         onClose={handleCloseManager}
         subdivisions={subdivisions}
-        allTextures={allTextures}
+        allPieces={allPieces}
       />
 
-      {doorMenu ? (
-        <DoorMenu
-          door={doorMenu.door}
-          position={doorMenu.position}
-          onChangeState={handleChangeDoorState}
-          onClose={() => setDoorMenu(null)}
-        />
-      ) : null}
+      {traitMenuNode}
     </div>
   );
 }

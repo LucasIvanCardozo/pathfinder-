@@ -18,7 +18,6 @@ model Scenario {
   updatedAt DateTime @updatedAt
 
   floors Floor[]
-  doors  Door[]
 }
 
 model Floor {
@@ -32,7 +31,6 @@ model Floor {
 
   scenario     Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   paintedCells PaintedCell[]
-  doors        Door[]
 
   @@index([scenarioId])
 }
@@ -43,7 +41,9 @@ model PaintedCell {
   subdivisionId String
   gridX         Int
   gridY         Int
-  textureId     String
+  pieceId       String
+  /// Mutable state attached by traits (e.g. door-states: "open" | "closed" | "locked").
+  entityState   Json?
 
   floor Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
 
@@ -53,28 +53,10 @@ model PaintedCell {
 model SubdivisionConfig {
   id            String @id @default(cuid())
   name          String
-  textureIds    String @default("[]")
+  pieceIds      String @default("[]")
   cellSizeRatio Int
   order         Int    @default(0)
 
   @@index([order])
 }
 
-model Door {
-  id          String   @id @default(cuid())
-  scenarioId  String
-  floorId     String
-  textureId   String
-  gridX       Int
-  gridY       Int
-  state       String   @default("closed")
-  orientation Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  floor    Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
-
-  @@index([scenarioId])
-  @@index([floorId])
-}

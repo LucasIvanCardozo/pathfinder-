@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { listScenarios } from "./actions/scenarios";
+import { createBlankScenario, listScenarios } from "./actions/scenarios";
 import "./home.css";
 
 function HomeFallback() {
@@ -26,7 +26,7 @@ async function HomeContent() {
         <h1>Pathfinder</h1>
         <p>Battle Map — editor de escenarios</p>
         <nav className="home-nav">
-          <Link href="/admin/textures" className="home-nav-link">
+          <Link href="/admin/pieces" className="home-nav-link">
             🎨 Galería de texturas
           </Link>
         </nav>
@@ -35,9 +35,11 @@ async function HomeContent() {
       <section className="home-section">
         <div className="home-section-header">
           <h2>Escenarios</h2>
-          <Link href="/editor" className="button primary">
-            + Nuevo
-          </Link>
+          <form action={createBlankScenario}>
+            <button type="submit" className="button primary">
+              + Nuevo
+            </button>
+          </form>
         </div>
         {scenarios.length === 0 ? (
           <p className="empty">No hay escenarios guardados. Creá uno para empezar.</p>

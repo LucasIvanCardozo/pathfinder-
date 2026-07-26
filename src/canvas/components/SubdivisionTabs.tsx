@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { SubdivisionConfig } from "@/pieces";
-import { DOORS_SUBDIVISION_NAME, filterVisibleSubdivisions } from "../subdivisions";
 
 type Props = {
   subdivisions: SubdivisionConfig[];
@@ -19,14 +18,11 @@ type Props = {
 type DropIndicator = { id: string; side: "left" | "right" } | null;
 
 /**
- * Subdivision tab strip. Regular subdivisions are draggable so the user
- * can reorder them; the "Puertas" tab is intentionally fixed at the end
- * (its separator marks it as a special-destination tab, not a peer).
+ * Subdivision tab strip. Every subdivision (including ones that contain
+ * door textures) is rendered as a peer tab — the old "Puertas" special tab
+ * is gone, replaced by the trait system.
  */
 export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }: Props) {
-  const doorsSub = subdivisions.find((s) => s.name === DOORS_SUBDIVISION_NAME);
-  const visible = filterVisibleSubdivisions(subdivisions);
-
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 
@@ -62,7 +58,7 @@ export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }:
 
   return (
     <div className="subdivision-tabs" role="tablist">
-      {visible.map((sub) => {
+      {subdivisions.map((sub) => {
         const isDragging = draggingId === sub.id;
         const indicatorHere =
           dropIndicator && dropIndicator.id === sub.id ? dropIndicator.side : null;
@@ -76,9 +72,7 @@ export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }:
               role="tab"
               aria-selected={sub.id === activeId}
               draggable
-              className={`subdivision-tab ${
-                sub.id === activeId ? "active" : ""
-              } ${isDragging ? "dragging" : ""}`}
+              className={`subdivision-tab ${sub.id === activeId ? "active" : ""} ${isDragging ? "dragging" : ""}`}
               onClick={() => onChange(sub.id)}
               onDragStart={(e) => handleDragStart(e, sub.id)}
               onDragOver={(e) => handleDragOver(e, sub.id)}
@@ -90,21 +84,6 @@ export function SubdivisionTabs({ subdivisions, activeId, onChange, onReorder }:
           </div>
         );
       })}
-      {doorsSub ? (
-        <>
-          <span className="subdivision-tabs-separator" aria-hidden="true" />
-          <button
-            type="button"
-            role="tab"
-            aria-selected={doorsSub.id === activeId}
-            className={`subdivision-tab doors-tab ${doorsSub.id === activeId ? "active" : ""}`}
-            onClick={() => onChange(doorsSub.id)}
-            title="Activar la subcapa Puertas"
-          >
-            🚪 Puertas
-          </button>
-        </>
-      ) : null}
     </div>
   );
 }

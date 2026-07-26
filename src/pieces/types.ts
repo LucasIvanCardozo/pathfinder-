@@ -12,19 +12,58 @@ export const PIECE_CATEGORIES = [
 
 export type PieceCategory = (typeof PIECE_CATEGORIES)[number];
 
+/** A visual state of a piece. Most pieces have just one ("default"), but
+ *  objects like doors have several ("closed" | "open" | "locked"). */
+export type VisualState = {
+  /** Unique within the parent piece, e.g. "closed", "open", "default". */
+  id: string;
+  /** Public path served by Next.js. */
+  imagePath: string;
+  /** True for the visual state used when the piece is freshly painted. */
+  isDefault?: boolean;
+};
+
+export type TextureTrait = import("./traits").TextureTrait;
+export type EntityState = import("./traits").EntityState;
+
 /**
- * A reusable texture tile that can be painted into individual cells of a
- * subdivision. Textures live in the codebase and are referenced by id.
+ * A piece is something the GM can paint into a floor cell. It groups one or
+ * more visual states under a single id/name, plus optional behaviour traits.
+ *
+ * Examples:
+ *   { id: "floor-stone", name: "Suelo de piedra",
+ *     visualStates: [{ id: "default", imagePath: ".../stone.svg" }] }
+ *
+ *   { id: "door", name: "Puerta",
+ *     visualStates: [
+ *       { id: "closed", imagePath: ".../door-closed.svg", isDefault: true },
+ *       { id: "open",   imagePath: ".../door-open.svg" },
+ *       { id: "locked", imagePath: ".../door-locked.svg" },
+ *     ],
+ *     traits: [{ kind: "door-states" }] }
  */
-export type Texture = {
+export type Piece = {
   id: string;
   name: string;
-  imagePath: string;
+  category: PieceCategory;
+  visualStates: readonly VisualState[];
+  tags: string[];
+  /** Width of the default visual state (for the catalog/UI). */
   width: number;
   height: number;
-  category: PieceCategory;
-  tags: string[];
+  /**
+   * Optional traits that attach behaviour to this piece (door-states,
+   * blocks-light, ...). See `src/pieces/traits.ts` for the full list.
+   */
+  traits?: readonly TextureTrait[];
 };
+
+/**
+ * Backwards-compat alias. Many call sites still use `Texture`; we keep the
+ * name working until the rename is complete.
+ * @deprecated use `Piece` instead.
+ */
+export type Texture = Piece;
 
 /**
  * A subdivision config describes one kind of layer inside a floor (ground,
@@ -35,8 +74,8 @@ export type Texture = {
 export type SubdivisionConfig = {
   id: string;
   name: string;
-  /** Explicit list of texture ids that this subdivision can use. */
-  textureIds: string[];
+  /** List of piece ids that this subdivision can use. */
+  pieceIds: string[];
   /** Divisor of the floor's baseCellSize. */
   cellSizeRatio: number;
   /** Z-order (0 = bottom). Higher renders on top. */
@@ -44,7 +83,7 @@ export type SubdivisionConfig = {
 };
 
 /**
- * A painted cell represents one cell of one subdivision that has a texture
+ * A painted cell represents one cell of one subdivision that has a piece
  * applied. Empty cells are not stored.
  */
 export type PaintedCell = {
@@ -54,7 +93,13 @@ export type PaintedCell = {
   /** Coordinates in the subdivision's grid (not in floor pixels). */
   gridX: number;
   gridY: number;
-  textureId: string;
+  /** The piece painted here (e.g. "floor-stone", "door"). */
+  pieceId: string;
+  /**
+   * Mutable state attached to this cell by its piece's traits. Keys are
+   * trait kinds (e.g. "door-states" → "closed" | "open" | "locked").
+   */
+  entityState?: EntityState;
 };
 
 export type Floor = {
@@ -71,30 +116,7 @@ export type Scenario = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
-  doors: Door[];
 };
 
-/**
- * Door state. Maps to a texture variant in the door texture set.
- * - open:    door is open (visible opening)
- * - closed:  standard closed door
- * - locked:  locked (typically with a key requirement)
- * - secret:  hidden / not visible until discovered
- * - broken:  smashed open (destructible variant)
- */
 export const DOOR_STATES = ["open", "closed", "locked"] as const;
 export type DoorState = (typeof DOOR_STATES)[number];
-
-export type Door = {
-  id: string;
-  scenarioId: string;
-  floorId: string;
-  /** Base texture id (e.g. "door-closed"). The actual rendered texture
-   *  depends on the current state — see DOOR_TEXTURE_BY_STATE. */
-  textureId: string;
-  gridX: number;
-  gridY: number;
-  state: DoorState;
-  /** 0 = horizontal, 1 = vertical (for rotation). Future use. */
-  orientation: number;
-};

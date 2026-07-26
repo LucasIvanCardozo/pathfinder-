@@ -419,8 +419,14 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
-  align-self: center;
+  position: relative; /* positioning context for .weather-overlay */
+  overflow: auto;
+  /* Stage sizes itself to the grid's native pixel dimensions; the
+     container grows to fit and scrolls when the grid overflows. */
+  width: max-content;
+  max-width: 100%;
+  max-height: calc(100vh - 200px); /* header + toolbar + footer */
+  align-self: flex-start;
 }
 
 .canvas-loading {
@@ -434,4 +440,28 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+  color: #aaa;
+}
+
+.empty-state h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #e8e8e8;
+}
+
+.empty-state p {
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.5;
 }

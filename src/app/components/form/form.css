@@ -106,3 +106,54 @@
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Range slider */
+.form-slider {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.form-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.form-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.form-slider::-moz-range-track {
+  height: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.form-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 1px solid var(--fg);
+  cursor: grab;
+}
+
+.form-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 1px solid var(--fg);
+  cursor: grab;
+}
