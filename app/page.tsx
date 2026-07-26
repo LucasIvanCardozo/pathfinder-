@@ -2,8 +2,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { createBlankScenario, listScenarios } from "@/lib/server/actions/scenario.action";
-import { Button } from "./components/Button";
-import { Empty } from "./components/Empty";
+import { Button } from "@/components/Button";
+import { Empty } from "@/components/Empty";
 import styles from "./page.module.css";
 
 function HomeFallback() {

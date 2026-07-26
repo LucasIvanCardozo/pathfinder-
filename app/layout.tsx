@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.module.css";
-import { DisableContextMenu } from "./components/DisableContextMenu";
+import { DisableContextMenu } from "@/components/DisableContextMenu";
 
 export const metadata: Metadata = {
   title: "Pathfinder — Battle Map",

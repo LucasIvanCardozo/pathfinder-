@@ -12,11 +12,11 @@ import {
 } from "@/lib/shared/types";
 import { SubdivisionConfigPieceIdsInputSchema } from "@/lib/shared/schemas";
 import { createSubdivision, deleteSubdivision, updateSubdivision } from "@/lib/server/actions/subdivision.action";
-import traitBadgeStyles from "./TraitBadge.module.css";
-import { Button } from "./Button";
-import { Empty } from "./Empty";
-import { FormField, FormInput, FormNumberInput } from "./form";
-import { Modal } from "./Modal";
+import traitBadgeStyles from "@/components/TraitBadge.module.css";
+import { Button } from "@/components/Button";
+import { Empty } from "@/components/Empty";
+import { FormField, FormInput, FormNumberInput } from "@/components/form";
+import { Modal } from "@/components/Modal";
 import styles from "./SubdivisionManager.module.css";
 
 const FormSchema = SubdivisionConfigPieceIdsInputSchema;

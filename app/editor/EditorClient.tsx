@@ -24,9 +24,9 @@ import { saveScenario } from "@/lib/server/actions/scenario.action";
 import { reorderSubdivisions } from "@/lib/server/actions/subdivision.action";
 import { generateId } from "@/lib/shared/utils/generateId";
 import { useReload } from "@/hooks";
-import { Button } from "../components/Button";
-import { Empty } from "../components/Empty";
-import { SubdivisionManager } from "../components/SubdivisionManager";
+import { Button } from "@/components/Button";
+import { Empty } from "@/components/Empty";
+import { SubdivisionManager } from "@/components/SubdivisionManager";
 import styles from "./Editor.module.css";
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;

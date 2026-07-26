@@ -1,7 +1,7 @@
 "use client";
 
 import { FormProvider, useForm } from "react-hook-form";
-import { FormField, FormSelect, FormSlider } from "@/app/components/form";
+import { FormField, FormSelect, FormSlider } from "@/components/form";
 import styles from "./WeatherPanel.module.css";
 import { WEATHERS, type WeatherDef } from "./registry";
 
