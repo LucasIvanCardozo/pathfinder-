@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import styles from "./StateMenu.module.css";
+import { useEffect } from 'react';
+import styles from './state-menu.module.css';
 
 type StateMenuProps = {
   /** All valid state values for this trait. */
@@ -42,19 +42,19 @@ export function StateMenu({
     const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (!target.closest("[data-state-menu]")) onClose();
+      if (!target.closest('[data-state-menu]')) onClose();
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
     const t = setTimeout(() => {
-      document.addEventListener("pointerdown", handlePointerDown, true);
-      document.addEventListener("keydown", handleKey);
+      document.addEventListener('pointerdown', handlePointerDown, true);
+      document.addEventListener('keydown', handleKey);
     }, 0);
     return () => {
       clearTimeout(t);
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKey);
     };
   }, [onClose]);
 
@@ -63,14 +63,9 @@ export function StateMenu({
     <div className={menuClass} data-state-menu>
       <div className={styles.header}>
         <span>
-          {title} · {labels[current ?? states[0] ?? ""] ?? current}
+          {title} · {labels[current ?? states[0] ?? ''] ?? current}
         </span>
-        <button
-          type="button"
-          className={styles.close}
-          onClick={onClose}
-          aria-label="Cerrar menú"
-        >
+        <button type="button" className={styles.close} onClick={onClose} aria-label="Cerrar menú">
           ×
         </button>
       </div>
@@ -81,7 +76,7 @@ export function StateMenu({
             <button
               key={s}
               type="button"
-              className={`${styles.stateBtn} ${s === current ? styles.active : ""}`}
+              className={`${styles.stateBtn} ${s === current ? styles.active : ''}`}
               onClick={() => onChange(s)}
               data-state={s}
             >

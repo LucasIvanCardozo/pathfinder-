@@ -1,8 +1,8 @@
-import type { z } from "zod";
+import type { z } from 'zod';
 import type {
   SubdivisionConfigInputSchema,
   SubdivisionConfigSchema,
-} from "@/lib/shared/schemas/subdivision.schemas";
+} from '@/lib/shared/schemas/subdivision.schemas';
 
 /**
  * A subdivision config describes one kind of layer inside a floor (ground,
@@ -32,22 +32,22 @@ export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigInputSchema
  */
 export const DEFAULT_SUBDIVISIONS: SubdivisionConfigInput[] = [
   {
-    name: "Suelo",
+    name: 'Suelo',
     cellSizeRatio: 1,
     order: 0,
   },
   {
-    name: "Objetos grandes",
+    name: 'Objetos grandes',
     cellSizeRatio: 3,
     order: 1,
   },
   {
-    name: "Objetos pequeños",
+    name: 'Objetos pequeños',
     cellSizeRatio: 6,
     order: 2,
   },
   {
-    name: "Estructuras",
+    name: 'Estructuras',
     cellSizeRatio: 1,
     order: 3,
   },

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import overlayStyles from "./weather-overlay.module.css";
+import { useEffect, useRef } from 'react';
+import overlayStyles from './weather-effect.module.css';
 
 /**
  * Slow-falling snowflakes. Each flake is a soft white dot with subtle drift.
@@ -14,7 +14,7 @@ export function SnowEffect() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -54,7 +54,7 @@ export function SnowEffect() {
     const tick = () => {
       t += 1;
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "rgba(245, 248, 255, 0.85)";
+      ctx.fillStyle = 'rgba(245, 248, 255, 0.85)';
       for (let i = 0; i < flakes.length; i++) {
         const f = flakes[i]!;
         f.y += f.vy;
@@ -84,5 +84,7 @@ export function SnowEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }

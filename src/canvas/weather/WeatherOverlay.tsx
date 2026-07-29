@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { FogEffect } from "./FogEffect";
-import { RainEffect } from "./RainEffect";
-import { SnowEffect } from "./SnowEffect";
-import { StormEffect } from "./StormEffect";
-import { getWeather } from "./registry";
-import styles from "./WeatherOverlay.module.css";
+import { FogEffect } from './FogEffect';
+import { RainEffect } from './RainEffect';
+import { SnowEffect } from './SnowEffect';
+import { StormEffect } from './StormEffect';
+import { getWeather } from './registry';
+import styles from './weather-overlay.module.css';
 
 /**
  * Maps animation kinds to their prop-less canvas overlay components. Adding
@@ -33,8 +33,8 @@ export function WeatherOverlay({
   // Branched animations: render with an explicit subtree because they need
   // extra layers (storm listens for thunder; night stacks vignette + tinted
   // moonlight). These never go through `ANIMATIONS`.
-  const isStorm = def.animation === "storm";
-  const isNight = def.animation === "night";
+  const isStorm = def.animation === 'storm';
+  const isNight = def.animation === 'night';
   const Animation = !isStorm && !isNight && hasAnimation ? ANIMATIONS[def.animation!] : null;
 
   return (

@@ -8,7 +8,7 @@
  * occluders.
  */
 export const blocksLightTrait = {
-  kind: "blocks-light" as const,
+  kind: 'blocks-light' as const,
 
   /** Default opacity for a freshly painted cell with this trait. */
   defaultOpacity(): number {
@@ -17,7 +17,7 @@ export const blocksLightTrait = {
 
   /** Resolve the opacity from a cell's entityState (defaults to 1). */
   resolveOpacity(state: unknown): number {
-    const v = typeof state === "number" ? state : Number(state);
+    const v = typeof state === 'number' ? state : Number(state);
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1.0;
   },
 

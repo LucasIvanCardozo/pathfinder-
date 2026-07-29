@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Layer, Line, Stage } from "react-konva";
-import { gridLines, type GridConfig } from "../grid";
+import { Layer, Line, Stage } from 'react-konva';
+import { gridLines, type GridConfig } from '../grid';
 
 type Props = {
   mapDims: { baseCellSize: number; width: number; height: number };
@@ -17,7 +17,7 @@ type Props = {
   strokeWidth?: number;
 };
 
-const DEFAULT_STROKE = "#2a2e36";
+const DEFAULT_STROKE = '#2a2e36';
 
 /**
  * Single-instanced grid overlay for the entire floor stack. Renders the

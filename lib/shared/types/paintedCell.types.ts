@@ -1,5 +1,5 @@
-import type { z } from "zod";
-import type { PaintedCellSchema } from "@/lib/shared/schemas/paintedCell.schemas";
+import type { z } from 'zod';
+import type { PaintedCellSchema } from '@/lib/shared/schemas/paintedCell.schemas';
 
 /**
  * A painted cell represents one cell of one subdivision that has a piece

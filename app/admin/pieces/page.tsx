@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { listAllPieces } from "@/lib/server/actions/subdivision.action";
-import styles from "../../page.module.css";
-import { PiecesGallery } from "./PiecesGallery";
+import Link from 'next/link';
+import { listAllPieces } from '@/lib/server/actions/subdivision.action';
+import styles from '../../page.module.css';
+import { PiecesGallery } from './PiecesGallery';
 
 export default async function PiecesGalleryPage() {
   // listAllPieces is a cached read wrapped by createAction; unwrap the

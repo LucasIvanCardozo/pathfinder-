@@ -66,15 +66,11 @@ export function gridLines(cfg: GridConfig): {
   horizontal: number[];
 } {
   const { worldBaseCellSize, width, height, worldBounds } = cfg;
-  const startX = worldBounds
-    ? Math.max(0, Math.floor(worldBounds.x / worldBaseCellSize))
-    : 0;
+  const startX = worldBounds ? Math.max(0, Math.floor(worldBounds.x / worldBaseCellSize)) : 0;
   const endX = worldBounds
     ? Math.min(width, Math.ceil((worldBounds.x + worldBounds.width) / worldBaseCellSize))
     : width;
-  const startY = worldBounds
-    ? Math.max(0, Math.floor(worldBounds.y / worldBaseCellSize))
-    : 0;
+  const startY = worldBounds ? Math.max(0, Math.floor(worldBounds.y / worldBaseCellSize)) : 0;
   const endY = worldBounds
     ? Math.min(height, Math.ceil((worldBounds.y + worldBounds.height) / worldBaseCellSize))
     : height;

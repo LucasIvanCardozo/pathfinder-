@@ -1,5 +1,5 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import type { Floor } from "@/lib/shared/types/floor.types";
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import type { Floor } from '@/lib/shared/types/floor.types';
 
 /**
  * Thin floor repository. Lives in its own file so transactional reads

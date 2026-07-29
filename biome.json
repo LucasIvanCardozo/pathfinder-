@@ -30,13 +30,13 @@
       },
       "style": {
         "useImportType": "warn",
-            "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off"
       }
     }
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double",
+      "quoteStyle": "single",
       "semicolons": "always",
       "trailingCommas": "all",
       "arrowParentheses": "always"

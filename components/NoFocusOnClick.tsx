@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 /**
  * Suppresses the default focus behavior on mouse click for `<button>` elements
@@ -30,8 +30,8 @@ export function NoFocusOnClick() {
         e.preventDefault();
       }
     };
-    document.addEventListener("mousedown", handler, true);
-    return () => document.removeEventListener("mousedown", handler, true);
+    document.addEventListener('mousedown', handler, true);
+    return () => document.removeEventListener('mousedown', handler, true);
   }, []);
   return null;
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef } from "react";
-import type { WeatherSound } from "./registry";
+import { useEffect, useMemo, useRef } from 'react';
+import type { WeatherSound } from './registry';
 
 /**
  * Plays one or more audio tracks associated with the active weather.
@@ -64,7 +64,7 @@ export function useWeatherAudio(
     for (const [src, a] of audiosRef.current) {
       if (!wantedSrcs.has(src)) {
         a.pause();
-        a.removeAttribute("src");
+        a.removeAttribute('src');
         a.load();
         audiosRef.current.delete(src);
         const t = triggersRef.current.get(src);
@@ -79,8 +79,8 @@ export function useWeatherAudio(
       let a = audiosRef.current.get(s.src);
       if (!a) {
         a = new Audio(s.src);
-        a.loop = s.mode === "loop";
-        a.preload = "auto";
+        a.loop = s.mode === 'loop';
+        a.preload = 'auto';
         audiosRef.current.set(s.src, a);
       }
       // Sync volume BEFORE play(): the dedicated volume-sync effect runs
@@ -89,7 +89,7 @@ export function useWeatherAudio(
       // dropped to the slider's value.
       a.volume = Math.max(0, Math.min(1, volumeRef.current));
 
-      if (s.mode === "loop") {
+      if (s.mode === 'loop') {
         // Best-effort start. Any rejection (autoplay block) is silently
         // ignored; a later interaction will unlock playback.
         a.play().catch(() => {});
@@ -144,7 +144,7 @@ export function useWeatherAudio(
       triggersRef.current.clear();
       for (const a of audiosRef.current.values()) {
         a.pause();
-        a.removeAttribute("src");
+        a.removeAttribute('src');
         a.load();
       }
       audiosRef.current.clear();

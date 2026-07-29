@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { memo, useCallback, useRef } from "react";
-import { Image as KonvaImage, Layer, Stage } from "react-konva";
-import type Konva from "konva";
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
-import { usePieceMap, useSubdivisionMap } from "@/hooks";
-import { findInteractiveCellAtPixel, getTrait } from "../traits";
-import styles from "./FloorCanvas.module.css";
+import { memo, useCallback, useRef } from 'react';
+import { Image as KonvaImage, Layer, Stage } from 'react-konva';
+import type Konva from 'konva';
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { usePieceMap, useSubdivisionMap } from '@/hooks';
+import { findInteractiveCellAtPixel, getTrait } from '../traits';
+import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -24,7 +24,7 @@ type Props = {
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
-  tool: "paint" | "erase";
+  tool: 'paint' | 'erase';
   /** Loaded texture images keyed by `imagePath`. One HTMLImageElement per path
    *  — depth blur is now done in CSS. */
   textureImages: Map<string, HTMLImageElement>;
@@ -91,15 +91,14 @@ function FloorCanvasImpl({
   const pieceById = usePieceMap(pieces);
 
   // Render-time cellSize helper (world coords; the Stage scales on output).
-  const cellSizeFor = (sub: SubdivisionConfig): number =>
-    mapDims.baseCellSize / sub.cellSizeRatio;
+  const cellSizeFor = (sub: SubdivisionConfig): number => mapDims.baseCellSize / sub.cellSizeRatio;
 
   // Resolve the actual imagePath to render. Pieces with stateful traits
   // (e.g. doors) may override the visual state per cell.
   const resolveRenderImagePath = (cell: PaintedCell, fallbackPath: string): string => {
     const piece = pieceById.get(cell.pieceId);
     if (!piece) return fallbackPath;
-    const trait = getTrait("door-states");
+    const trait = getTrait('door-states');
     if (!trait?.resolveTextureId) {
       const def = piece.visualStates.find((v) => v.isDefault) ?? piece.visualStates[0];
       return def?.imagePath ?? fallbackPath;
@@ -120,17 +119,9 @@ function FloorCanvasImpl({
       const gridY = Math.floor(pointer.y / cellSize);
       if (gridX < 0 || gridY < 0 || gridX >= maxX || gridY >= maxY) return;
 
-      const pieceId = tool === "paint" ? activePieceId : null;
-      if (tool === "paint" && !pieceId) return;
-      onPaint?.(
-        floor.id,
-        activeSubdivisionId,
-        gridX,
-        gridY,
-        pieceId,
-        null,
-        isDragging,
-      );
+      const pieceId = tool === 'paint' ? activePieceId : null;
+      if (tool === 'paint' && !pieceId) return;
+      onPaint?.(floor.id, activeSubdivisionId, gridX, gridY, pieceId, null, isDragging);
     },
     [
       activePieceId,
@@ -233,8 +224,8 @@ function FloorCanvasImpl({
 
   // Cursor reflects the current interaction: default crosshair (paint),
   // grab when space is held, grabbing while a pan drag is in progress.
-  const baseCursor = tool === "erase" ? "cell" : "crosshair";
-  const cursor = isSpaceDown ? (isPanning ? "grabbing" : "grab") : baseCursor;
+  const baseCursor = tool === 'erase' ? 'cell' : 'crosshair';
+  const cursor = isSpaceDown ? (isPanning ? 'grabbing' : 'grab') : baseCursor;
 
   // Pick the CSS tier class for this floor. tier0 is the active floor
   // (sharp + fully opaque); tier1..tier3 are progressively blurred + dimmed.
@@ -247,7 +238,7 @@ function FloorCanvasImpl({
         : tier === 2
           ? styles.tier2
           : styles.tier3;
-  const className = `${styles.floor} ${tierClass}${isActive ? ` ${styles.interactive}` : ""}`;
+  const className = `${styles.floor} ${tierClass}${isActive ? ` ${styles.interactive}` : ''}`;
 
   return (
     <div className={className} style={isActive ? { cursor } : undefined}>
@@ -275,9 +266,8 @@ function FloorCanvasImpl({
             if (!sub) return null;
             const cellSize = cellSizeFor(sub);
             const piece = pieceById.get(cell.pieceId);
-            const def =
-              piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
-            const fallbackPath = def?.imagePath ?? "";
+            const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
+            const fallbackPath = def?.imagePath ?? '';
             const imagePath = resolveRenderImagePath(cell, fallbackPath);
             const img = textureImages.get(imagePath);
             if (!img) return null;

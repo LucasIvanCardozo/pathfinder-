@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import styles from "./Empty.module.css";
+import type { ReactNode } from 'react';
+import styles from './empty.module.css';
 
 type EmptyProps = {
   children: ReactNode;

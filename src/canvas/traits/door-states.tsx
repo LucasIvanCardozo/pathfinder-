@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { StateMenu } from "./StateMenu";
-import type { PaintedCell, Piece } from "@/lib/shared/types";
+import { StateMenu } from './StateMenu';
+import type { PaintedCell, Piece } from '@/lib/shared/types';
 
-export const DOOR_STATES = ["closed", "open", "locked"] as const;
+export const DOOR_STATES = ['closed', 'open', 'locked'] as const;
 export type DoorState = (typeof DOOR_STATES)[number];
 
 const DOOR_LABELS: Record<DoorState, string> = {
-  closed: "Cerrada",
-  open: "Abierta",
-  locked: "Bloqueada",
+  closed: 'Cerrada',
+  open: 'Abierta',
+  locked: 'Bloqueada',
 };
 
 export const doorStatesTrait = {
-  kind: "door-states" as const,
+  kind: 'door-states' as const,
 
   defaultState(): DoorState {
-    return "closed";
+    return 'closed';
   },
 
   /**
@@ -25,10 +25,10 @@ export const doorStatesTrait = {
    * default visualState if the state is missing/invalid.
    */
   resolveTextureId(cell: PaintedCell, fallbackImagePath: string, piece: Piece): string {
-    const state = cell.entityState?.["door-states"] as DoorState | undefined;
+    const state = cell.entityState?.['door-states'] as DoorState | undefined;
     const visualState = state
       ? piece.visualStates.find((v) => v.id === state)
-      : piece.visualStates.find((v) => v.isDefault) ?? piece.visualStates[0];
+      : (piece.visualStates.find((v) => v.isDefault) ?? piece.visualStates[0]);
     return visualState?.imagePath ?? fallbackImagePath;
   },
 
@@ -41,7 +41,7 @@ export const doorStatesTrait = {
     onChangeState: (newState: DoorState) => void;
     onClose: () => void;
   }) {
-    const current = (cell.entityState?.["door-states"] as DoorState) ?? this.defaultState();
+    const current = (cell.entityState?.['door-states'] as DoorState) ?? this.defaultState();
     return (
       <StateMenu
         title="Puerta"
@@ -53,7 +53,6 @@ export const doorStatesTrait = {
       />
     );
   },
-
 };
 
 export type DoorStatesTrait = typeof doorStatesTrait;

@@ -1,5 +1,5 @@
-import { useRouter } from "next/navigation";
-import { startTransition, useCallback } from "react";
+import { useRouter } from 'next/navigation';
+import { startTransition, useCallback } from 'react';
 
 /**
  * Soft-refresh the current route.

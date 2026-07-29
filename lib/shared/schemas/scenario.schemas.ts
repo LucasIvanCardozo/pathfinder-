@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { FloorSchema } from "@/lib/shared/schemas/floor.schemas";
-import { PaintedCellSchema } from "@/lib/shared/schemas/paintedCell.schemas";
+import { z } from 'zod';
+import { FloorSchema } from '@/lib/shared/schemas/floor.schemas';
+import { PaintedCellSchema } from '@/lib/shared/schemas/paintedCell.schemas';
 
 /**
  * Full scenario as the editor sees it: persisted `id`, name, the map
@@ -14,7 +14,7 @@ export const ScenarioSchema = z.object({
   baseCellSize: z.number().int().min(10).max(200),
   width: z.number().int().min(1).max(500),
   height: z.number().int().min(1).max(500),
-  floors: z.array(FloorSchema).min(1, "Al menos un piso requerido"),
+  floors: z.array(FloorSchema).min(1, 'Al menos un piso requerido'),
   activeFloorId: z.string().min(1),
   paintedCells: z.array(PaintedCellSchema),
 });

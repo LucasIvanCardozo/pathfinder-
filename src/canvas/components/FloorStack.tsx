@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
-import { useStageViewport } from "@/hooks/useStageViewport";
-import { useTextureImages } from "../useTextureImages";
-import { FloorCanvas } from "./FloorCanvas";
-import { WorldGrid } from "./WorldGrid";
-import styles from "./FloorStack.module.css";
+import { useMemo } from 'react';
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { useStageViewport } from '@/hooks/useStageViewport';
+import { useTextureImages } from '../useTextureImages';
+import { FloorCanvas } from './FloorCanvas';
+import { WorldGrid } from './WorldGrid';
+import styles from './floor-stack.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -21,7 +21,7 @@ type Props = {
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
-  tool: "paint" | "erase";
+  tool: 'paint' | 'erase';
   onPaint: (
     floorId: string,
     subdivisionId: string,
@@ -60,15 +60,8 @@ function FloorStackImpl({
   onOpenTraitMenu,
   overlay,
 }: Props) {
-  const {
-    containerRef,
-    viewportSize,
-    pan,
-    beginPan,
-    isSpaceDown,
-    isPanning,
-    worldBounds,
-  } = useStageViewport({ mapDims, zoom });
+  const { containerRef, viewportSize, pan, beginPan, isSpaceDown, isPanning, worldBounds } =
+    useStageViewport({ mapDims, zoom });
 
   const cellsForFloor = useMemo(() => {
     const m = new Map<string, PaintedCell[]>();
@@ -86,14 +79,14 @@ function FloorStackImpl({
   // Resolve the active index defensively — if the id isn't found (degenerate
   // empty scenario), fall back to the first floor so the canvas still
   // initialises something visible.
-  const activeIndex = Math.max(0, floors.findIndex((f) => f.id === activeFloorId));
+  const activeIndex = Math.max(
+    0,
+    floors.findIndex((f) => f.id === activeFloorId),
+  );
 
   // Only floors at or below the active one render. Floors above are not
   // drawn (matches the prior PaintCanvas behaviour: no painted cells shown).
-  const visibleFloors = useMemo(() => floors.slice(0, activeIndex + 1), [
-    floors,
-    activeIndex,
-  ]);
+  const visibleFloors = useMemo(() => floors.slice(0, activeIndex + 1), [floors, activeIndex]);
 
   // Load every piece's texture image once and share the map with all
   // FloorCanvas instances — the browser deduplicates the network requests

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { saveScenario } from "@/lib/server/actions/scenario.action";
-import type { Floor, PaintedCell } from "@/lib/shared/types";
+import { useCallback, useEffect, useState, useTransition } from 'react';
+import { saveScenario } from '@/lib/server/actions/scenario.action';
+import type { Floor, PaintedCell } from '@/lib/shared/types';
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 
@@ -16,7 +16,7 @@ type UseScenarioAutosaveParams = {
 
 type UseScenarioAutosaveResult = {
   isSaving: boolean;
-  autosaveStatus: "idle" | "saving" | "saved" | "error";
+  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
   savedAt: string | null;
   save: (isAutosave?: boolean) => void;
 };
@@ -32,14 +32,15 @@ export function useScenarioAutosave({
 }: UseScenarioAutosaveParams): UseScenarioAutosaveResult {
   const [, startSaveTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
-  const [autosaveStatus, setAutosaveStatus] = useState<UseScenarioAutosaveResult["autosaveStatus"]>("idle");
+  const [autosaveStatus, setAutosaveStatus] =
+    useState<UseScenarioAutosaveResult['autosaveStatus']>('idle');
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const save = useCallback(
     (isAutosave = false) => {
       if (isAutosave && !isDirty) return;
       startSaveTransition(async () => {
-        setAutosaveStatus("saving");
+        setAutosaveStatus('saving');
         setIsSaving(true);
         try {
           const result = await saveScenario({
@@ -52,19 +53,20 @@ export function useScenarioAutosave({
             paintedCells,
           });
           if (!result.success) {
-            setAutosaveStatus("error");
+            setAutosaveStatus('error');
             return;
           }
-          setSavedAt(new Date().toLocaleTimeString("es"));
-          setAutosaveStatus("saved");
+          setSavedAt(new Date().toLocaleTimeString('es'));
+          setAutosaveStatus('saved');
           onSaved(result.data.id);
         } catch {
-          setAutosaveStatus("error");
+          setAutosaveStatus('error');
         } finally {
           setIsSaving(false);
         }
       });
-    }, [isDirty, scenarioId, scenarioName, mapDims, floors, paintedCells, onSaved]
+    },
+    [isDirty, scenarioId, scenarioName, mapDims, floors, paintedCells, onSaved],
   );
 
   useEffect(() => {

@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState, useTransition } from "react";
-import { FormProvider, useForm } from "react-hook-form";
-import type { z } from "zod";
-import type { SubdivisionConfig } from "@/lib/shared/types";
-import { SubdivisionConfigInputSchema } from "@/lib/shared/schemas";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useState, useTransition } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
+import type { z } from 'zod';
+import type { SubdivisionConfig } from '@/lib/shared/types';
+import { SubdivisionConfigInputSchema } from '@/lib/shared/schemas';
 import {
   createSubdivision,
   deleteSubdivision,
   updateSubdivision,
-} from "@/lib/server/actions/subdivision.action";
-import { Button } from "@/components/Button";
-import { Empty } from "@/components/Empty";
-import { FormField, FormInput, FormNumberInput } from "@/components/form";
-import { Modal } from "@/components/Modal";
-import styles from "./SubdivisionManager.module.css";
+} from '@/lib/server/actions/subdivision.action';
+import { Button } from '@/components/Button';
+import { Empty } from '@/components/Empty';
+import { FormField, FormInput, FormNumberInput } from '@/components/form';
+import { Modal } from '@/components/Modal';
+import styles from './subdivision-manager.module.css';
 
 const FormSchema = SubdivisionConfigInputSchema;
 type FormValues = z.infer<typeof FormSchema>;
@@ -30,20 +30,20 @@ type Props = {
 };
 
 const DEFAULT_FORM_VALUES: FormValues = {
-  name: "",
+  name: '',
   cellSizeRatio: 1,
   order: 0,
 };
 
 /** Form-mode controls whether the right-hand panel is rendered. */
-type Mode = "idle" | "creating" | "editing";
+type Mode = 'idle' | 'creating' | 'editing';
 
 export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
   // Local copy of subdivisions. Synced with the parent prop on every modal
   // open so external changes (e.g. another tab) still show up next time the
   // user opens the manager.
   const [local, setLocal] = useState<SubdivisionConfig[]>(subdivisions);
-  const [mode, setMode] = useState<Mode>("idle");
+  const [mode, setMode] = useState<Mode>('idle');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -51,7 +51,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
   useEffect(() => {
     if (isOpen) {
       setLocal(subdivisions);
-      setMode("idle");
+      setMode('idle');
       setEditingId(null);
     }
   }, [isOpen, subdivisions]);
@@ -65,7 +65,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
     setEditingId(null);
     setError(null);
     methods.reset(DEFAULT_FORM_VALUES);
-    setMode("idle");
+    setMode('idle');
   };
 
   const handleNew = () => {
@@ -73,7 +73,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
     setError(null);
     const maxOrder = local.reduce((max, s) => Math.max(max, s.order), -1);
     methods.reset({ ...DEFAULT_FORM_VALUES, order: maxOrder + 1 });
-    setMode("creating");
+    setMode('creating');
   };
 
   const handleEdit = (sub: SubdivisionConfig) => {
@@ -84,7 +84,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
       cellSizeRatio: sub.cellSizeRatio,
       order: sub.order,
     });
-    setMode("editing");
+    setMode('editing');
   };
 
   const handleDelete = (sub: SubdivisionConfig) => {
@@ -115,9 +115,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
       // full re-fetch when the modal closes, so we stay in sync.
       if (isEditing) {
         setLocal((prev) =>
-          prev.map((s) =>
-            s.id === editingId ? { ...s, ...data, id: editingId! } : s,
-          ),
+          prev.map((s) => (s.id === editingId ? { ...s, ...data, id: editingId! } : s)),
         );
       } else if (action.data) {
         setLocal((prev) => [...prev, action.data]);
@@ -168,11 +166,7 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
                       </div>
                     </button>
                     <div className={styles.subdivisionListActions}>
-                      <Button
-                        type="button"
-                        size="mini"
-                        onClick={() => handleEdit(sub)}
-                      >
+                      <Button type="button" size="mini" onClick={() => handleEdit(sub)}>
                         Editar
                       </Button>
                       <Button
@@ -192,11 +186,11 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
         </aside>
 
         {/* ─── FORM (solo al crear/editar) ─── */}
-        {mode !== "idle" ? (
+        {mode !== 'idle' ? (
           <FormProvider {...methods}>
             <form onSubmit={onSubmit} className={styles.subdivisionForm}>
               <header className={styles.subdivisionFormHeader}>
-                <h3>{editingId ? "Editar" : "Nueva"} subdivision</h3>
+                <h3>{editingId ? 'Editar' : 'Nueva'} subdivision</h3>
                 <Button
                   type="button"
                   size="mini"
@@ -222,25 +216,21 @@ export function SubdivisionManager({ isOpen, onClose, subdivisions }: Props) {
               </div>
 
               <p className={styles.subdivisionFormNote}>
-                Las piezas son globales: cualquier pieza puede pintarse en
-                cualquier subdivision. Administra las piezas en{" "}
-                <strong>Administrar piezas</strong> (en la página principal).
+                Las piezas son globales: cualquier pieza puede pintarse en cualquier subdivision.
+                Administra las piezas en <strong>Administrar piezas</strong> (en la página
+                principal).
               </p>
 
               <footer className={styles.subdivisionFormActions}>
                 <Button type="button" onClick={closeForm}>
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={methods.formState.isSubmitting}
-                >
+                <Button type="submit" variant="primary" disabled={methods.formState.isSubmitting}>
                   {methods.formState.isSubmitting
-                    ? "Guardando…"
+                    ? 'Guardando…'
                     : editingId
-                      ? "Guardar cambios"
-                      : "Crear subdivision"}
+                      ? 'Guardar cambios'
+                      : 'Crear subdivision'}
                 </Button>
               </footer>
             </form>

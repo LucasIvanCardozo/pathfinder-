@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 
 /**
  * Returns a function that executes a callback within a transaction.
@@ -8,7 +8,7 @@ import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 export const runInTx = (
   db: PrismaClient | Prisma.TransactionClient,
 ): (<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) => Promise<T>) => {
-  const canRunTx = "$transaction" in db && typeof (db as PrismaClient).$transaction === "function";
+  const canRunTx = '$transaction' in db && typeof (db as PrismaClient).$transaction === 'function';
 
   if (canRunTx) {
     return <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>

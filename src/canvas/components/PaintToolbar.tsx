@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import styles from './PaintToolbar.module.css'
+import styles from './paint-toolbar.module.css';
 
-export type PaintTool = 'paint' | 'erase'
+export type PaintTool = 'paint' | 'erase';
 
 type Props = {
-  tool: PaintTool
-  onChange: (tool: PaintTool) => void
-}
+  tool: PaintTool;
+  onChange: (tool: PaintTool) => void;
+};
 
 export function PaintToolbar({ tool, onChange }: Props) {
   return (
@@ -29,5 +29,5 @@ export function PaintToolbar({ tool, onChange }: Props) {
         🧹 Borrar
       </button>
     </div>
-  )
+  );
 }

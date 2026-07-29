@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { type ReactNode, useEffect } from "react";
-import styles from "./Modal.module.css";
+import { type ReactNode, useEffect } from 'react';
+import styles from './modal.module.css';
 
 type ModalProps = {
   isOpen: boolean;
@@ -20,10 +20,10 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -34,7 +34,7 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
       className={styles.modalBackdrop}
       onClick={onClose}
       onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
+        if (e.key === 'Escape') onClose();
       }}
       role="presentation"
     >
@@ -48,12 +48,7 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
       >
         <header className={styles.modalHeader}>
           <h2>{title}</h2>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Cerrar">
             ×
           </button>
         </header>

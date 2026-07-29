@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import overlayStyles from "./weather-overlay.module.css";
+import { useEffect, useRef } from 'react';
+import overlayStyles from './weather-effect.module.css';
 
 /**
  * Lightweight canvas-overlay rain animation. Uses a single <canvas> sized to
@@ -15,7 +15,7 @@ export function RainEffect() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -52,7 +52,7 @@ export function RainEffect() {
     let raf = 0;
     const tick = () => {
       ctx.clearRect(0, 0, width, height);
-      ctx.strokeStyle = "rgba(180, 200, 220, 0.55)";
+      ctx.strokeStyle = 'rgba(180, 200, 220, 0.55)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let i = 0; i < drops.length; i++) {
@@ -82,5 +82,7 @@ export function RainEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }

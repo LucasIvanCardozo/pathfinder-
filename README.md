@@ -22,22 +22,38 @@ Sin Tailwind, sin CSS-in-JS, sin Zustand. El estilado es CSS Modules exclusivame
 
 ## Estructura
 
-Pathfinder es una **single Next.js app**, no un monorepo. La transición a un árbol
-`lib/`/`components/`/`hooks/` a nivel raíz está documentada en
-`docs/architecture/folder-architecture.md` y avanza commit a commit. Hoy conviven dos
-árboles:
+Pathfinder es una **single Next.js app**. Las rutas viven en la raíz del repo
+(`app/`, `components/`, `hooks/`, `lib/`); `src/` aloja el motor de canvas y el
+cliente de Prisma generado. El patrón Server Action → Use Case → Repository vive
+en `lib/server/`. Ver `docs/architecture/folder-architecture.md` para el plan de
+migración y `AGENTS.md` para el priority resolver.
 
 ```text
-src/app/                    → App Router routes + composición (NEXT stage)
-src/canvas/                 → motor react-konva (PaintCanvas, weather, traits)
-src/pieces/                 → tipos y schemas legacy (transitional; barrelled re-exports)
-src/assets/                 → catálogo de piezas auto-generado
-lib/                        → Server Action → Use Case → Repository (TARGET stage)
-lib/shared/{schemas,types,utils}/
-lib/server/{actions,useCases,db/repository,utils}/
-prisma/                     → schema + migrations + seed (subdivision defaults)
-docs/                       → contrato operativo (leer antes de codear)
-AGENTS.md                   → TOC y priority resolver
+app/                           → App Router routes (TARGET stage)
+  page.tsx, layout.tsx, globals.module.css
+  admin/pieces/                → admin gallery
+  editor/                      → editor + EditorClient + co-located hooks
+components/                    → shared UI primitives (Button, Modal, Empty, form/)
+hooks/                         → reusable client hooks (useReload, useStageViewport, usePieceMap, useSubdivisionMap)
+lib/
+  server/
+    actions/                   → Server Actions (createAction contract)
+    useCases/                  → plain-object async methods (cached reads lazy-import db)
+    db/                        → Prisma singleton + repositories (factory around injected db/tx)
+    utils/                     → server-side utils (e.g. runInTx)
+  shared/
+    schemas/                   → Zod schemas
+    types/                     → z.infer types
+    utils/                     → generateId, capitalize
+    constants/                 → map dimensions, zoom bounds
+    floors/                    → floor naming helpers (Planta Baja / Subsuelo N / Piso N)
+src/
+  assets/                      → generated piece catalog + image processor
+  canvas/                      → Konva canvas: FloorStack, FloorCanvas, WorldGrid, traits, weather
+  generated/                   → Prisma client output (gitignored)
+prisma/                        → schema + migrations + seed
+docs/                          → architectural contract (read before coding)
+AGENTS.md                      → TOC + priority resolver
 ```
 
 Las rutas activas son `/`, `/editor`, y `/admin/pieces`. Cache Components habilitado en
@@ -107,9 +123,6 @@ Fuera de alcance (per `AGENTS.md §11`):
 
 ## Estado del proyecto
 
-**Fase 1 — Migración al árbol `lib/` + CSS Modules completada.** Documentación
-operativa completa (AGENTS.md + 13 docs). Server Actions, Use Cases, y Repositories
-funcionando para `scenario` y `subdivision`. Pendiente: rewrite del README (este archivo,
-recién hecho), promoción de `lib/server/db/db.ts` desde el bridge al singleton real
-(realizado en commit `e825caa`), y limpieza de carpetas vacías (realizado en commit
-`6766e70`).
+El árbol `lib/`, `app/`, `components/`, `hooks/` ya está en uso. El canvas usa una pila de
+`FloorCanvas` (uno por piso) + `WorldGrid` compartido + overlays. La Fase 4 alinea el
+naming de CSS Modules al target (`kebab-case`) y unifica el quote style a single quotes.

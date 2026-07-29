@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import "./globals.module.css";
-import { DisableContextMenu } from "@/components/DisableContextMenu";
-import { NoFocusOnClick } from "@/components/NoFocusOnClick";
+import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import './globals.module.css';
+import { DisableContextMenu } from '@/components/DisableContextMenu';
+import { NoFocusOnClick } from '@/components/NoFocusOnClick';
 
 export const metadata: Metadata = {
-  title: "Pathfinder — Battle Map",
+  title: 'Pathfinder — Battle Map',
   description:
-    "Editor de mapas para Pathfinder. Arma escenarios con grilla, tiles y piezas personalizadas.",
+    'Editor de mapas para Pathfinder. Arma escenarios con grilla, tiles y piezas personalizadas.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

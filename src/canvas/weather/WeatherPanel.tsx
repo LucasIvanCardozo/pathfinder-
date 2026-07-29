@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { FormProvider, useForm } from "react-hook-form";
-import { FormField, FormSelect, FormSlider } from "@/components/form";
-import styles from "./WeatherPanel.module.css";
-import { WEATHERS, type WeatherDef } from "./registry";
+import { FormProvider, useForm } from 'react-hook-form';
+import { FormField, FormSelect, FormSlider } from '@/components/form';
+import styles from './weather-panel.module.css';
+import { WEATHERS, type WeatherDef } from './registry';
 
 export type WeatherState = {
   weatherId: string;
@@ -15,12 +15,12 @@ type Props = {
   initial?: WeatherState;
 };
 
-const DEFAULT: WeatherState = { weatherId: "none", volume: 100 };
+const DEFAULT: WeatherState = { weatherId: 'none', volume: 100 };
 export const WEATHER_DEFAULT: WeatherState = DEFAULT;
 
 export function WeatherPanel({ onChange, initial }: Props) {
   const methods = useForm<WeatherState>({
-    mode: "onChange",
+    mode: 'onChange',
     defaultValues: { ...DEFAULT, ...initial },
   });
 

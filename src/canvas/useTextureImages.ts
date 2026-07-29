@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 /**
  * Loads a set of image paths and resolves each to a single `HTMLImageElement`.
@@ -27,7 +27,7 @@ export function useTextureImages(paths: readonly string[]): Map<string, HTMLImag
 
     for (const path of paths) {
       const img = new window.Image();
-      img.crossOrigin = "anonymous";
+      img.crossOrigin = 'anonymous';
       img.onload = () => {
         if (cancelled) return;
         map.set(path, img);

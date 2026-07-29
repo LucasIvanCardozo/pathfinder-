@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * A painted cell represents one cell of one subdivision that has a piece

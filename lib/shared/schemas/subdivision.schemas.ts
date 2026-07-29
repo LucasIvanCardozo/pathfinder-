@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * A subdivision config describes one kind of layer inside a floor (ground,
@@ -13,7 +13,7 @@ import { z } from "zod";
  */
 export const SubdivisionConfigSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1, "Nombre requerido").max(100),
+  name: z.string().min(1, 'Nombre requerido').max(100),
   cellSizeRatio: z.number().int().min(1).max(64),
   order: z.number().int().min(0).max(20),
 });

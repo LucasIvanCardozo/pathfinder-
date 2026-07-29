@@ -14,29 +14,21 @@ import {
   rmdirSync,
   unlinkSync,
   writeFileSync,
-} from "node:fs";
-import { join, relative } from "node:path";
-import imageSize from "image-size";
-import sharp from "sharp";
-import { optimize as svgoOptimize } from "svgo";
-import type { Piece, PieceCategory, VisualState } from "@/lib/shared/types";
+} from 'node:fs';
+import { join, relative } from 'node:path';
+import imageSize from 'image-size';
+import sharp from 'sharp';
+import { optimize as svgoOptimize } from 'svgo';
+import type { Piece, PieceCategory, VisualState } from '@/lib/shared/types';
 
-const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
-const TEXTURES_DIR = join(REPO_ROOT, "public/pieces/textures");
-const CATALOG_PATH = join(REPO_ROOT, "src/assets/catalog.ts");
+const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
+const TEXTURES_DIR = join(REPO_ROOT, 'public/pieces/textures');
+const CATALOG_PATH = join(REPO_ROOT, 'src/assets/catalog.ts');
 const MAX_SIZE = 128;
 
-const VALID_CATEGORIES = [
-  "floor",
-  "wall",
-  "water",
-  "lava",
-  "decoration",
-  "door",
-  "other",
-] as const;
+const VALID_CATEGORIES = ['floor', 'wall', 'water', 'lava', 'decoration', 'door', 'other'] as const;
 
-const IMAGE_EXTS = ["svg", "png", "jpg", "jpeg", "webp"] as const;
+const IMAGE_EXTS = ['svg', 'png', 'jpg', 'jpeg', 'webp'] as const;
 type ImageExt = (typeof IMAGE_EXTS)[number];
 
 function isImageExt(s: string): s is ImageExt {
@@ -44,9 +36,7 @@ function isImageExt(s: string): s is ImageExt {
 }
 
 function prettifyBasename(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function isValidCategory(c: string): c is PieceCategory {
@@ -54,7 +44,7 @@ function isValidCategory(c: string): c is PieceCategory {
 }
 
 function readSvgDimensions(file: string): { width: number; height: number } {
-  const raw = readFileSync(file, "utf-8");
+  const raw = readFileSync(file, 'utf-8');
   const viewBox = raw.match(/viewBox=["']([^"']+)["']/);
   if (viewBox) {
     const parts = viewBox[1]!.trim().split(/\s+/).map(Number);
@@ -87,11 +77,11 @@ async function generateWebpVariant(
 ): Promise<string> {
   const webpPath = join(TEXTURES_DIR, categoryDir, `${basename}.webp`);
   const buf = readFileSync(file);
-  const pipeline = ext === "svg" ? sharp(buf, { density: 300 }) : sharp(buf);
+  const pipeline = ext === 'svg' ? sharp(buf, { density: 300 }) : sharp(buf);
   await pipeline
     .resize(MAX_SIZE, MAX_SIZE, {
-      fit: "cover",
-      position: "center",
+      fit: 'cover',
+      position: 'center',
     })
     .webp({ quality: 90 })
     .toFile(webpPath);
@@ -99,7 +89,7 @@ async function generateWebpVariant(
 }
 
 function optimizeSvg(file: string): void {
-  const raw = readFileSync(file, "utf-8");
+  const raw = readFileSync(file, 'utf-8');
 
   // SVGO's preset-default aggressively collapses `<metadata>` and removes any
   // children inside it because they aren't recognized SVG semantics. Capture
@@ -113,7 +103,7 @@ function optimizeSvg(file: string): void {
     multipass: true,
     plugins: [
       {
-        name: "preset-default",
+        name: 'preset-default',
         params: {
           overrides: {
             removeViewBox: false,
@@ -123,7 +113,7 @@ function optimizeSvg(file: string): void {
       },
     ],
   });
-  if (!("data" in result)) return;
+  if (!('data' in result)) return;
 
   let data = result.data;
 
@@ -132,16 +122,13 @@ function optimizeSvg(file: string): void {
   // `<svg ...>` tag if SVGO dropped it entirely.
   if (preservedMetadata) {
     if (/<metadata[^>]*\/>|<metadata[^>]*><\/metadata>/i.test(data)) {
-      data = data.replace(
-        /<metadata[^>]*\/>|<metadata[^>]*><\/metadata>/i,
-        preservedMetadata,
-      );
+      data = data.replace(/<metadata[^>]*\/>|<metadata[^>]*><\/metadata>/i, preservedMetadata);
     } else {
       data = data.replace(/(<svg\b[^>]*>)/i, `$1${preservedMetadata}`);
     }
   }
 
-  writeFileSync(file, data, "utf-8");
+  writeFileSync(file, data, 'utf-8');
 }
 
 /**
@@ -211,12 +198,12 @@ type ProcessedFile = {
 };
 
 async function processFile(category: string, file: string): Promise<ProcessedFile> {
-  const ext = file.split(".").pop()!.toLowerCase();
+  const ext = file.split('.').pop()!.toLowerCase();
   if (!isImageExt(ext)) {
     throw new Error(`Unsupported extension: ${ext}`);
   }
   const fullPath = join(TEXTURES_DIR, category, file);
-  const basename = file.replace(/\.[^.]+$/, "");
+  const basename = file.replace(/\.[^.]+$/, '');
 
   let imagePath: string;
   let dims: { width: number; height: number };
@@ -224,8 +211,8 @@ async function processFile(category: string, file: string): Promise<ProcessedFil
   let pieceIdFromSvg: string | null = null;
   let visualStateIdFromSvg: string | null = null;
 
-  if (ext === "svg") {
-    const raw = readFileSync(fullPath, "utf-8");
+  if (ext === 'svg') {
+    const raw = readFileSync(fullPath, 'utf-8');
     const meta = parseMetadata(raw);
     traits = meta.traits;
     pieceIdFromSvg = meta.pieceId;
@@ -251,7 +238,7 @@ async function processFile(category: string, file: string): Promise<ProcessedFil
     traits,
     pieceIdFromSvg,
     visualStateIdFromSvg,
-    wasResized: ext !== "svg",
+    wasResized: ext !== 'svg',
     isSquare: dims.width === dims.height,
   };
 }
@@ -270,7 +257,7 @@ function listFilesRecursive(root: string, skipDirNames: string[] = []): string[]
       }
     }
   }
-  walk(root, "");
+  walk(root, '');
   return out;
 }
 
@@ -284,7 +271,7 @@ function deleteOrphans(
   const all = listFilesRecursive(root, skipDirNames);
   for (const rel of all) {
     if (expected.has(rel)) continue;
-    const ext = rel.split(".").pop()!.toLowerCase();
+    const ext = rel.split('.').pop()!.toLowerCase();
     if (skipExts.includes(ext)) continue;
     if (!isImageExt(ext)) continue;
     const full = join(root, rel);
@@ -311,7 +298,7 @@ function deleteOrphans(
       } catch {}
     }
   }
-  rmdirEmpty(root, "");
+  rmdirEmpty(root, '');
   return removed;
 }
 
@@ -328,14 +315,14 @@ async function main() {
   let webpGenerated = 0;
 
   const categories = readdirSync(TEXTURES_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && !d.name.startsWith("_"))
+    .filter((d) => d.isDirectory() && !d.name.startsWith('_'))
     .map((d) => d.name);
 
   // Pass 1: process every file.
   for (const category of categories) {
     const dir = join(TEXTURES_DIR, category);
     const files = readdirSync(dir).filter((f) => {
-      const ext = f.split(".").pop()!.toLowerCase();
+      const ext = f.split('.').pop()!.toLowerCase();
       return isImageExt(ext);
     });
 
@@ -344,12 +331,10 @@ async function main() {
         const r = await processFile(category, file);
         processed.push(r);
         if (r.wasResized) resized++;
-        if (r.ext === "svg") optimized++;
+        if (r.ext === 'svg') optimized++;
         else webpGenerated++;
         if (!r.isSquare) {
-          warnings.push(
-            `⚠ ${category}/${file} no es cuadrado (${r.width}×${r.height}px).`,
-          );
+          warnings.push(`⚠ ${category}/${file} no es cuadrado (${r.width}×${r.height}px).`);
         }
       } catch (err) {
         console.error(`✗ ${category}/${file}:`, err);
@@ -378,17 +363,17 @@ async function main() {
     const pieceId = f.pieceIdFromSvg ?? `${f.category}-${f.basename}`;
     // If the file declared a visualState, use that; otherwise derive from
     // the basename (last segment after the piece prefix).
-    let visualStateId = f.visualStateIdFromSvg ?? "default";
+    let visualStateId = f.visualStateIdFromSvg ?? 'default';
     if (!f.visualStateIdFromSvg && f.pieceIdFromSvg) {
       // e.g. piece="door", basename="closed" → visualState="closed"
-      visualStateId = f.basename.split("-").pop() ?? "default";
+      visualStateId = f.basename.split('-').pop() ?? 'default';
     }
 
     let piece = pieceById.get(pieceId);
     if (!piece) {
       piece = {
         id: pieceId,
-        category: isValidCategory(f.category) ? f.category : "other",
+        category: isValidCategory(f.category) ? f.category : 'other',
         visualStates: [],
         traits: [],
       };
@@ -405,13 +390,13 @@ async function main() {
       traits: f.traits,
     });
     // Dedupe traits by `kind` so a piece with N visual states doesn't get N
-// copies of the same trait. Each SVG file can declare the same trait; only
-// the first occurrence per kind wins.
-for (const t of f.traits) {
-  if (!piece.traits.some((existing) => existing.kind === t.kind)) {
-    piece.traits.push(t);
-  }
-}
+    // copies of the same trait. Each SVG file can declare the same trait; only
+    // the first occurrence per kind wins.
+    for (const t of f.traits) {
+      if (!piece.traits.some((existing) => existing.kind === t.kind)) {
+        piece.traits.push(t);
+      }
+    }
   }
 
   const pieces: Piece[] = [];
@@ -434,9 +419,7 @@ for (const t of f.traits) {
       width: def.width,
       height: def.height,
       tags: [rec.category],
-      ...(rec.traits.length > 0
-        ? { traits: rec.traits as unknown as Piece["traits"] }
-        : {}),
+      ...(rec.traits.length > 0 ? { traits: rec.traits as unknown as Piece['traits'] } : {}),
     });
   }
   pieces.sort((a, b) => a.id.localeCompare(b.id));
@@ -460,15 +443,15 @@ export function findPiecesByIds(ids: string[]): Piece[] {
 
 `;
 
-  writeFileSync(CATALOG_PATH, catalogContent, "utf-8");
+  writeFileSync(CATALOG_PATH, catalogContent, 'utf-8');
 
   // Cleanup: only SVGs and WebPs derived from raster sources stay on disk.
   // Anything else (JPG/PNG) is considered residue.
   const expectedSources = new Set<string>();
   for (const r of processed) {
-    expectedSources.add(`${r.category}/${r.ext === "svg" ? r.file : `${r.basename}.webp`}`);
+    expectedSources.add(`${r.category}/${r.ext === 'svg' ? r.file : `${r.basename}.webp`}`);
   }
-  const orphanSources = deleteOrphans(TEXTURES_DIR, expectedSources, ["svg"]);
+  const orphanSources = deleteOrphans(TEXTURES_DIR, expectedSources, ['svg']);
 
   const totalOrphans = orphanSources.length;
 

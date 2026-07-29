@@ -1,11 +1,15 @@
-import { Prisma } from "@/generated/prisma/client";
-import type { PrismaClient } from "@/generated/prisma/client";
-import { isPlantaBajaName } from "@/lib/shared/floors/naming";
-import type { LoadScenarioResult, ScenarioSummary, SaveScenarioInput } from "@/lib/shared/types/scenario.types";
-import { DEFAULT_FLOORS } from "@/lib/shared/types/floor.types";
-import { runInTx } from "@/lib/server/utils/runInTx";
-import { floorRepository } from "@/lib/server/db/repository/floor.repository";
-import { paintedCellRepository } from "@/lib/server/db/repository/paintedCell.repository";
+import { Prisma } from '@/generated/prisma/client';
+import type { PrismaClient } from '@/generated/prisma/client';
+import { isPlantaBajaName } from '@/lib/shared/floors/naming';
+import type {
+  LoadScenarioResult,
+  ScenarioSummary,
+  SaveScenarioInput,
+} from '@/lib/shared/types/scenario.types';
+import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
+import { runInTx } from '@/lib/server/utils/runInTx';
+import { floorRepository } from '@/lib/server/db/repository/floor.repository';
+import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
 
 /**
  * Scenario repository. Pure Prisma. Returns DTOs only; never exposes a
@@ -25,7 +29,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
      *  full floor + cell tree. */
     async findAllSummaries(): Promise<ScenarioSummary[]> {
       const rows = await db.scenario.findMany({
-        orderBy: { updatedAt: "desc" },
+        orderBy: { updatedAt: 'desc' },
         include: {
           floors: {
             select: {
@@ -35,10 +39,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
         },
       });
       return rows.map((s) => {
-        const paintedCellCount = s.floors.reduce(
-          (sum, f) => sum + f._count.paintedCells,
-          0,
-        );
+        const paintedCellCount = s.floors.reduce((sum, f) => sum + f._count.paintedCells, 0);
         return {
           id: s.id,
           name: s.name,
@@ -58,7 +59,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
         where: { id },
         include: {
           floors: {
-            orderBy: { order: "asc" },
+            orderBy: { order: 'asc' },
             include: { paintedCells: true },
           },
         },
@@ -89,7 +90,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
             // Prisma returns JsonValue | null for nullable Json columns;
             // collapse null to undefined and trust the shape from the client.
             entityState: (c.entityState ?? undefined) as
-              | LoadScenarioResult["paintedCells"][number]["entityState"]
+              | LoadScenarioResult['paintedCells'][number]['entityState']
               | undefined,
           })),
         ),
@@ -172,7 +173,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       return db.scenario.create({
         data: {
           id: scenarioId,
-          name: "Nuevo escenario",
+          name: 'Nuevo escenario',
           baseCellSize: mapDims.baseCellSize,
           width: mapDims.width,
           height: mapDims.height,

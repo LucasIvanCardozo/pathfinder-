@@ -1,9 +1,13 @@
-import type { Prisma } from "@/generated/prisma/client";
-import { cacheLife, cacheTag } from "next/cache";
-import type { PrismaClient } from "@/generated/prisma/client";
-import { scenarioRepository } from "@/lib/server/db/repository/scenario.repository";
-import type { LoadScenarioResult, SaveScenarioInput, ScenarioSummary } from "@/lib/shared/types/scenario.types";
-import { newId } from "@/lib/shared/utils/generateId";
+import type { Prisma } from '@/generated/prisma/client';
+import { cacheLife, cacheTag } from 'next/cache';
+import type { PrismaClient } from '@/generated/prisma/client';
+import { scenarioRepository } from '@/lib/server/db/repository/scenario.repository';
+import type {
+  LoadScenarioResult,
+  SaveScenarioInput,
+  ScenarioSummary,
+} from '@/lib/shared/types/scenario.types';
+import { newId } from '@/lib/shared/utils/generateId';
 
 type TxOrClient = PrismaClient | Prisma.TransactionClient;
 
@@ -18,19 +22,19 @@ type TxOrClient = PrismaClient | Prisma.TransactionClient;
 export const scenarioUseCases = {
   /** Cached list of all scenarios (flat summaries). */
   async list(): Promise<ScenarioSummary[]> {
-    "use cache";
-    cacheLife("hours");
-    cacheTag("pathfinder:scenarios");
-    const db = (await import("@/lib/server/db/db")).default;
+    'use cache';
+    cacheLife('hours');
+    cacheTag('pathfinder:scenarios');
+    const db = (await import('@/lib/server/db/db')).default;
     return scenarioRepository(db).findAllSummaries();
   },
 
   /** Cached full-scenario load. Returns null when the id is unknown. */
   async findById({ id }: { id: string }): Promise<LoadScenarioResult | null> {
-    "use cache";
-    cacheLife("hours");
-    cacheTag("pathfinder:scenarios", `pathfinder:scenario:${id}`);
-    const db = (await import("@/lib/server/db/db")).default;
+    'use cache';
+    cacheLife('hours');
+    cacheTag('pathfinder:scenarios', `pathfinder:scenario:${id}`);
+    const db = (await import('@/lib/server/db/db')).default;
     return scenarioRepository(db).findByIdWithFloors(id);
   },
 
@@ -50,8 +54,8 @@ export const scenarioUseCases = {
     db: TxOrClient,
     mapDims: { baseCellSize: number; width: number; height: number },
   ) {
-    const scenarioId = newId("scenario");
-    const floorIds = [newId("floor"), newId("floor"), newId("floor")];
+    const scenarioId = newId('scenario');
+    const floorIds = [newId('floor'), newId('floor'), newId('floor')];
     await scenarioRepository(db).createBlank(scenarioId, floorIds, mapDims);
     return { scenarioId };
   },

@@ -8,9 +8,9 @@
 //   2. Implement it in `src/canvas/traits/<kind>.ts`.
 //   3. Add the entry to `traitRegistry` below.
 
-import type { PaintedCell, Piece } from "@/lib/shared/types";
-import { doorStatesTrait, type DoorState } from "./door-states";
-import { blocksLightTrait } from "./blocks-light";
+import type { PaintedCell, Piece } from '@/lib/shared/types';
+import { doorStatesTrait, type DoorState } from './door-states';
+import { blocksLightTrait } from './blocks-light';
 
 export type TraitMenuProps<TState> = {
   cell: PaintedCell;
@@ -30,8 +30,8 @@ export type TraitImpl = {
 };
 
 export const traitRegistry: Record<string, TraitImpl> = {
-  "door-states": doorStatesTrait as unknown as TraitImpl,
-  "blocks-light": blocksLightTrait as unknown as TraitImpl,
+  'door-states': doorStatesTrait as unknown as TraitImpl,
+  'blocks-light': blocksLightTrait as unknown as TraitImpl,
 };
 
 export type TraitKind = keyof typeof traitRegistry;
@@ -65,7 +65,7 @@ export function getInteractiveTrait(texture: {
  * typically store the result under `PaintedCell.entityState`.
  */
 export function defaultEntityStateFor(
-  piece: Pick<Piece, "traits">,
+  piece: Pick<Piece, 'traits'>,
 ): Record<string, unknown> | undefined {
   const traits = piece.traits ?? [];
   for (const t of traits) {

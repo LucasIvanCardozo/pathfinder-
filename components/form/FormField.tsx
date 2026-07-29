@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-import styles from "./FormField.module.css";
+import type { ReactNode } from 'react';
+import styles from './form-field.module.css';
 
 type FormFieldProps = {
   /** Field label shown above the input. */

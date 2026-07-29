@@ -1,7 +1,7 @@
-import type { z } from "zod";
-import type { PaintedCell } from "@/lib/shared/types/paintedCell.types";
-import type { Floor } from "@/lib/shared/types/floor.types";
-import type { ScenarioInputSchema, ScenarioSchema } from "@/lib/shared/schemas/scenario.schemas";
+import type { z } from 'zod';
+import type { PaintedCell } from '@/lib/shared/types/paintedCell.types';
+import type { Floor } from '@/lib/shared/types/floor.types';
+import type { ScenarioInputSchema, ScenarioSchema } from '@/lib/shared/schemas/scenario.schemas';
 
 /** Full scenario as the editor sees it. */
 export type Scenario = z.infer<typeof ScenarioSchema>;

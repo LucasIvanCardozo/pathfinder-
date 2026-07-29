@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useFormContext } from "react-hook-form";
-import styles from "./FormSlider.module.css";
+import { useFormContext } from 'react-hook-form';
+import styles from './form-slider.module.css';
 
 type FormSliderProps = {
   name: string;

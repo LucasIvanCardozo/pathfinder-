@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import overlayStyles from "./weather-overlay.module.css";
+import { useEffect, useRef } from 'react';
+import overlayStyles from './weather-effect.module.css';
 
 type Props = {
   /** Timestamp (ms) of the most recent thunder trigger. When this value
@@ -30,7 +30,7 @@ export function StormEffect({ thunderAt }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -68,7 +68,7 @@ export function StormEffect({ thunderAt }: Props) {
       ctx.clearRect(0, 0, width, height);
 
       // 1. Drops
-      ctx.strokeStyle = "rgba(180, 195, 215, 0.6)";
+      ctx.strokeStyle = 'rgba(180, 195, 215, 0.6)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let i = 0; i < drops.length; i++) {
@@ -98,11 +98,16 @@ export function StormEffect({ thunderAt }: Props) {
           // real lightning reads faintly violet-white, not pure
           // white.
           let alpha = 0;
-          if (elapsed < 50) alpha = 0.95; // primary discharge
-          else if (elapsed < 110) alpha = 0; // gap
-          else if (elapsed < 200) alpha = 0.65; // secondary lobe
-          else if (elapsed < 260) alpha = 0.05; // small gap
-          else if (elapsed < 380) alpha = 0.35; // tertiary pulse
+          if (elapsed < 50)
+            alpha = 0.95; // primary discharge
+          else if (elapsed < 110)
+            alpha = 0; // gap
+          else if (elapsed < 200)
+            alpha = 0.65; // secondary lobe
+          else if (elapsed < 260)
+            alpha = 0.05; // small gap
+          else if (elapsed < 380)
+            alpha = 0.35; // tertiary pulse
           else alpha = 0.12; // afterglow tail
           if (alpha > 0) {
             ctx.fillStyle = `rgba(225, 232, 250, ${alpha})`;
@@ -132,11 +137,6 @@ export function StormEffect({ thunderAt }: Props) {
   }, [thunderAt]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={overlayStyles.overlay}
-      tabIndex={-1}
-      aria-hidden="true"
-    />
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
   );
 }

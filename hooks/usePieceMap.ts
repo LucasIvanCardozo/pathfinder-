@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import type { Piece } from "@/lib/shared/types";
+import { useMemo } from 'react';
+import type { Piece } from '@/lib/shared/types';
 
 /**
  * Builds a stable `id -> Piece` lookup from a piece list. The map is rebuilt

@@ -1,8 +1,8 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  serverExternalPackages: ["konva"],
+  serverExternalPackages: ['konva'],
 };
 
 export default nextConfig;

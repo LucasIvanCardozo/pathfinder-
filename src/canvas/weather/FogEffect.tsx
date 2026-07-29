@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import overlayStyles from "./weather-overlay.module.css";
+import { useEffect, useRef } from 'react';
+import overlayStyles from './weather-effect.module.css';
 
 /**
  * Translucent fog with two perceptual layers:
@@ -23,7 +23,7 @@ export function FogEffect() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -59,7 +59,7 @@ export function FogEffect() {
       // Density scales with area but is more dense than before.
       const count = Math.min(40, Math.max(14, Math.floor((width * height) / 18_000)));
       wisps = Array.from({ length: count }, (_, i) => {
-        const isFar = (i % 5) < 2; // ~40% far, 60% near
+        const isFar = i % 5 < 2; // ~40% far, 60% near
         const baseY = Math.random() * height;
         const r = isFar ? 180 + Math.random() * 140 : 80 + Math.random() * 100;
         return {
@@ -81,7 +81,7 @@ export function FogEffect() {
     const tick = () => {
       t += 1;
       ctx.clearRect(0, 0, width, height);
-      ctx.globalCompositeOperation = "lighter";
+      ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < wisps.length; i++) {
         const w = wisps[i]!;
         w.x += w.vx;
@@ -93,13 +93,13 @@ export function FogEffect() {
 
         const grad = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.r);
         grad.addColorStop(0, `rgba(232, 236, 244, ${w.alpha})`);
-        grad.addColorStop(1, "rgba(232, 236, 244, 0)");
+        grad.addColorStop(1, 'rgba(232, 236, 244, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.globalCompositeOperation = "source-over";
+      ctx.globalCompositeOperation = 'source-over';
       raf = requestAnimationFrame(tick);
     };
 
@@ -114,5 +114,7 @@ export function FogEffect() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }

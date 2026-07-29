@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Trait definitions for textures. A trait is a piece of behaviour or metadata
@@ -15,14 +15,14 @@ import { z } from "zod";
  */
 
 /** A single texture trait, as stored in the catalog (and serialised to JSON). */
-export const TextureTraitSchema = z.discriminatedUnion("kind", [
+export const TextureTraitSchema = z.discriminatedUnion('kind', [
   z.object({
-    kind: z.literal("door-states"),
+    kind: z.literal('door-states'),
     /** The state this texture represents (e.g. "closed" for door-closed). */
-    state: z.enum(["closed", "open", "locked"]),
+    state: z.enum(['closed', 'open', 'locked']),
   }),
   z.object({
-    kind: z.literal("blocks-light"),
+    kind: z.literal('blocks-light'),
     /** 0..1, how opaque the wall is to light. */
     opacity: z.number().min(0).max(1),
   }),

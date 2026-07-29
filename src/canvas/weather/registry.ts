@@ -21,7 +21,7 @@
 //   - `sound` is one or more sound specs (see `WeatherSound`); null = no audio.
 //   - `tint` is a translucent color overlay above the canvas; null = none.
 
-export type WeatherAnimationKind = "rain" | "fog" | "snow" | "storm" | "night";
+export type WeatherAnimationKind = 'rain' | 'fog' | 'snow' | 'storm' | 'night';
 
 export type WeatherSound = {
   src: string;
@@ -31,7 +31,7 @@ export type WeatherSound = {
    *   non-looping effects like thunder. The next play is scheduled
    *   after the current one finishes.
    */
-  mode: "loop" | "random";
+  mode: 'loop' | 'random';
   /** Range in ms between random triggers. Defaults to [8_000, 25_000]. */
   intervalMs?: [number, number];
 };
@@ -54,21 +54,51 @@ export const WEATHERS: readonly WeatherDef[] = [
   //   - thunder.mp3    (one-shot 3-5s trueno individual, disparado random en tormenta)
   //   - night.mp3      (loop 90-120s  grillos, búhos ocasionales)
   //   - snow.mp3       (loop 60-90s   viento helado, crujidos)
-  { id: "sunny", label: "Soleado", animation: null, sound: { src: "/sounds/sunny.mp3", mode: "loop" }, tint: null },
-  { id: "rain", label: "Lluvia", animation: "rain", sound: { src: "/sounds/rain.mp3", mode: "loop" }, tint: "rgba(150, 175, 200, 0.18)" },
-  { id: "fog", label: "Niebla", animation: "fog", sound: { src: "/sounds/fog.mp3", mode: "loop" }, tint: "rgba(220, 220, 225, 0.28)" },
   {
-    id: "storm",
-    label: "Tormenta",
-    animation: "storm",
-    sound: [
-      { src: "/sounds/storm_rain.mp3", mode: "loop" },
-      { src: "/sounds/thunder.mp3", mode: "random", intervalMs: [8_000, 25_000] },
-    ],
-    tint: "rgba(70, 75, 90, 0.35)",
+    id: 'sunny',
+    label: 'Soleado',
+    animation: null,
+    sound: { src: '/sounds/sunny.mp3', mode: 'loop' },
+    tint: null,
   },
-  { id: "night", label: "Noche", animation: "night", sound: { src: "/sounds/night.mp3", mode: "loop" }, tint: "rgba(35, 45, 65, 0.40)" },
-  { id: "snow", label: "Nieve", animation: "snow", sound: { src: "/sounds/snow.mp3", mode: "loop" }, tint: "rgba(240, 245, 255, 0.20)" },
+  {
+    id: 'rain',
+    label: 'Lluvia',
+    animation: 'rain',
+    sound: { src: '/sounds/rain.mp3', mode: 'loop' },
+    tint: 'rgba(150, 175, 200, 0.18)',
+  },
+  {
+    id: 'fog',
+    label: 'Niebla',
+    animation: 'fog',
+    sound: { src: '/sounds/fog.mp3', mode: 'loop' },
+    tint: 'rgba(220, 220, 225, 0.28)',
+  },
+  {
+    id: 'storm',
+    label: 'Tormenta',
+    animation: 'storm',
+    sound: [
+      { src: '/sounds/storm_rain.mp3', mode: 'loop' },
+      { src: '/sounds/thunder.mp3', mode: 'random', intervalMs: [8_000, 25_000] },
+    ],
+    tint: 'rgba(70, 75, 90, 0.35)',
+  },
+  {
+    id: 'night',
+    label: 'Noche',
+    animation: 'night',
+    sound: { src: '/sounds/night.mp3', mode: 'loop' },
+    tint: 'rgba(35, 45, 65, 0.40)',
+  },
+  {
+    id: 'snow',
+    label: 'Nieve',
+    animation: 'snow',
+    sound: { src: '/sounds/snow.mp3', mode: 'loop' },
+    tint: 'rgba(240, 245, 255, 0.20)',
+  },
 ] as const;
 
 export function getWeather(id: string): WeatherDef {

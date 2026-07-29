@@ -15,11 +15,11 @@ Pathfinder authors component styling **only** with CSS Modules. No plain compone
 ```text
 components/Features/SubdivisionManager/
   SubdivisionManager.tsx
-  SubdivisionManager.module.css
+  subdivision-manager.module.css
 
 components/UI/Button/
   Button.tsx
-  Button.module.css
+  button.module.css
 
 app/globals.module.css      ← only global stylesheet
 ```
@@ -27,7 +27,7 @@ app/globals.module.css      ← only global stylesheet
 ## Quick path (a button)
 
 ```css
-/* components/UI/Button/Button.module.css */
+/* components/UI/Button/button.module.css */
 .button {
   display: inline-flex;
   align-items: center;
@@ -51,7 +51,7 @@ app/globals.module.css      ← only global stylesheet
 ```
 
 ```tsx
-import styles from './Button.module.css';
+import styles from './button.module.css';
 
 export function Button({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
@@ -168,10 +168,10 @@ The CURRENT tree has **plain CSS only** (`src/app/globals.css`, `home.css`, `edi
 |---------|--------|
 | `src/app/globals.css` | `app/globals.module.css` (uses `:global` and `:root` tokens; no class names) |
 | `src/app/home.css` | `app/page.module.css` |
-| `src/app/editor/editor.css` | `app/editor/Editor.module.css` or per-component modules |
-| `src/app/components/form/form.css` | split per primitive: `FormField.module.css`, `FormInput.module.css`, ... |
-| `src/app/components/modal.css` | `components/UI/Modal/Modal.module.css` |
-| `src/app/components/subdivision-manager.css` | `components/Features/SubdivisionManager/SubdivisionManager.module.css` |
+| `src/app/editor/editor.css` | `app/editor/editor.module.css` or per-component modules |
+| `src/app/components/form/form.css` | split per primitive: `form-field.module.css`, `form-input.module.css`, ... |
+| `src/app/components/modal.css` | `components/UI/Modal/modal.module.css` |
+| `src/app/components/subdivision-manager.css` | `components/Features/SubdivisionManager/subdivision-manager.module.css` |
 | `src/canvas/weather/weather.css` | per-component modules under `src/canvas/weather/` |
 | `src/canvas/traits/state-menu.css` | per-component module |
 

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 /**
  * Suppresses the browser's native context menu across the whole app, so the
@@ -17,11 +17,11 @@ export function DisableContextMenu() {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       e.preventDefault();
     };
-    document.addEventListener("contextmenu", handler);
-    return () => document.removeEventListener("contextmenu", handler);
+    document.addEventListener('contextmenu', handler);
+    return () => document.removeEventListener('contextmenu', handler);
   }, []);
   return null;
 }

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import type { SubdivisionConfig } from "@/lib/shared/types";
+import { useMemo } from 'react';
+import type { SubdivisionConfig } from '@/lib/shared/types';
 
 /**
  * Builds a stable `id -> SubdivisionConfig` lookup from a subdivision list.

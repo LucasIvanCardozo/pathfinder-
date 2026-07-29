@@ -1,12 +1,9 @@
-import { connection } from "next/server";
-import { Suspense } from "react";
-import { loadScenario } from "@/lib/server/actions/scenario.action";
-import {
-  listAllPieces,
-  listSubdivisions,
-} from "@/lib/server/actions/subdivision.action";
-import styles from "./Editor.module.css";
-import { EditorClient } from "./EditorClient";
+import { connection } from 'next/server';
+import { Suspense } from 'react';
+import { loadScenario } from '@/lib/server/actions/scenario.action';
+import { listAllPieces, listSubdivisions } from '@/lib/server/actions/subdivision.action';
+import styles from './editor.module.css';
+import { EditorClient } from './EditorClient';
 
 type SearchParams = Promise<{ id?: string }>;
 
@@ -30,7 +27,8 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
     listAllPieces(),
   ]);
 
-  const scenario = scenarioResult === null ? null : scenarioResult.success ? scenarioResult.data : null;
+  const scenario =
+    scenarioResult === null ? null : scenarioResult.success ? scenarioResult.data : null;
   const subdivisions = subdivisionsResult.success ? subdivisionsResult.data : [];
   const allPieces = allPiecesResult.success ? allPiecesResult.data : [];
 
@@ -41,7 +39,7 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
   // B briefly shows A's content until the props update.
   return (
     <EditorClient
-      key={scenario?.id ?? "new"}
+      key={scenario?.id ?? 'new'}
       initialScenario={
         scenario
           ? {

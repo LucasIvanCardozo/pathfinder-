@@ -1,6 +1,9 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import type { SubdivisionConfig, SubdivisionConfigInput } from "@/lib/shared/types/subdivision.types";
-import { runInTx } from "@/lib/server/utils/runInTx";
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import type {
+  SubdivisionConfig,
+  SubdivisionConfigInput,
+} from '@/lib/shared/types/subdivision.types';
+import { runInTx } from '@/lib/server/utils/runInTx';
 
 /**
  * Subdivision repository. Pieces are NOT scoped to a subdivision, so the
@@ -34,7 +37,7 @@ export function subdivisionRepository(db: PrismaClient | Prisma.TransactionClien
     /** All subdivisions ordered for the manager UI. */
     async findAllOrdered(): Promise<SubdivisionConfig[]> {
       const rows = await db.subdivisionConfig.findMany({
-        orderBy: { order: "asc" },
+        orderBy: { order: 'asc' },
       });
       return rows.map(rowToConfig);
     },

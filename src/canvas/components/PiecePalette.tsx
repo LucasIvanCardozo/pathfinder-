@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import type { Piece } from "@/lib/shared/types";
-import traitBadgeStyles from "@/components/TraitBadge.module.css";
-import styles from "./PiecePalette.module.css";
+import Image from 'next/image';
+import type { Piece } from '@/lib/shared/types';
+import traitBadgeStyles from '@/components/trait-badge.module.css';
+import styles from './piece-palette.module.css';
 
 type Props = {
   pieces: Piece[];
@@ -31,12 +31,10 @@ export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
             <button
               key={piece.id}
               type="button"
-              className={`${styles.card} ${piece.id === activePieceId ? styles.active : ""}`}
+              className={`${styles.card} ${piece.id === activePieceId ? styles.active : ''}`}
               onClick={() => onSelect(piece.id)}
               title={
-                multipleStates
-                  ? `${piece.name} (${piece.visualStates.length} estados)`
-                  : piece.name
+                multipleStates ? `${piece.name} (${piece.visualStates.length} estados)` : piece.name
               }
             >
               <Image

@@ -1,6 +1,6 @@
-import type { z } from "zod";
-import type { FloorSchema } from "@/lib/shared/schemas/floor.schemas";
-import { DEFAULT_FLOOR_NAMES } from "@/lib/shared/floors/naming";
+import type { z } from 'zod';
+import type { FloorSchema } from '@/lib/shared/schemas/floor.schemas';
+import { DEFAULT_FLOOR_NAMES } from '@/lib/shared/floors/naming';
 
 /**
  * A single floor inside a scenario. Carries only its identity and display
@@ -21,6 +21,6 @@ export type Floor = z.infer<typeof FloorSchema>;
  * `generateId("floor")` at insert time.
  */
 export const DEFAULT_FLOORS: Floor[] = DEFAULT_FLOOR_NAMES.map((name) => ({
-  id: "",
+  id: '',
   name,
 }));

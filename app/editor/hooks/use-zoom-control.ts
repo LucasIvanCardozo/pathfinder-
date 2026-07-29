@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "@/lib/shared/constants/map";
+import { useState } from 'react';
+import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from '@/lib/shared/constants/map';
 
 export function useZoomControl() {
   const [zoom, setZoom] = useState(1);

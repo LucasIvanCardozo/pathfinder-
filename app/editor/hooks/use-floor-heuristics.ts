@@ -1,7 +1,7 @@
-import type React from "react";
-import type { Floor } from "@/lib/shared/types";
-import { findPlantaBajaIndex, floorNameForIndex } from "@/lib/shared/floors/naming";
-import { newId } from "@/lib/shared/utils/generateId";
+import type React from 'react';
+import type { Floor } from '@/lib/shared/types';
+import { findPlantaBajaIndex, floorNameForIndex } from '@/lib/shared/floors/naming';
+import { newId } from '@/lib/shared/utils/generateId';
 
 type UseFloorHeuristicsParams = {
   floors: Floor[];
@@ -11,10 +11,16 @@ type UseFloorHeuristicsParams = {
   markDirty: () => void;
 };
 
-export function useFloorHeuristics({ floors, activeFloorId, setActiveFloorId, setFloors, markDirty }: UseFloorHeuristicsParams) {
+export function useFloorHeuristics({
+  floors,
+  activeFloorId,
+  setActiveFloorId,
+  setFloors,
+  markDirty,
+}: UseFloorHeuristicsParams) {
   const activeFloorIndex = floors.findIndex((floor) => floor.id === activeFloorId);
-  const activeFloor = floors[activeFloorIndex] ?? floors[0] ?? { id: "", name: "" };
-  const makeFloor = (name: string): Floor => ({ id: newId("floor"), name });
+  const activeFloor = floors[activeFloorIndex] ?? floors[0] ?? { id: '', name: '' };
+  const makeFloor = (name: string): Floor => ({ id: newId('floor'), name });
 
   const handleAddFloorAbove = () => {
     const newFloor = makeFloor(floorNameForIndex(floors, floors.length));
@@ -37,5 +43,12 @@ export function useFloorHeuristics({ floors, activeFloorId, setActiveFloorId, se
     if (floor) setActiveFloorId(floor.id);
   };
 
-  return { activeFloorIndex, activeFloor, handleAddFloorAbove, handleAddFloorBelow, handleFloorUp, handleFloorDown };
+  return {
+    activeFloorIndex,
+    activeFloor,
+    handleAddFloorAbove,
+    handleAddFloorBelow,
+    handleFloorUp,
+    handleFloorDown,
+  };
 }

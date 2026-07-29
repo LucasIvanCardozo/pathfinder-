@@ -1,5 +1,5 @@
-import type { PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
-import { getTrait, type TraitImpl } from "./registry";
+import type { PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { getTrait, type TraitImpl } from './registry';
 
 /**
  * Locates the topmost painted cell under a pixel position on the canvas, and

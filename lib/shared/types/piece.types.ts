@@ -1,22 +1,22 @@
-import type { z } from "zod";
+import type { z } from 'zod';
 import type {
   DoorStateSchema,
   PieceCategorySchema,
   PieceSchema,
   VisualStateSchema,
-} from "@/lib/shared/schemas/piece.schemas";
+} from '@/lib/shared/schemas/piece.schemas';
 
 // The PIECE_CATEGORIES constant must mirror PieceCategorySchema exactly — it
 // is the runtime iteration order used by the UI. Keeping it next to its schema
 // keeps the two in lock-step.
 export const PIECE_CATEGORIES = [
-  "wall",
-  "floor",
-  "door",
-  "water",
-  "lava",
-  "decoration",
-  "other",
+  'wall',
+  'floor',
+  'door',
+  'water',
+  'lava',
+  'decoration',
+  'other',
 ] as const satisfies readonly z.infer<typeof PieceCategorySchema>[];
 
 export type PieceCategory = z.infer<typeof PieceCategorySchema>;

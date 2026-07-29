@@ -1,12 +1,12 @@
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import { cacheLife, cacheTag } from "next/cache";
-import type { Piece } from "@/lib/shared/types/piece.types";
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { cacheLife, cacheTag } from 'next/cache';
+import type { Piece } from '@/lib/shared/types/piece.types';
 import {
   DEFAULT_SUBDIVISIONS,
   type SubdivisionConfig,
   type SubdivisionConfigInput,
-} from "@/lib/shared/types/subdivision.types";
-import { subdivisionRepository } from "@/lib/server/db/repository/subdivision.repository";
+} from '@/lib/shared/types/subdivision.types';
+import { subdivisionRepository } from '@/lib/server/db/repository/subdivision.repository';
 
 /**
  * Subdivision use cases.
@@ -19,10 +19,10 @@ import { subdivisionRepository } from "@/lib/server/db/repository/subdivision.re
 export const subdivisionUseCases = {
   /** Cached list of subdivisions ordered for the manager UI. */
   async list(): Promise<SubdivisionConfig[]> {
-    "use cache";
-    cacheLife("hours");
-    cacheTag("pathfinder:subdivisions");
-    const db = (await import("@/lib/server/db/db")).default;
+    'use cache';
+    cacheLife('hours');
+    cacheTag('pathfinder:subdivisions');
+    const db = (await import('@/lib/server/db/db')).default;
     return subdivisionRepository(db).findAllOrdered();
   },
 
@@ -32,10 +32,10 @@ export const subdivisionUseCases = {
    * tree from re-serialising it on every request.
    */
   async getAllPieces(): Promise<Piece[]> {
-    "use cache";
-    cacheLife("hours");
-    cacheTag("pathfinder:pieces");
-    const { ALL_PIECES } = await import("@/assets");
+    'use cache';
+    cacheLife('hours');
+    cacheTag('pathfinder:pieces');
+    const { ALL_PIECES } = await import('@/assets');
     return ALL_PIECES;
   },
 
@@ -58,7 +58,7 @@ export const subdivisionUseCases = {
   async delete(db: PrismaClient | Prisma.TransactionClient, id: string): Promise<void> {
     const inUse = await subdivisionRepository(db).isInUse(id);
     if (inUse) {
-      throw new Error("Subdivision is in use");
+      throw new Error('Subdivision is in use');
     }
     await subdivisionRepository(db).delete(id);
   },
@@ -84,4 +84,3 @@ export const subdivisionUseCases = {
     }
   },
 };
-

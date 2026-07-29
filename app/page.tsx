@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { connection } from "next/server";
-import { Suspense } from "react";
-import { createBlankScenario, listScenarios } from "@/lib/server/actions/scenario.action";
-import { Button } from "@/components/Button";
-import { Empty } from "@/components/Empty";
-import styles from "./page.module.css";
+import Link from 'next/link';
+import { connection } from 'next/server';
+import { Suspense } from 'react';
+import { createBlankScenario, listScenarios } from '@/lib/server/actions/scenario.action';
+import { Button } from '@/components/Button';
+import { Empty } from '@/components/Empty';
+import styles from './page.module.css';
 
 function HomeFallback() {
   return (
@@ -56,11 +56,11 @@ async function HomeContent() {
                 <Link href={`/editor?id=${s.id}`} className={styles.scenarioLink}>
                   <span className={styles.scenarioName}>{s.name}</span>
                   <span className={styles.scenarioMeta}>
-                    {s.floorCount} {s.floorCount === 1 ? "piso" : "pisos"} · {s.paintedCellCount}{" "}
+                    {s.floorCount} {s.floorCount === 1 ? 'piso' : 'pisos'} · {s.paintedCellCount}{' '}
                     celdas pintadas
                   </span>
                   <span className={styles.scenarioDate}>
-                    {new Date(s.updatedAt).toLocaleString("es")}
+                    {new Date(s.updatedAt).toLocaleString('es')}
                   </span>
                 </Link>
               </li>

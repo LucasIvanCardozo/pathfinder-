@@ -1,2 +1,2 @@
-export * from "./capitalize";
-export * from "./generateId";
+export * from './capitalize';
+export * from './generateId';

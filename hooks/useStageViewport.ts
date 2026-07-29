@@ -1,7 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -140,21 +139,21 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
   // the browser from scrolling the page when space is held.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat) {
+      if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         setIsSpaceDown(true);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === 'Space') {
         setIsSpaceDown(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
@@ -186,11 +185,11 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
         setIsPanning(false);
       }
     };
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
     return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
     };
   }, []);
 
@@ -215,11 +214,11 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
         setIsPanning(false);
       }
     };
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
     return () => {
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, []);
 
