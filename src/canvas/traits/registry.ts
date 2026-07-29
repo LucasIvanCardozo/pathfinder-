@@ -3,6 +3,11 @@
 //   2. Implement it in `src/canvas/traits/<kind>.ts`.
 //   3. Add the entry to `traitRegistry` below.
 
+// Central registry of piece traits. To add a new trait:
+//   1. Add the trait data type to `src/pieces/traits.ts` (with Zod schema).
+//   2. Implement it in `src/canvas/traits/<kind>.ts`.
+//   3. Add the entry to `traitRegistry` below.
+
 import type { PaintedCell, Piece } from "@/lib/shared/types";
 import { doorStatesTrait, type DoorState } from "./door-states";
 import { blocksLightTrait } from "./blocks-light";
@@ -51,6 +56,25 @@ export function getInteractiveTrait(texture: {
   traits?: readonly { kind: string }[] | undefined;
 }): TraitImpl | undefined {
   return getTextureTraits(texture).find((t) => t.getMenu);
+}
+
+/**
+ * Resolves the default entity state for a piece by finding the first trait
+ * that declares a `defaultState()` and mapping it to `{ [trait.kind]: state }`.
+ * Returns `undefined` when the piece has no stateful traits — call sites
+ * typically store the result under `PaintedCell.entityState`.
+ */
+export function defaultEntityStateFor(
+  piece: Pick<Piece, "traits">,
+): Record<string, unknown> | undefined {
+  const traits = piece.traits ?? [];
+  for (const t of traits) {
+    const impl = traitRegistry[t.kind];
+    if (impl?.defaultState) {
+      return { [t.kind]: impl.defaultState() };
+    }
+  }
+  return undefined;
 }
 
 export type { DoorState };

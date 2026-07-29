@@ -18,8 +18,7 @@ export const loadScenario = createAction(
 );
 
 /** Upsert a scenario. Generates a new id when `input.id` is omitted. */
-export const saveScenario = createAction(ScenarioInputSchema, async ({ data }) => {
-  const db = (await import("@/lib/server/db/db")).default;
+export const saveScenario = createAction(ScenarioInputSchema, async ({ data, db }) => {
   const result = await scenarioUseCases.save(db, data);
   updateTag("pathfinder:scenarios");
   updateTag(`pathfinder:scenario:${result.id}`);

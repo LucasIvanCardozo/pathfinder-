@@ -13,8 +13,8 @@ import {
   WeatherPanel,
   type WeatherState,
   WEATHER_DEFAULT,
+  defaultEntityStateFor,
   getInteractiveTrait,
-  getTextureTraits,
   getWeather,
   useKeyboardShortcuts,
   useWeatherAudio,
@@ -22,8 +22,9 @@ import {
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types'
 import { saveScenario } from '@/lib/server/actions/scenario.action'
 import { reorderSubdivisions } from '@/lib/server/actions/subdivision.action'
-import { generateId } from '@/lib/shared/utils/generateId'
-import { useReload } from '@/hooks'
+import { findPlantaBajaIndex, floorNameForIndex } from '@/lib/shared/floors/naming'
+import { newId } from '@/lib/shared/utils/generateId'
+import { usePieceMap, useReload } from '@/hooks'
 import { Button } from '@/components/Button'
 import { Empty } from '@/components/Empty'
 import { SubdivisionManager } from '@/components/SubdivisionManager'
@@ -104,18 +105,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   // Pieces are global — every piece is paintable in any subdivision cell.
   const activePieces = allPieces
 
-  // Derive the "used" set from the actual painted cells (not from the
-  // subdivision declarations). The previous implementation used
-  // `subdivisions[i].pieceIds`, which over-reported (declared but unpainted)
-  // and missed anything painted that wasn't pre-declared.
+  // Derive the "used" set from the actual painted cells (not from subdivision
+  // declarations). Pieces are global per `lib/shared/types/piece.types.ts` —
+  // every piece can be painted into any subdivision cell on any floor.
   const usedPieceIds = useMemo(() => new Set(paintedCells.map((c) => c.pieceId)), [paintedCells])
   const allUsedPieces = useMemo(() => allPieces.filter((p) => usedPieceIds.has(p.id)), [allPieces, usedPieceIds])
 
-  const pieceById = useMemo(() => {
-    const m = new Map<string, Piece>()
-    for (const p of allPieces) m.set(p.id, p)
-    return m;
-  }, [allPieces])
+  const pieceById = usePieceMap(allPieces)
 
   const markDirty = useCallback(() => setIsDirty(true), [])
 
@@ -139,16 +135,14 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       if (!pieceId) return
 
       const newPiece = pieceById.get(pieceId)
-      const traits = newPiece ? getTextureTraits(newPiece) : []
-      const statefulTrait = traits.find((t) => t.defaultState)
-      const entityState = statefulTrait?.defaultState ? { [statefulTrait.kind]: statefulTrait.defaultState() } : undefined
+      const entityState = newPiece ? defaultEntityStateFor(newPiece) : undefined
 
       setPaintedCells((prev) => {
         const filtered = prev.filter((c) => !(c.floorId === floorId && c.subdivisionId === subdivisionId && c.gridX === gridX && c.gridY === gridY))
         return [
           ...filtered,
           {
-            id: generateId('cell'),
+            id: newId("cell"),
             floorId,
             subdivisionId,
             gridX,
@@ -264,29 +258,23 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     setTool(newTool)
   }
 
-  const plantaBajaIndex = floors.findIndex((f) => f.name.toLowerCase() === 'planta baja')
-  const floorNameForIndex = (index: number): string => {
-    if (index === plantaBajaIndex) return 'Planta Baja'
-    if (plantaBajaIndex === -1) return `Piso ${index}`
-    if (index < plantaBajaIndex) return `Subsuelo ${plantaBajaIndex - index}`
-    return `Piso ${index - plantaBajaIndex}`
-  }
-
   const makeFloor = (name: string): Floor => ({
-    id: generateId('floor'),
+    id: newId("floor"),
     name,
   })
 
   const handleAddFloorAbove = () => {
     const newIndex = floors.length
-    const newFloor = makeFloor(floorNameForIndex(newIndex))
+    const newFloor = makeFloor(floorNameForIndex(floors, newIndex))
     setFloors((prev) => [...prev, newFloor])
     setActiveFloorId(newFloor.id)
     markDirty()
   }
 
   const handleAddFloorBelow = () => {
-    const newN = plantaBajaIndex + 1
+    // Prepending shifts the (old) Planta Baja by +1; the new floor sits at
+    // index 0, so its `Subsuelo N` number is the new pb index minus 0.
+    const newN = findPlantaBajaIndex(floors) + 1
     const newFloor = makeFloor(`Subsuelo ${newN}`)
     setFloors((prev) => [newFloor, ...prev])
     setActiveFloorId(newFloor.id)
@@ -526,5 +514,3 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     </div>
   )
 }
-
-

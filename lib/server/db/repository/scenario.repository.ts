@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { isPlantaBajaName } from "@/lib/shared/floors/naming";
 import type { LoadScenarioResult, ScenarioSummary, SaveScenarioInput } from "@/lib/shared/types/scenario.types";
 import { DEFAULT_FLOORS } from "@/lib/shared/types/floor.types";
 import { runInTx } from "@/lib/server/utils/runInTx";
@@ -63,9 +64,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
         },
       });
       if (!scenario) return null;
-      const plantaBaja = scenario.floors.find(
-        (f) => f.name.toLowerCase() === "planta baja",
-      );
+      const plantaBaja = scenario.floors.find((f) => isPlantaBajaName(f.name));
       const initialFloor = plantaBaja ?? scenario.floors[0];
       if (!initialFloor) return null;
       return {

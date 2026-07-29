@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import styles from "./FormNumberInput.module.css";
+import styles from "./control.module.css";
 
 type FormNumberInputProps = {
   name: string;

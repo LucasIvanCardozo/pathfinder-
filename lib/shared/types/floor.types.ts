@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { FloorSchema } from "@/lib/shared/schemas/floor.schemas";
+import { DEFAULT_FLOOR_NAMES } from "@/lib/shared/floors/naming";
 
 /**
  * A single floor inside a scenario. Carries only its identity and display
@@ -9,15 +10,17 @@ import type { FloorSchema } from "@/lib/shared/schemas/floor.schemas";
 export type Floor = z.infer<typeof FloorSchema>;
 
 /**
- * Default floor names for brand-new scenarios. The map dimensions come from
- * the scenario-level constants in `lib/shared/constants/map.ts`; floors
- * inherit them automatically.
+ * Default floor list for brand-new scenarios. The display names come from
+ * `lib/shared/floors/naming.ts` so the editor, the seed payload, and the
+ * default-scenario creation use case stay in lock-step.
+ *
+ * The map dimensions come from the scenario-level constants in
+ * `lib/shared/constants/map.ts`; floors inherit them automatically.
  *
  * `id` is an empty placeholder; the repository assigns real ids via
  * `generateId("floor")` at insert time.
  */
-export const DEFAULT_FLOORS: Floor[] = [
-  { id: "", name: "Subsuelo 1" },
-  { id: "", name: "Planta Baja" },
-  { id: "", name: "Piso 1" },
-];
+export const DEFAULT_FLOORS: Floor[] = DEFAULT_FLOOR_NAMES.map((name) => ({
+  id: "",
+  name,
+}));

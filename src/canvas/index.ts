@@ -15,6 +15,7 @@ export {
   getTrait,
   getTextureTraits,
   getInteractiveTrait,
+  defaultEntityStateFor,
   doorStatesTrait,
   blocksLightTrait,
   DOOR_STATES,

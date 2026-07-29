@@ -3,7 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { scenarioRepository } from "@/lib/server/db/repository/scenario.repository";
 import type { LoadScenarioResult, SaveScenarioInput, ScenarioSummary } from "@/lib/shared/types/scenario.types";
-import { generateId } from "@/lib/shared/utils/generateId";
+import { newId } from "@/lib/shared/utils/generateId";
 
 type TxOrClient = PrismaClient | Prisma.TransactionClient;
 
@@ -50,8 +50,8 @@ export const scenarioUseCases = {
     db: TxOrClient,
     mapDims: { baseCellSize: number; width: number; height: number },
   ) {
-    const scenarioId = generateId("scenario");
-    const floorIds = [generateId("floor"), generateId("floor"), generateId("floor")];
+    const scenarioId = newId("scenario");
+    const floorIds = [newId("floor"), newId("floor"), newId("floor")];
     await scenarioRepository(db).createBlank(scenarioId, floorIds, mapDims);
     return { scenarioId };
   },

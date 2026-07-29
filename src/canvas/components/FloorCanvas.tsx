@@ -1,9 +1,10 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 import { Image as KonvaImage, Layer, Stage } from "react-konva";
 import type Konva from "konva";
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from "@/lib/shared/types";
+import { usePieceMap, useSubdivisionMap } from "@/hooks";
 import { findInteractiveCellAtPixel, getTrait } from "../traits";
 import styles from "./FloorCanvas.module.css";
 
@@ -86,22 +87,8 @@ function FloorCanvasImpl({
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
 
-  const sortedSubs = useMemo(
-    () => [...subdivisions].sort((a, b) => a.order - b.order),
-    [subdivisions],
-  );
-
-  const subById = useMemo(() => {
-    const m = new Map<string, SubdivisionConfig>();
-    for (const sub of sortedSubs) m.set(sub.id, sub);
-    return m;
-  }, [sortedSubs]);
-
-  const pieceById = useMemo(() => {
-    const m = new Map<string, Piece>();
-    for (const p of pieces) m.set(p.id, p);
-    return m;
-  }, [pieces]);
+  const subById = useSubdivisionMap(subdivisions);
+  const pieceById = usePieceMap(pieces);
 
   // Render-time cellSize helper (world coords; the Stage scales on output).
   const cellSizeFor = (sub: SubdivisionConfig): number =>
