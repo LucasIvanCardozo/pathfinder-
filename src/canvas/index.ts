@@ -7,6 +7,28 @@ export type { PaintTool } from './components/PaintToolbar';
 export { PaintToolbar } from './components/PaintToolbar';
 export { SubdivisionTabs } from './components/SubdivisionTabs';
 export { PiecePalette } from './components/PiecePalette';
+export {
+  applyPaintStroke,
+  applyEraseStroke,
+  brushCellsAt,
+  brushOffsets,
+  bumpBrushSizeDown,
+  bumpBrushSizeUp,
+  computeStrokeCells,
+  MAX_BRUSH_SIZE,
+  MIN_BRUSH_SIZE,
+  normalizeBrushSize,
+} from './tools';
+export type {
+  BrushBounds,
+  BrushCell,
+  BrushSize,
+  BrushStroke,
+  EraseStrokeInput,
+  PaintStrokeInput,
+  PieceProjection,
+  ToolKind,
+} from './tools';
 export type { Shortcut } from './useKeyboardShortcuts';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { useTextureImages } from './useTextureImages';

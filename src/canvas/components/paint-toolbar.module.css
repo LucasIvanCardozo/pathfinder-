@@ -1,6 +1,12 @@
 .toolbar {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toolGroup {
+  display: flex;
+  flex-direction: column;
   gap: 0.25rem;
 }
 
@@ -28,4 +34,107 @@
   color: #1a1206;
   border-color: var(--accent);
   font-weight: 500;
+}
+
+.brushSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.brushHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.brushLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+
+.brushValue {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.brushControls {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.brushStep {
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.brushStep:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.brushStep:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.brushSlider {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+.brushSlider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.brushSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.brushSlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  cursor: pointer;
 }

@@ -11,7 +11,11 @@ import {
   SubdivisionTabs,
   WeatherOverlay,
   WeatherPanel,
-  defaultEntityStateFor,
+  applyEraseStroke,
+  applyPaintStroke,
+  bumpBrushSizeDown,
+  bumpBrushSizeUp,
+  normalizeBrushSize,
   useKeyboardShortcuts,
 } from '@/canvas';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
@@ -65,6 +69,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(initialSubdivisions[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>('paint');
+  const [brushSize, setBrushSize] = useState<number>(1);
   const [isManaging, setIsManaging] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -127,57 +132,30 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     (
       floorId: string,
       subdivisionId: string,
-      gridX: number,
-      gridY: number,
+      cells: { gridX: number; gridY: number }[],
       pieceId: string | null,
-      _screenPos: { x: number; y: number } | null,
-      _isDragging: boolean,
     ) => {
+      if (cells.length === 0) return;
       markDirty();
 
       if (tool === 'erase') {
         setPaintedCells((prev) =>
-          prev.filter(
-            (c) =>
-              !(
-                c.floorId === floorId &&
-                c.subdivisionId === subdivisionId &&
-                c.gridX === gridX &&
-                c.gridY === gridY
-              ),
-          ),
+          applyEraseStroke({ stroke: { floorId, subdivisionId, cells }, paintedCells: prev }),
         );
         return;
       }
 
       if (!pieceId) return;
 
-      const newPiece = pieceById.get(pieceId);
-      const entityState = newPiece ? defaultEntityStateFor(newPiece) : undefined;
-
-      setPaintedCells((prev) => {
-        const filtered = prev.filter(
-          (c) =>
-            !(
-              c.floorId === floorId &&
-              c.subdivisionId === subdivisionId &&
-              c.gridX === gridX &&
-              c.gridY === gridY
-            ),
-        );
-        return [
-          ...filtered,
-          {
-            id: newId('cell'),
-            floorId,
-            subdivisionId,
-            gridX,
-            gridY,
-            pieceId,
-            entityState: entityState as Record<string, string | number | boolean> | undefined,
-          },
-        ];
-      });
+      setPaintedCells((prev) =>
+        applyPaintStroke({
+          stroke: { floorId, subdivisionId, cells },
+          pieceId,
+          pieceById,
+          paintedCells: prev,
+          generateId: () => newId('cell'),
+        }),
+      );
     },
     [tool, markDirty, pieceById],
   );
@@ -218,6 +196,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   useKeyboardShortcuts([
     { key: 'b', handler: () => setTool('paint') },
     { key: 'e', handler: () => setTool('erase') },
+    { key: '[', handler: () => setBrushSize((s) => bumpBrushSizeDown(normalizeBrushSize(s))) },
+    { key: ']', handler: () => setBrushSize((s) => bumpBrushSizeUp(normalizeBrushSize(s))) },
     {
       key: 's',
       ctrl: true,
@@ -256,6 +236,10 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
 
   const handleToolChange = (newTool: PaintTool) => {
     setTool(newTool);
+  };
+
+  const handleBrushSizeChange = (size: number) => {
+    setBrushSize(normalizeBrushSize(size));
   };
 
   const handleClearAll = () => {
@@ -297,7 +281,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         <Link href="/" className={styles.backLink}>
           ← Escenarios
         </Link>
-        <PaintToolbar tool={tool} onChange={handleToolChange} />
+        <PaintToolbar
+          tool={tool}
+          onChange={handleToolChange}
+          brushSize={brushSize}
+          onBrushSizeChange={handleBrushSizeChange}
+        />
         <Button type="button" onClick={() => setIsManaging(true)}>
           ⚙ Administrar subdivisions
         </Button>
@@ -468,6 +457,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
           tool={tool}
+          brushSize={brushSize}
           onPaint={handlePaint}
           onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}

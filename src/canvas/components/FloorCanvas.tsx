@@ -1,11 +1,18 @@
 'use client';
 
-import { memo, useCallback, useRef } from 'react';
-import { Image as KonvaImage, Layer, Stage } from 'react-konva';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
 import type Konva from 'konva';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import { usePieceMap, useSubdivisionMap } from '@/hooks';
 import { findInteractiveCellAtPixel, getTrait } from '../traits';
+import {
+  brushCellsAt,
+  computeStrokeCells,
+  type BrushCell,
+  type BrushSize,
+  type ToolKind,
+} from '../tools';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -24,7 +31,9 @@ type Props = {
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
-  tool: 'paint' | 'erase';
+  tool: ToolKind;
+  /** Brush footprint in active-subdivision cells. Always odd; size 1 = single cell. */
+  brushSize: BrushSize;
   /** Loaded texture images keyed by `imagePath`. One HTMLImageElement per path
    *  — depth blur is now done in CSS. */
   textureImages: Map<string, HTMLImageElement>;
@@ -35,15 +44,18 @@ type Props = {
   beginPan: (clientX: number, clientY: number) => void;
   isSpaceDown: boolean;
   isPanning: boolean;
-  /** ONLY attached when `isActive`. */
+  /**
+   * Fired when the user clicks or drags across the active floor with the paint
+   * or erase tool. The `cells` array is the full interpolated stroke (every
+   * cell touched by the brush footprint between consecutive pointer samples),
+   * already clipped to the active subdivision's bounds. `pieceId` is `null`
+   * for the erase tool.
+   */
   onPaint?: (
     floorId: string,
     subdivisionId: string,
-    gridX: number,
-    gridY: number,
+    cells: BrushCell[],
     pieceId: string | null,
-    screenPos: { x: number; y: number } | null,
-    isDragging: boolean,
   ) => void;
   /** ONLY attached when `isActive`. Opens an interactive trait menu (e.g.
    *  door-states right-click). */
@@ -63,6 +75,13 @@ function depthToTier(d: number): 0 | 1 | 2 | 3 {
   return 3;
 }
 
+/** Style tokens for the brush preview overlay. Kept local to avoid
+ *  contaminating the global palette with paint-tool-specific colours. */
+const PREVIEW_STYLE = {
+  paint: { stroke: '#c9a86a', fill: 'rgba(201, 168, 106, 0.25)' },
+  erase: { stroke: '#e07a7a', fill: 'rgba(224, 122, 122, 0.2)' },
+} as const;
+
 function FloorCanvasImpl({
   floor,
   cells,
@@ -74,6 +93,7 @@ function FloorCanvasImpl({
   activeSubdivisionId,
   activePieceId,
   tool,
+  brushSize,
   textureImages,
   viewportSize,
   pan,
@@ -86,6 +106,13 @@ function FloorCanvasImpl({
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
+  // Last cell the stroke touched — used as the start point for line
+  // interpolation on the next mousemove. Reset on stroke end and whenever
+  // the cursor leaves the canvas.
+  const lastStrokeCellRef = useRef<BrushCell | null>(null);
+  // Throttle hover state updates to once per cell change so the preview
+  // doesn't re-render the whole tree on every mouse-move tick.
+  const [hoverCell, setHoverCell] = useState<BrushCell | null>(null);
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
@@ -106,35 +133,82 @@ function FloorCanvasImpl({
     return trait.resolveTextureId(cell, fallbackPath, piece);
   };
 
-  // Paint stroke handler. Pointer coords are in WORLD coords (Konva's
-  // `getRelativePointerPosition` accounts for the stage transform).
+  // Compute the active subdivision's cellSize and bounds, or `null` if the
+  // active subdivision isn't loaded. Inlined in `apply` and reused by the
+  // hover preview to keep both paths in sync.
+  const activeSubdivision = subById.get(activeSubdivisionId);
+  const activeCellSize = activeSubdivision
+    ? mapDims.baseCellSize / activeSubdivision.cellSizeRatio
+    : 0;
+  const activeMaxX = activeSubdivision ? mapDims.width * activeSubdivision.cellSizeRatio : 0;
+  const activeMaxY = activeSubdivision ? mapDims.height * activeSubdivision.cellSizeRatio : 0;
+
+  // Convert a world-space pointer to a subdivision grid cell, or null when
+  // the pointer is outside the active subdivision's bounds. Centralised so
+  // mousedown/mousemove/mouseleave stay in sync.
+  const pointerToCell = useCallback(
+    (pointer: { x: number; y: number }): BrushCell | null => {
+      if (!activeSubdivision) return null;
+      const gx = Math.floor(pointer.x / activeCellSize);
+      const gy = Math.floor(pointer.y / activeCellSize);
+      if (gx < 0 || gy < 0 || gx >= activeMaxX || gy >= activeMaxY) return null;
+      return { gridX: gx, gridY: gy };
+    },
+    [activeSubdivision, activeCellSize, activeMaxX, activeMaxY],
+  );
+
+  // Paint stroke handler. Computes the brush footprint, interpolates
+  // between the previous and current cell to keep fast drags continuous,
+  // then forwards the resulting cell list to the parent.
   const apply = useCallback(
     (pointer: { x: number; y: number }, isDragging: boolean) => {
-      const sub = subById.get(activeSubdivisionId);
-      if (!sub) return;
-      const cellSize = mapDims.baseCellSize / sub.cellSizeRatio;
-      const maxX = mapDims.width * sub.cellSizeRatio;
-      const maxY = mapDims.height * sub.cellSizeRatio;
-      const gridX = Math.floor(pointer.x / cellSize);
-      const gridY = Math.floor(pointer.y / cellSize);
-      if (gridX < 0 || gridY < 0 || gridX >= maxX || gridY >= maxY) return;
+      const target = pointerToCell(pointer);
+      if (!target) {
+        // Out of bounds: clear the interpolation anchor but do not emit a
+        // stroke. The user will pick up where they re-enter the canvas.
+        lastStrokeCellRef.current = null;
+        return;
+      }
+      const start = isDragging ? lastStrokeCellRef.current : null;
+      const cells = computeStrokeCells(start, target, brushSize, {
+        maxX: activeMaxX,
+        maxY: activeMaxY,
+      });
+      lastStrokeCellRef.current = target;
 
-      const pieceId = tool === 'paint' ? activePieceId : null;
-      if (tool === 'paint' && !pieceId) return;
-      onPaint?.(floor.id, activeSubdivisionId, gridX, gridY, pieceId, null, isDragging);
+      if (tool === 'paint') {
+        if (!activePieceId) return;
+        onPaint?.(floor.id, activeSubdivisionId, cells, activePieceId);
+      } else {
+        onPaint?.(floor.id, activeSubdivisionId, cells, null);
+      }
     },
+    // `pointerToCell` closes over the same render-scope values, so it captures
+    // every dependency the callback needs. Tracking only the underlying
+    // values keeps the callback stable across renders that don't change them.
     [
+      activeMaxX,
+      activeMaxY,
       activePieceId,
       activeSubdivisionId,
+      brushSize,
       floor.id,
-      mapDims.baseCellSize,
-      mapDims.width,
-      mapDims.height,
       onPaint,
-      subById,
+      pointerToCell,
       tool,
     ],
   );
+
+  // Update the preview hover cell. Only fires a state update when the cell
+  // actually changes — moving the cursor inside the same cell is a no-op,
+  // which keeps the Konva tree from re-rendering on every pointer tick.
+  const updateHoverCell = (cell: BrushCell | null) => {
+    setHoverCell((prev) => {
+      if (!prev && !cell) return prev;
+      if (prev && cell && prev.gridX === cell.gridX && prev.gridY === cell.gridY) return prev;
+      return cell;
+    });
+  };
 
   const getPointer = (): { x: number; y: number } | null => {
     const stage = stageRef.current;
@@ -164,19 +238,30 @@ function FloorCanvasImpl({
 
   const handleMouseMove = (_e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!isActive) return;
+    const pointer = getPointer();
+    if (!pointer) return;
+    // Always update the preview hover position, regardless of draw state —
+    // the preview must be visible any time the cursor is over the canvas.
+    updateHoverCell(pointerToCell(pointer));
     // Panning is handled by the window-level listener registered in the
     // viewport hook, so the cursor can leave the stage area without losing
     // the drag.
     if (isPanning) return;
     if (!isDrawingRef.current) return;
-    const pointer = getPointer();
-    if (!pointer) return;
     apply(pointer, true);
   };
 
   const handlePointerUp = () => {
     if (!isActive) return;
     isDrawingRef.current = false;
+    lastStrokeCellRef.current = null;
+  };
+
+  const handleMouseLeave = () => {
+    if (!isActive) return;
+    isDrawingRef.current = false;
+    lastStrokeCellRef.current = null;
+    updateHoverCell(null);
   };
 
   const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
@@ -240,6 +325,27 @@ function FloorCanvasImpl({
           : styles.tier3;
   const className = `${styles.floor} ${tierClass}${isActive ? ` ${styles.interactive}` : ''}`;
 
+  // Always-visible, non-interactive brush preview. Renders one outlined
+  // rect per cell in the brush footprint at the current hover position.
+  // Empty when the cursor is outside the canvas or no subdivision is
+  // active. The `Layer` is `listening={false}` so it never intercepts
+  // pointer events — paint strokes still flow through to the active
+  // floor's hit testing.
+  const previewCells = useMemo(() => {
+    if (!activeSubdivision || !hoverCell) return [];
+    const bounds = {
+      maxX: mapDims.width * activeSubdivision.cellSizeRatio,
+      maxY: mapDims.height * activeSubdivision.cellSizeRatio,
+    };
+    return brushCellsAt(hoverCell, brushSize, bounds);
+    // We intentionally depend on hoverCell (the throttled state value), not
+    // the raw pointer, so re-renders are bounded by cell changes.
+  }, [activeSubdivision, hoverCell, brushSize, mapDims.width, mapDims.height]);
+  const previewCellSize = activeSubdivision
+    ? mapDims.baseCellSize / activeSubdivision.cellSizeRatio
+    : 0;
+  const previewStyle = PREVIEW_STYLE[tool];
+
   return (
     <div className={className} style={isActive ? { cursor } : undefined}>
       <Stage
@@ -254,7 +360,7 @@ function FloorCanvasImpl({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
+        onMouseLeave={handleMouseLeave}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchEnd}
@@ -283,6 +389,22 @@ function FloorCanvasImpl({
               />
             );
           })}
+        </Layer>
+        <Layer listening={false}>
+          {previewCells.map((cell) => (
+            <Rect
+              key={`preview-${cell.gridX}-${cell.gridY}`}
+              x={cell.gridX * previewCellSize}
+              y={cell.gridY * previewCellSize}
+              width={previewCellSize}
+              height={previewCellSize}
+              stroke={previewStyle.stroke}
+              strokeWidth={1.5}
+              fill={previewStyle.fill}
+              perfectDrawEnabled={false}
+              listening={false}
+            />
+          ))}
         </Layer>
       </Stage>
     </div>

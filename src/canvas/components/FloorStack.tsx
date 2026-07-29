@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import { useStageViewport } from '@/hooks/useStageViewport';
 import { useTextureImages } from '../useTextureImages';
+import type { BrushCell, BrushSize, ToolKind } from '../tools';
 import { FloorCanvas } from './FloorCanvas';
 import { WorldGrid } from './WorldGrid';
 import styles from './floor-stack.module.css';
@@ -21,16 +22,9 @@ type Props = {
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
-  tool: 'paint' | 'erase';
-  onPaint: (
-    floorId: string,
-    subdivisionId: string,
-    gridX: number,
-    gridY: number,
-    pieceId: string | null,
-    screenPos: { x: number; y: number } | null,
-    isDragging: boolean,
-  ) => void;
+  tool: ToolKind;
+  brushSize: BrushSize;
+  onPaint: (floorId: string, subdivisionId: string, cells: BrushCell[], pieceId: string | null) => void;
   onOpenTraitMenu?: (
     cellId: string,
     traitKind: string,
@@ -56,6 +50,7 @@ function FloorStackImpl({
   activeSubdivisionId,
   activePieceId,
   tool,
+  brushSize,
   onPaint,
   onOpenTraitMenu,
   overlay,
@@ -120,6 +115,7 @@ function FloorStackImpl({
             activeSubdivisionId={activeSubdivisionId}
             activePieceId={activePieceId}
             tool={tool}
+            brushSize={brushSize}
             viewportSize={viewportSize}
             pan={pan}
             zoom={zoom}
