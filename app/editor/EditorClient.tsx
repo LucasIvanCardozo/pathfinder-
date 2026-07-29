@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   type PaintTool,
   PaintToolbar,
@@ -11,27 +11,23 @@ import {
   SubdivisionTabs,
   WeatherOverlay,
   WeatherPanel,
-  type WeatherState,
-  WEATHER_DEFAULT,
   defaultEntityStateFor,
-  getInteractiveTrait,
-  getWeather,
   useKeyboardShortcuts,
-  useWeatherAudio,
 } from '@/canvas'
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types'
-import { saveScenario } from '@/lib/server/actions/scenario.action'
 import { reorderSubdivisions } from '@/lib/server/actions/subdivision.action'
-import { findPlantaBajaIndex, floorNameForIndex } from '@/lib/shared/floors/naming'
 import { newId } from '@/lib/shared/utils/generateId'
 import { usePieceMap, useReload } from '@/hooks'
 import { Button } from '@/components/Button'
 import { Empty } from '@/components/Empty'
 import { SubdivisionManager } from '@/components/SubdivisionManager'
-import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from '@/lib/shared/constants/map'
+import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map'
+import { useFloorHeuristics } from './hooks/use-floor-heuristics'
+import { useScenarioAutosave } from './hooks/use-scenario-autosave'
+import { useTraitMenu } from './hooks/use-trait-menu'
+import { useWeatherSession } from './hooks/use-weather-session'
+import { useZoomControl } from './hooks/use-zoom-control'
 import styles from './Editor.module.css'
-
-const AUTOSAVE_INTERVAL_MS = 60 * 1000
 
 const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorStack), {
   ssr: false,
@@ -69,38 +65,13 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const [tool, setTool] = useState<PaintTool>('paint')
   const [isManaging, setIsManaging] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
-  const [, startSaveTransition] = useTransition()
-  const [isSaving, setIsSaving] = useState(false)
-  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [savedAt, setSavedAt] = useState<string | null>(null)
 
-  const [traitMenu, setTraitMenu] = useState<{
-    cellId: string
-    traitKind: string
-    position: { x: number; y: number }
-  } | null>(null)
-
-  // Weather state is ephemeral (not persisted). Panel writes to here; audio
-  // and overlay read from here.
-  const [weatherState, setWeatherState] = useState<WeatherState>(WEATHER_DEFAULT)
-  // When the storm's thunder audio fires, the audio hook calls back here
-  // and we forward the timestamp to StormEffect for a synced flash.
-  const [thunderAt, setThunderAt] = useState<number | null>(null)
-  const weatherDef = getWeather(weatherState.weatherId)
-  useWeatherAudio(weatherDef.sound, weatherState.volume / 100, (src) => {
-    if (src.endsWith('thunder.mp3')) setThunderAt(Date.now())
-  })
-
-  const fallbackFloor: Floor = { id: '', name: '' }
-  const activeFloor = floors.find((f) => f.id === activeFloorId) ?? floors[0] ?? fallbackFloor
   const mapDims = {
     baseCellSize: initialScenario?.baseCellSize ?? 64,
     width: initialScenario?.width ?? 100,
     height: initialScenario?.height ?? 300,
   }
-  const [zoom, setZoom] = useState(1)
-  const handleZoomIn = () => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))
-  const handleZoomOut = () => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))
+  const { zoom, zoomIn, zoomOut } = useZoomControl()
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId)
   // Pieces are global — every piece is paintable in any subdivision cell.
   const activePieces = allPieces
@@ -114,6 +85,31 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const pieceById = usePieceMap(allPieces)
 
   const markDirty = useCallback(() => setIsDirty(true), [])
+  const { isSaving, autosaveStatus, savedAt, save } = useScenarioAutosave({
+    scenarioName,
+    scenarioId,
+    mapDims,
+    floors,
+    paintedCells,
+    isDirty,
+    onSaved: useCallback(
+      (savedId: string) => {
+        setScenarioId(savedId)
+        router.replace(`/editor?id=${savedId}`)
+        setIsDirty(false)
+      },
+      [router]
+    ),
+  })
+  const { activeFloorIndex, activeFloor, handleAddFloorAbove, handleAddFloorBelow, handleFloorUp, handleFloorDown } = useFloorHeuristics({
+    floors,
+    activeFloorId,
+    setActiveFloorId,
+    setFloors,
+    markDirty,
+  })
+  const { weatherState, setWeatherState, thunderAt } = useWeatherSession()
+  const traitMenu = useTraitMenu({ paintedCells, setPaintedCells, pieceById, markDirty })
 
   const handlePaint = useCallback(
     (
@@ -187,18 +183,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     [subdivisions, markDirty, startReload]
   )
 
-  const activeFloorIndex = floors.findIndex((f) => f.id === activeFloorId)
-  const handleFloorUp = () => {
-    if (activeFloorIndex < floors.length - 1) {
-      setActiveFloorId(floors[activeFloorIndex + 1]!.id)
-    }
-  }
-  const handleFloorDown = () => {
-    if (activeFloorIndex > 0) {
-      setActiveFloorId(floors[activeFloorIndex - 1]!.id)
-    }
-  }
-
   useKeyboardShortcuts([
     { key: 'b', handler: () => setTool('paint') },
     { key: 'e', handler: () => setTool('erase') },
@@ -207,12 +191,12 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       ctrl: true,
       handler: () => {
         if (isSaving) return
-        startSaveTransition(() => handleSave(false))
+        save(false)
       },
     },
     {
       key: 'Escape',
-      handler: () => setTraitMenu(null),
+      handler: traitMenu.close,
     },
     ...subdivisions.map((sub, i) => ({
       key: String(i + 1),
@@ -236,49 +220,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     }
   }
 
-  const handleOpenTraitMenu = useCallback((cellId: string, traitKind: string, position: { x: number; y: number }) => {
-    setTraitMenu({ cellId, traitKind, position })
-  }, [])
-
-  const handleChangeTraitState = useCallback(
-    (newState: unknown) => {
-      if (!traitMenu) return
-      setPaintedCells((prev) =>
-        prev.map((c) => (c.id === traitMenu.cellId ? { ...c, entityState: { ...c.entityState, [traitMenu.traitKind]: newState as string } } : c))
-      )
-      markDirty()
-      setTraitMenu(null)
-    },
-    [traitMenu, markDirty]
-  )
-
-  const handleCloseTraitMenu = useCallback(() => setTraitMenu(null), [])
-
   const handleToolChange = (newTool: PaintTool) => {
     setTool(newTool)
-  }
-
-  const makeFloor = (name: string): Floor => ({
-    id: newId("floor"),
-    name,
-  })
-
-  const handleAddFloorAbove = () => {
-    const newIndex = floors.length
-    const newFloor = makeFloor(floorNameForIndex(floors, newIndex))
-    setFloors((prev) => [...prev, newFloor])
-    setActiveFloorId(newFloor.id)
-    markDirty()
-  }
-
-  const handleAddFloorBelow = () => {
-    // Prepending shifts the (old) Planta Baja by +1; the new floor sits at
-    // index 0, so its `Subsuelo N` number is the new pb index minus 0.
-    const newN = findPlantaBajaIndex(floors) + 1
-    const newFloor = makeFloor(`Subsuelo ${newN}`)
-    setFloors((prev) => [newFloor, ...prev])
-    setActiveFloorId(newFloor.id)
-    markDirty()
   }
 
   const handleClearAll = () => {
@@ -303,86 +246,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     markDirty()
   }
 
-  const handleSave = useCallback(
-    (isAutosave = false) => {
-      const doSave = async () => {
-        if (isAutosave && !isDirty) return
-        setAutosaveStatus('saving')
-        setIsSaving(true)
-        try {
-          const result = await saveScenario({
-            id: scenarioId ?? undefined,
-            name: scenarioName,
-            baseCellSize: mapDims.baseCellSize,
-            width: mapDims.width,
-            height: mapDims.height,
-            floors,
-            paintedCells,
-          })
-          // The action returns the canonical envelope; the wrapper already
-          // surfaced any Zod / domain errors. Only transport or framework
-          // failures should land in the catch block now.
-          if (!result.success) {
-            setAutosaveStatus('error')
-            return
-          }
-          setScenarioId(result.data.id)
-          const t = new Date().toLocaleTimeString('es')
-          setSavedAt(t)
-          setIsDirty(false)
-          setAutosaveStatus('saved')
-          // Keep the URL in sync with the persisted scenario id so reloads
-          // and shared links point at the right place.
-          router.replace(`/editor?id=${result.data.id}`)
-        } catch {
-          setAutosaveStatus('error')
-        } finally {
-          setIsSaving(false)
-        }
-      }
-      doSave()
-    },
-    [isDirty, scenarioId, scenarioName, mapDims.baseCellSize, mapDims.width, mapDims.height, floors, paintedCells, router]
-  )
-
-  // Periodic autosave. Always on; the tick is a no-op when there's nothing
-  // dirty to save.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!isDirty) return
-      startSaveTransition(() => handleSave(true))
-    }, AUTOSAVE_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [isDirty, handleSave])
-
   const paintedInFloor = paintedCells.filter((c) => c.floorId === activeFloorId).length
-
-  const traitMenuNode = useMemo(() => {
-    if (!traitMenu) return null
-    const cell = paintedCells.find((c) => c.id === traitMenu.cellId)
-    if (!cell) return null
-    const trait = getInteractiveTrait(
-      pieceById.get(cell.pieceId) ?? {
-        id: '',
-        name: '',
-        category: 'other' as const,
-        visualStates: [],
-        width: 0,
-        height: 0,
-        tags: [] as string[],
-      }
-    )
-    if (!trait?.getMenu) return null
-    return (
-      <div style={{ left: traitMenu.position.x, top: traitMenu.position.y, position: 'fixed' }}>
-        {trait.getMenu({
-          cell,
-          onChangeState: handleChangeTraitState,
-          onClose: handleCloseTraitMenu,
-        })}
-      </div>
-    )
-  }, [traitMenu, paintedCells, pieceById, handleChangeTraitState, handleCloseTraitMenu])
 
   return (
     <div className={styles.editor}>
@@ -458,24 +322,24 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           </div>
 
           <div className={styles.zoomControls}>
-            <Button type="button" size="mini" onClick={handleZoomOut} disabled={zoom <= MIN_ZOOM} title="Reducir zoom">
+            <Button type="button" size="mini" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} title="Reducir zoom">
               −
             </Button>
             <span className={styles.zoomDisplay} aria-live="polite">
               {Math.round(zoom * 100)}%
             </span>
-            <Button type="button" size="mini" onClick={handleZoomIn} disabled={zoom >= MAX_ZOOM} title="Aumentar zoom">
+            <Button type="button" size="mini" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} title="Aumentar zoom">
               +
             </Button>
           </div>
 
-          <span className={styles.autosaveStatus} data-status={autosaveStatus} title={`Autoguardado cada ${AUTOSAVE_INTERVAL_MS / 60_000} min`}>
+          <span className={styles.autosaveStatus} data-status={autosaveStatus} title="Autoguardado cada 1 min">
             {autosaveStatus === 'saving' && '⟳ Guardando…'}
             {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
             {autosaveStatus === 'error' && '✗ Error al guardar'}
             {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
           </span>
-          <Button type="button" variant="primary" onClick={() => handleSave(false)} disabled={isSaving}>
+          <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
             {isSaving ? 'Guardando…' : scenarioId ? 'Guardar' : 'Crear'}
           </Button>
         </header>
@@ -503,14 +367,14 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           activePieceId={activePieceId}
           tool={tool}
           onPaint={handlePaint}
-          onOpenTraitMenu={handleOpenTraitMenu}
+          onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </main>
 
       <SubdivisionManager isOpen={isManaging} onClose={handleCloseManager} subdivisions={subdivisions} />
 
-      {traitMenuNode}
+      {traitMenu.render}
     </div>
   )
 }
