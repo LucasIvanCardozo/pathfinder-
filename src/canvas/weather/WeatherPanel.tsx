@@ -1,6 +1,7 @@
 'use client';
 
-import { FormProvider, useForm } from 'react-hook-form';
+import { useEffect } from 'react';
+import { FormProvider, useForm, useWatch, type Control } from 'react-hook-form';
 import { FormField, FormSelect, FormSlider } from '@/components/form';
 import styles from './weather-panel.module.css';
 import { WEATHERS, type WeatherDef } from './registry';
@@ -18,19 +19,27 @@ type Props = {
 const DEFAULT: WeatherState = { weatherId: 'none', volume: 100 };
 export const WEATHER_DEFAULT: WeatherState = DEFAULT;
 
+/**
+ * Narrow-subscription watcher. Uses `useWatch({ control, name })` per field so
+ * the form re-renders only when `weatherId` or `volume` change — not when other
+ * fields are touched, registered, or blurred. Pushes the merged state up to
+ * the parent via `onChange`.
+ */
+function WeatherWatcher({ control, onChange }: { control: Control<WeatherState>; onChange: (state: WeatherState) => void }) {
+  const weatherId = useWatch({ control, name: 'weatherId' }) ?? DEFAULT.weatherId;
+  const volume = useWatch({ control, name: 'volume' }) ?? DEFAULT.volume;
+
+  useEffect(() => {
+    onChange({ weatherId, volume });
+  }, [onChange, weatherId, volume]);
+
+  return null;
+}
+
 export function WeatherPanel({ onChange, initial }: Props) {
   const methods = useForm<WeatherState>({
     mode: 'onChange',
     defaultValues: { ...DEFAULT, ...initial },
-  });
-
-  // Push form values up to the parent so the overlay + audio can react.
-  // Using a single subscription on the whole form keeps the count to one.
-  methods.watch((value) => {
-    onChange({
-      weatherId: value.weatherId ?? DEFAULT.weatherId,
-      volume: value.volume ?? DEFAULT.volume,
-    });
   });
 
   const options = WEATHERS.map((w: WeatherDef) => ({
@@ -48,6 +57,7 @@ export function WeatherPanel({ onChange, initial }: Props) {
         <FormField label="Volumen ambiente" htmlFor="volume">
           <FormSlider name="volume" min={0} max={100} step={1} />
         </FormField>
+        <WeatherWatcher control={methods.control} onChange={onChange} />
       </section>
     </FormProvider>
   );
