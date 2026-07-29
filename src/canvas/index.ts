@@ -1,5 +1,5 @@
 // Non-Konva exports. Safe to import from server components.
-// For Konva-dependent components (PaintCanvas, GridLayer),
+// For Konva-dependent components (FloorStack, FloorCanvas, WorldGrid),
 // import from "@/canvas/konva" via dynamic({ ssr: false }).
 
 export type { SubdivisionConfig } from "@/lib/shared/types";

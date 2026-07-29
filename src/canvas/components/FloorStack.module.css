@@ -1,0 +1,22 @@
+.stack {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* The WorldGrid sits visually above the FloorCanvas stack but must not
+   intercept pointer events — Konva's `listening={false}` only stops the
+   library from processing events; the surrounding `<div class="konvajs-content">`
+   remains a valid DOM hit-test target and would swallow the paint stroke
+   before it ever reaches the active FloorCanvas behind it. */
+.worldGridOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * Suppresses the browser's native context menu across the whole app, so the
  * Pathfinder editor feels more like a desktop tool. Internal `contextmenu`
- * listeners (e.g. PaintCanvas's right-click → open trait menu) still work
+ * listeners (e.g. FloorCanvas's right-click → open trait menu) still work
  * because we call `preventDefault` after their handlers run.
  *
  * Inputs and textareas are exempt so users can still right-click to access

@@ -1,0 +1,30 @@
+.floor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.interactive {
+  pointer-events: auto;
+}
+
+.tier0 {
+  filter: none;
+  opacity: 1;
+}
+
+.tier1 {
+  filter: blur(1px);
+  opacity: 0.7;
+}
+
+.tier2 {
+  filter: blur(2px);
+  opacity: 0.5;
+}
+
+.tier3 {
+  filter: blur(3px);
+  opacity: 0.3;
+}

@@ -3,28 +3,16 @@
 import { useEffect, useState } from "react";
 
 /**
- * Blur intensities (in pixels) pre-rendered for every visual state. Indexed
- * by `BlurTier`. Higher tier = stronger blur, used for cells in floors below
- * the active one.
+ * Loads a set of image paths and resolves each to a single `HTMLImageElement`.
+ * One image per path — the depth-blur effect is now a CSS `filter: blur(...)`
+ * on the floor container, so per-tier pre-rendered variants are no longer
+ * needed.
+ *
+ * Cancellation: when `paths` changes (or the component unmounts), any
+ * in-flight loads are discarded so we never write stale entries.
  */
-export type BlurTier = 0 | 1 | 2 | 3;
-export const BLUR_PX: Record<BlurTier, number> = {
-  0: 0,
-  1: 1,
-  2: 2,
-  3: 3,
-};
-
-export type ImageVariants = Record<BlurTier, HTMLImageElement>;
-
-/**
- * Loads a set of image paths (visual-state imagePaths) and pre-renders 4
- * blur variants per path. The original plus 3 progressively blurred copies
- * are generated once at load time via `canvas.filter`, then cached for the
- * lifetime of the hook.
- */
-export function useTextureImages(paths: readonly string[]): Map<string, ImageVariants> {
-  const [images, setImages] = useState<Map<string, ImageVariants>>(new Map());
+export function useTextureImages(paths: readonly string[]): Map<string, HTMLImageElement> {
+  const [images, setImages] = useState<Map<string, HTMLImageElement>>(new Map());
 
   useEffect(() => {
     if (paths.length === 0) {
@@ -32,28 +20,26 @@ export function useTextureImages(paths: readonly string[]): Map<string, ImageVar
       return;
     }
 
-    // Cancellation flag: when `paths` changes (or the component unmounts),
-    // we discard in-flight loads to avoid setting stale variants.
     let cancelled = false;
-    const map = new Map<string, ImageVariants>();
+    const map = new Map<string, HTMLImageElement>();
     let finished = 0;
     const total = paths.length;
 
     for (const path of paths) {
-      const baseImg = new window.Image();
-      baseImg.crossOrigin = "anonymous";
-      baseImg.onload = () => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
         if (cancelled) return;
-        map.set(path, generateVariants(baseImg));
+        map.set(path, img);
         finished++;
         if (finished === total) setImages(new Map(map));
       };
-      baseImg.onerror = () => {
+      img.onerror = () => {
         if (cancelled) return;
         finished++;
         if (finished === total) setImages(new Map(map));
       };
-      baseImg.src = path;
+      img.src = path;
     }
 
     return () => {
@@ -62,29 +48,4 @@ export function useTextureImages(paths: readonly string[]): Map<string, ImageVar
   }, [paths]);
 
   return images;
-}
-
-/**
- * Renders the source image at all blur tiers using the browser's native
- * canvas filter. Tier 0 reuses the source image directly (no filter).
- */
-function generateVariants(src: HTMLImageElement): ImageVariants {
-  const variants: Partial<ImageVariants> = { 0: src };
-  for (const tier of [1, 2, 3] as const) {
-    variants[tier] = blurImage(src, BLUR_PX[tier]);
-  }
-  return variants as ImageVariants;
-}
-
-function blurImage(src: HTMLImageElement, blurPx: number): HTMLImageElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = src.naturalWidth || src.width;
-  canvas.height = src.naturalHeight || src.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return src;
-  ctx.filter = `blur(${blurPx}px)`;
-  ctx.drawImage(src, 0, 0);
-  const out = new Image();
-  out.src = canvas.toDataURL();
-  return out;
 }

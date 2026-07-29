@@ -31,7 +31,7 @@ export const MAX_ZOOM = 1.5
 export const ZOOM_STEP = 0.1
 
 /** Convenience shape passed to `scenarioUseCases.createBlank` and to
- *  `PaintCanvas` as the `mapDims` prop. */
+ *  `FloorStack` as the `mapDims` prop. */
 export type MapDims = {
   baseCellSize: number
   width: number

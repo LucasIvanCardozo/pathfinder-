@@ -32,7 +32,7 @@ import styles from './Editor.module.css'
 
 const AUTOSAVE_INTERVAL_MS = 60 * 1000
 
-const PaintCanvas = dynamic(() => import('@/canvas/konva').then((m) => m.PaintCanvas), {
+const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorStack), {
   ssr: false,
   loading: () => <div className={styles.canvasLoading}>Cargando canvas…</div>,
 })
@@ -114,7 +114,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const pieceById = useMemo(() => {
     const m = new Map<string, Piece>()
     for (const p of allPieces) m.set(p.id, p)
-    return m
+    return m;
   }, [allPieces])
 
   const markDirty = useCallback(() => setIsDirty(true), [])
@@ -526,7 +526,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           </Empty>
         )}
 
-        <PaintCanvas
+        <FloorStack
           floors={floors}
           activeFloorId={activeFloorId}
           mapDims={mapDims}
@@ -549,3 +549,5 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     </div>
   )
 }
+
+
