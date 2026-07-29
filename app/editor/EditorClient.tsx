@@ -126,8 +126,8 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       gridX: number,
       gridY: number,
       pieceId: string | null,
-      screenPos: { x: number; y: number } | null,
-      isDragging: boolean
+      _screenPos: { x: number; y: number } | null,
+      _isDragging: boolean
     ) => {
       markDirty()
 
@@ -159,7 +159,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         ]
       })
     },
-    [tool, markDirty, paintedCells, pieceById, mapDims.baseCellSize]
+    [tool, markDirty, pieceById]
   )
 
   const handleSubdivisionChange = (id: string) => {
@@ -290,22 +290,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     const newFloor = makeFloor(`Subsuelo ${newN}`)
     setFloors((prev) => [newFloor, ...prev])
     setActiveFloorId(newFloor.id)
-    markDirty()
-  }
-
-  const isAtTop = activeFloorIndex === floors.length - 1
-  const isAtBottom = activeFloorIndex === 0
-  const isPlantaBaja = activeFloor.name.toLowerCase() === 'planta baja'
-  const canDeleteFloor = floors.length > 1 && !isPlantaBaja && (isAtTop || isAtBottom)
-
-  const handleDeleteFloor = () => {
-    if (!canDeleteFloor) return
-    if (!confirm(`¿Borrar "${activeFloor.name}"? Las celdas pintadas de este piso se perderán.`)) return
-    const idx = activeFloorIndex
-    const remaining = floors.filter((_, i) => i !== idx)
-    setFloors(remaining)
-    const newIdx = Math.min(idx, remaining.length - 1)
-    setActiveFloorId(remaining[newIdx]!.id)
     markDirty()
   }
 
@@ -446,13 +430,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           >
             🗑 Subcapa
           </Button>
-          {
-            /*canDeleteFloor*/ false ? (
-              <Button type="button" size="mini" variant="danger" onClick={handleDeleteFloor} title={`Borrar el piso "${activeFloor.name}" del scenario`}>
-                × Eliminar piso
-              </Button>
-            ) : null
-          }
         </div>
         {activeSubdivision ? <PiecePalette pieces={activePieces} activePieceId={activePieceId} onSelect={setActivePieceId} /> : null}
         <WeatherPanel onChange={setWeatherState} initial={weatherState} />

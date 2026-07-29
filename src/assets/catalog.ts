@@ -190,25 +190,12 @@ export const ALL_PIECES: Piece[] = [
   }
 ];
 
-/** @deprecated use ALL_PIECES. Kept for backwards compat during migration. */
-export const ALL_TEXTURES: Piece[] = ALL_PIECES;
-
 export function findPiece(pieceId: string): Piece | undefined {
   return ALL_PIECES.find((p) => p.id === pieceId);
-}
-
-/** @deprecated use findPiece. */
-export function findTexture(pieceId: string): Piece | undefined {
-  return findPiece(pieceId);
 }
 
 export function findPiecesByIds(ids: string[]): Piece[] {
   return ids
     .map((id) => findPiece(id))
     .filter((p): p is Piece => p !== undefined);
-}
-
-/** @deprecated use findPiecesByIds. */
-export function findTexturesByIds(ids: string[]): Piece[] {
-  return findPiecesByIds(ids);
 }

@@ -32,11 +32,6 @@ export const doorStatesTrait = {
     return visualState?.imagePath ?? fallbackImagePath;
   },
 
-  validateState(raw: unknown): DoorState | null {
-    if (typeof raw !== "string") return null;
-    return (DOOR_STATES as readonly string[]).includes(raw) ? (raw as DoorState) : null;
-  },
-
   getMenu({
     cell,
     onChangeState,
@@ -59,9 +54,6 @@ export const doorStatesTrait = {
     );
   },
 
-  labelFor(state: string): string {
-    return DOOR_LABELS[state as DoorState] ?? state;
-  },
 };
 
 export type DoorStatesTrait = typeof doorStatesTrait;

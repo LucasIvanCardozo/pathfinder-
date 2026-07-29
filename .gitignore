@@ -5,6 +5,8 @@
 node_modules/
 .pnpm-store/
 
+.agents/
+
 # Next.js
 .next/
 out/

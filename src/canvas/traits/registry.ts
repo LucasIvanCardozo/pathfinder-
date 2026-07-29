@@ -20,10 +20,8 @@ export type TraitImpl = {
    * If absent, the render falls back to the piece's default visualState.
    */
   resolveTextureId?: (cell: PaintedCell, fallbackImagePath: string, piece: Piece) => string;
-  validateState?: (raw: unknown) => unknown;
   defaultState?: () => unknown;
   getMenu?: ((props: TraitMenuProps<unknown>) => React.ReactNode) | null;
-  labelFor?: (state: string) => string;
 };
 
 export const traitRegistry: Record<string, TraitImpl> = {

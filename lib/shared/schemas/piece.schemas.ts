@@ -53,8 +53,4 @@ export const PieceSchema = z.object({
   traits: z.array(TextureTraitSchema).optional(),
 });
 
-/** Backwards-compat alias. Many call sites still use `Texture`; we keep the
- *  name working until the rename is complete. */
-export const TextureSchema = PieceSchema;
-
 export const DoorStateSchema = z.enum(["open", "closed", "locked"]);

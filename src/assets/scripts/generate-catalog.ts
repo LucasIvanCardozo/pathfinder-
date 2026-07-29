@@ -12,7 +12,6 @@ import {
   readdirSync,
   readFileSync,
   rmdirSync,
-  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -449,16 +448,14 @@ import type { Piece } from "@/lib/shared/types";
 
 export const ALL_PIECES: Piece[] = ${JSON.stringify(pieces, null, 2)};
 
-/** @deprecated use ALL_PIECES. Kept for backwards compat during migration. */
-export const ALL_TEXTURES: Piece[] = ALL_PIECES;
-
 export function findPiece(pieceId: string): Piece | undefined {
   return ALL_PIECES.find((p) => p.id === pieceId);
 }
 
-/** @deprecated use findPiece. */
-export function findTexture(pieceId: string): Piece | undefined {
-  return findPiece(pieceId);
+export function findPiecesByIds(ids: string[]): Piece[] {
+  return ids
+    .map((id) => findPiece(id))
+    .filter((p): p is Piece => p !== undefined);
 }
 
 `;
@@ -497,7 +494,6 @@ export function findTexture(pieceId: string): Piece | undefined {
     console.log(`\n${warnings.length} warning(s):`);
     for (const w of warnings) console.log(`  ${w}`);
   }
-  void statSync;
 }
 
 main().catch((err) => {

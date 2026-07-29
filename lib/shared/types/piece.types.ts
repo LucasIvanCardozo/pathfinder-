@@ -30,10 +30,3 @@ export type DoorState = z.infer<typeof DoorStateSchema>;
 /** A piece is something the GM can paint into a floor cell. See
  *  `piece.schemas.ts` for the full description and examples. */
 export type Piece = z.infer<typeof PieceSchema>;
-
-/**
- * Backwards-compat alias. Many call sites still use `Texture`; we keep the
- * name working until the rename is complete.
- * @deprecated use `Piece` instead.
- */
-export type Texture = Piece;

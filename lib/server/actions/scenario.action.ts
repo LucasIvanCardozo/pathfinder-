@@ -22,7 +22,7 @@ export const saveScenario = createAction(ScenarioInputSchema, async ({ data }) =
   const db = (await import("@/lib/server/db/db")).default;
   const result = await scenarioUseCases.save(db, data);
   updateTag("pathfinder:scenarios");
-  updateTag(`pathfinder:scenarios:${result.id}`);
+  updateTag(`pathfinder:scenario:${result.id}`);
   revalidatePath("/");
   return result;
 });

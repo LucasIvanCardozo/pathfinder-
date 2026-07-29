@@ -1,4 +1,4 @@
-import { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { cacheLife, cacheTag } from "next/cache";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { scenarioRepository } from "@/lib/server/db/repository/scenario.repository";
@@ -29,7 +29,7 @@ export const scenarioUseCases = {
   async findById({ id }: { id: string }): Promise<LoadScenarioResult | null> {
     "use cache";
     cacheLife("hours");
-    cacheTag("pathfinder:scenarios", `pathfinder:scenarios:${id}`);
+    cacheTag("pathfinder:scenarios", `pathfinder:scenario:${id}`);
     const db = (await import("@/lib/server/db/db")).default;
     return scenarioRepository(db).findByIdWithFloors(id);
   },
@@ -53,6 +53,6 @@ export const scenarioUseCases = {
     const scenarioId = generateId("scenario");
     const floorIds = [generateId("floor"), generateId("floor"), generateId("floor")];
     await scenarioRepository(db).createBlank(scenarioId, floorIds, mapDims);
-    return { scenarioId, floorIds };
+    return { scenarioId };
   },
 };

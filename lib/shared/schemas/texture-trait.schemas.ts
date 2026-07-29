@@ -14,10 +14,6 @@ import { z } from "zod";
  *      in the SVG, or set `texture.traits` directly in the catalog.
  */
 
-/** Texture trait kinds. Extend the union to add new traits. */
-export const TEXTURE_TRAIT_KINDS = ["door-states", "blocks-light"] as const;
-export type TextureTraitKind = (typeof TEXTURE_TRAIT_KINDS)[number];
-
 /** A single texture trait, as stored in the catalog (and serialised to JSON). */
 export const TextureTraitSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -33,7 +29,3 @@ export const TextureTraitSchema = z.discriminatedUnion("kind", [
 ]);
 
 export type TextureTrait = z.infer<typeof TextureTraitSchema>;
-
-/** Mutable state stored per PaintedCell. Keys are trait kinds. */
-export const EntityStateSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]));
-export type EntityState = z.infer<typeof EntityStateSchema>;

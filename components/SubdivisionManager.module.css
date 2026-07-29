@@ -127,15 +127,6 @@
   font-weight: 600;
 }
 
-.subdivisionFormHeader .error {
-  margin: 0.25rem 0 0;
-  padding: 0.4rem 0.6rem;
-  background: rgba(220, 100, 100, 0.15);
-  color: rgb(240, 180, 180);
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-
 .subdivisionFormGrid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
