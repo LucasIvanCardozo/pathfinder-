@@ -115,6 +115,15 @@ function FloorCanvasImpl({
   // doesn't re-render the whole tree on every mouse-move tick.
   const [hoverCell, setHoverCell] = useState<BrushCell | null>(null);
 
+  // Clear the brush preview when this floor stops being the active one
+  // (e.g. user pressed Shift+ArrowUp with the cursor inside the canvas).
+  // Without this the rect stays painted on the now-inactive floor until
+  // the next mousemove / mouseleave fires — which may not happen if the
+  // cursor is over the active floor above.
+  useEffect(() => {
+    if (!isActive) setHoverCell(null);
+  }, [isActive]);
+
   // Render counter. Lives inside FloorCanvas (not in a wrapper) so React.memo
   // actually gates it: when the comparator returns true the useLayoutEffect
   // never runs and `recordRender` is never called. Previous design wrapped
