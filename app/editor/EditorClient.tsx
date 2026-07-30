@@ -167,8 +167,9 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   );
 
   const handleSubdivisionChange = (id: string) => {
+    // Pieces are global — the active piece persists across subdivision
+    // changes so the brush keeps painting the same piece after switching.
     setActiveSubdivisionId(id);
-    setActivePieceId(null);
   };
 
   const handleReorder = useCallback(
