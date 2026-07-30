@@ -1,0 +1,220 @@
+.hud {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 9999;
+  width: 360px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: rgba(13, 14, 16, 0.92);
+  color: #e6e7ea;
+  border: 1px solid #262a31;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.panel {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  width: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: rgba(13, 14, 16, 0.92);
+  color: #e6e7ea;
+  border: 1px solid #262a31;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.hudHeader,
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #262a31;
+}
+
+.title {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #c9a86a;
+}
+
+.hint {
+  color: #8a8f99;
+  font-size: 0.65rem;
+}
+
+.metricsRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.metricLabel {
+  color: #8a8f99;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metricValue {
+  font-weight: 600;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.button {
+  background: #16181c;
+  color: #e6e7ea;
+  border: 1px solid #262a31;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #1f2228;
+  border-color: #c9a86a;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.section {
+  margin-top: 0.5rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a8f99;
+}
+
+.empty {
+  margin: 0;
+  color: #8a8f99;
+  font-style: italic;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.2rem 0.3rem;
+  border-bottom: 1px solid #262a31;
+}
+
+.table th {
+  color: #8a8f99;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6rem;
+}
+
+.idCell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenarioList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.scenarioButton,
+.scenarioButtonActive {
+  background: #16181c;
+  color: #e6e7ea;
+  border: 1px solid #262a31;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.scenarioButton:hover:not(:disabled),
+.scenarioButtonActive:hover:not(:disabled) {
+  background: #1f2228;
+}
+
+.scenarioButtonActive {
+  border-color: #c9a86a;
+  color: #c9a86a;
+}
+
+.scenarioButton:disabled,
+.scenarioButtonActive:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scenarioDescription {
+  margin: 0 0 0.4rem 0;
+  color: #8a8f99;
+  font-size: 0.65rem;
+}
+
+.status {
+  margin: 0;
+  padding: 0.35rem;
+  background: #0d0e10;
+  border: 1px solid #262a31;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.statsHost {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
