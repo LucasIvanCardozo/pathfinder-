@@ -50,12 +50,3 @@ model PaintedCell {
   @@index([floorId, subdivisionId])
 }
 
-model SubdivisionConfig {
-  id            String @id @default(cuid())
-  name          String
-  cellSizeRatio Int
-  order         Int    @default(0)
-
-  @@index([order])
-}
-

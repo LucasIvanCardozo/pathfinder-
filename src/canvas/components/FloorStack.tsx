@@ -17,7 +17,7 @@ type Props = {
   mapDims: MapDims;
   /** Controlled by the parent (typically the editor header's zoom buttons). */
   zoom: number;
-  subdivisions: SubdivisionConfig[];
+  subdivisions: readonly SubdivisionConfig[];
   paintedCells: PaintedCell[];
   pieces: Piece[];
   activeSubdivisionId: string;

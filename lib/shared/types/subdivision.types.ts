@@ -1,23 +1,24 @@
 import type { z } from 'zod';
-import type {
-  SubdivisionConfigInputSchema,
-  SubdivisionConfigSchema,
-} from '@/lib/shared/schemas/subdivision.schemas';
+import type { SubdivisionConfigSchema } from '@/lib/shared/schemas/subdivision.schemas';
 
 /**
  * A subdivision config describes one kind of layer inside a floor (ground,
- * objects, walls, etc.). Pieces are global — any piece can be painted into
- * any subdivision cell. The `cellSizeRatio` controls how granular the layer
- * is (ratio 4 has 16x more cells per floor cell than ratio 1), and `order`
- * controls the Z-stack.
+ * objects, walls, etc.). Subdivisions are IMMUTABLE — there is no runtime
+ * CRUD for them. The set below is the source of truth and is referenced by
+ * id from `PaintedCell.subdivisionId`. Hardcoded ids survive `pnpm db:pr:reset`
+ * and are the same on every deployment.
+ *
+ * Pieces are NOT scoped to a subdivision: any piece can be painted into any
+ * subdivision cell. The `cellSizeRatio` controls how granular the layer is
+ * (ratio 4 has 16x more cells per floor cell than ratio 1), and `order`
+ * controls the Z-stack — `FloorCanvas` renders one Konva Layer per
+ * subdivision in `order` ascending.
  */
 export type SubdivisionConfig = z.infer<typeof SubdivisionConfigSchema>;
 
-export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigInputSchema>;
-
 /**
- * The default subdivision seed payload. Loaded by `prisma/seed.ts` and by
- * `subdivisionUseCases.seedDefaults(db)` (idempotent app-side repair).
+ * The canonical subdivision set. Frozen so accidental mutation throws at
+ * runtime instead of silently misaligning id-references across the app.
  *
  * The four defaults each serve a distinct role in the layering:
  *
@@ -30,25 +31,9 @@ export type SubdivisionConfigInput = z.infer<typeof SubdivisionConfigInputSchema
  *   - "Estructuras" (ratio 1, z 3): floor-sized structures such as walls
  *     and doors that always align to the floor's own cell grid.
  */
-export const DEFAULT_SUBDIVISIONS: SubdivisionConfigInput[] = [
-  {
-    name: 'Suelo',
-    cellSizeRatio: 1,
-    order: 0,
-  },
-  {
-    name: 'Objetos grandes',
-    cellSizeRatio: 3,
-    order: 1,
-  },
-  {
-    name: 'Objetos pequeños',
-    cellSizeRatio: 6,
-    order: 2,
-  },
-  {
-    name: 'Estructuras',
-    cellSizeRatio: 1,
-    order: 3,
-  },
-];
+export const SUBDIVISIONS: readonly SubdivisionConfig[] = Object.freeze([
+  { id: 'suelo', name: 'Suelo', cellSizeRatio: 1, order: 0 },
+  { id: 'objetos-grandes', name: 'Objetos grandes', cellSizeRatio: 3, order: 1 },
+  { id: 'objetos-pequenos', name: 'Objetos pequeños', cellSizeRatio: 6, order: 2 },
+  { id: 'estructuras', name: 'Estructuras', cellSizeRatio: 1, order: 3 },
+]);

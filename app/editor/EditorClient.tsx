@@ -19,13 +19,10 @@ import {
   WeatherPanel,
 } from '@/canvas';
 import { Button } from '@/components/Button';
-import { Empty } from '@/components/Empty';
-import { SubdivisionManager } from '@/components/SubdivisionManager';
-import { usePieceMap, useReload } from '@/hooks';
+import { usePieceMap } from '@/hooks';
 import { BenchmarkPanel, PerfHud, telemetry } from '@/lib/dev/perf';
-import { reorderSubdivisions } from '@/lib/server/actions/subdivision.action';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { SUBDIVISIONS, type Floor, type PaintedCell, type Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
@@ -52,26 +49,26 @@ type InitialScenario = {
 
 type Props = {
   initialScenario: InitialScenario | null;
-  initialSubdivisions: SubdivisionConfig[];
   allPieces: Piece[];
 };
 
-export function EditorClient({ initialScenario, initialSubdivisions, allPieces }: Props) {
+export function EditorClient({ initialScenario, allPieces }: Props) {
   const router = useRouter();
-  const { startReload } = useReload();
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenario?.id ?? null);
   const [scenarioName, setScenarioName] = useState(initialScenario?.name ?? '');
   const [floors, setFloors] = useState<Floor[]>(initialScenario?.floors ?? []);
   const [activeFloorId, setActiveFloorId] = useState(initialScenario?.activeFloorId ?? '');
-  const [subdivisions, setSubdivisions] = useState<SubdivisionConfig[]>(initialSubdivisions);
+  // Subdivisions are an immutable hardcoded set (see `SUBDIVISIONS`);
+  // `initialSubdivisions` is accepted as a prop for backward compatibility
+  // with the page-level prop shape but we never local-mutate it.
+  const subdivisions = SUBDIVISIONS;
   const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(
     initialScenario?.paintedCells ?? [],
   );
-  const [activeSubdivisionId, setActiveSubdivisionId] = useState(initialSubdivisions[0]?.id ?? '');
+  const [activeSubdivisionId, setActiveSubdivisionId] = useState(SUBDIVISIONS[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>('paint');
   const [brushSize, setBrushSize] = useState<number>(1);
-  const [isManaging, setIsManaging] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   // Memoize so FloorCanvas memo comparator sees a stable reference.
@@ -172,34 +169,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     setActiveSubdivisionId(id);
   };
 
-  const handleReorder = useCallback(
-    async (fromId: string, toId: string, side: 'left' | 'right') => {
-      if (fromId === toId) return;
-      const fromIdx = subdivisions.findIndex((s) => s.id === fromId);
-      const toIdx = subdivisions.findIndex((s) => s.id === toId);
-      if (fromIdx === -1 || toIdx === -1) return;
-
-      const moved = subdivisions[fromIdx]!;
-      const without = subdivisions.filter((_, i) => i !== fromIdx);
-      const newToIdx = without.findIndex((s) => s.id === toId);
-      const insertAt = side === 'left' ? newToIdx : newToIdx + 1;
-      without.splice(insertAt, 0, moved);
-
-      const renumbered = without.map((s, i) => ({ ...s, order: i }));
-      setSubdivisions(renumbered);
-      markDirty();
-      const result = await reorderSubdivisions(
-        renumbered.map((s) => ({ id: s.id, order: s.order })),
-      );
-      // Re-validate from server: action returns bare void on success;
-      // silent failure would leave local state desynced. startReload
-      // triggers a silent RSC refresh via router.refresh() inside
-      // startTransition (no loading flash).
-      if (result.success) startReload();
-    },
-    [subdivisions, markDirty, startReload],
-  );
-
   useKeyboardShortcuts([
     { key: 'b', handler: () => setTool('paint') },
     { key: 'e', handler: () => setTool('erase') },
@@ -224,22 +193,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
     { key: 'ArrowUp', shift: true, handler: handleFloorUp },
     { key: 'ArrowDown', shift: true, handler: handleFloorDown },
   ]);
-
-  const handleCloseManager = async () => {
-    setIsManaging(false);
-    // Dynamic import keeps the action bundle out of the initial editor
-    // chunk — the manager only needs it when the user opens the modal.
-    // The action returns the canonical envelope; unwrap here so the rest
-    // of the file deals with DTOs only.
-    const result = await import('@/lib/server/actions/subdivision.action').then((m) =>
-      m.listSubdivisions(),
-    );
-    const fresh = result.success ? result.data : [];
-    setSubdivisions(fresh);
-    if (!fresh.find((s) => s.id === activeSubdivisionId)) {
-      setActiveSubdivisionId(fresh[0]?.id ?? '');
-    }
-  };
 
   const handleToolChange = (newTool: PaintTool) => {
     setTool(newTool);
@@ -321,9 +274,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           brushSize={brushSize}
           onBrushSizeChange={handleBrushSizeChange}
         />
-        <Button type="button" onClick={() => setIsManaging(true)}>
-          ⚙ Administrar subdivisions
-        </Button>
         <div className={styles.dangerZone}>
           <Button
             type="button"
@@ -464,21 +414,11 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           </Button>
         </header>
 
-        {subdivisions.length > 0 ? (
-          <SubdivisionTabs
-            subdivisions={subdivisions}
-            activeId={activeSubdivisionId}
-            onChange={handleSubdivisionChange}
-            onReorder={handleReorder}
-          />
-        ) : (
-          <Empty>
-            No hay subdivisions.{' '}
-            <Button type="button" onClick={() => setIsManaging(true)}>
-              Crear la primera
-            </Button>
-          </Empty>
-        )}
+        <SubdivisionTabs
+          subdivisions={subdivisions}
+          activeId={activeSubdivisionId}
+          onChange={handleSubdivisionChange}
+        />
 
         <FloorStack
           floors={floors}
@@ -497,12 +437,6 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </main>
-
-      <SubdivisionManager
-        isOpen={isManaging}
-        onClose={handleCloseManager}
-        subdivisions={subdivisions}
-      />
 
       <PerfHud />
       <BenchmarkPanel

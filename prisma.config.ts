@@ -5,9 +5,9 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
-    // Run after every `prisma migrate dev` (and on explicit `prisma db seed`)
-    // so the default subdivision configs are present in fresh databases.
-    seed: 'tsx prisma/seed.ts',
+    // Subdivisions are now a hardcoded const in `lib/shared/types/subdivision.types.ts`
+    // and live in the schema for backwards compatibility of the FK reference on
+    // `PaintedCell.subdivisionId`. No seed step is needed.
   },
   datasource: {
     url: env('DATABASE_URL'),

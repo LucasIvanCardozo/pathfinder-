@@ -28,7 +28,7 @@ type Props = {
   /** Only the active floor attaches event handlers and Stage `listening`. */
   isActive: boolean;
   mapDims: MapDims;
-  subdivisions: SubdivisionConfig[];
+  subdivisions: readonly SubdivisionConfig[];
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;

@@ -1,7 +1,7 @@
 import { connection } from 'next/server';
 import { Suspense } from 'react';
 import { loadScenario } from '@/lib/server/actions/scenario.action';
-import { listAllPieces, listSubdivisions } from '@/lib/server/actions/subdivision.action';
+import { listAllPieces } from '@/lib/server/actions/piece.action';
 import { EditorClient } from './EditorClient';
 import styles from './editor.module.css';
 
@@ -19,17 +19,16 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const { id } = await searchParams;
 
-  // Run all three reads in parallel. Each one comes from a cached Server
-  // Action; unwrap the envelope so the client component receives DTOs only.
-  const [scenarioResult, subdivisionsResult, allPiecesResult] = await Promise.all([
+  // Run the scenario + pieces reads in parallel. Subdivisions are an immutable
+  // hardcoded constant (see `SUBDIVISIONS`), so they don't need a fetch — the
+  // import is enough.
+  const [scenarioResult, allPiecesResult] = await Promise.all([
     id ? loadScenario({ id }) : Promise.resolve(null),
-    listSubdivisions(),
     listAllPieces(),
   ]);
 
   const scenario =
     scenarioResult === null ? null : scenarioResult.success ? scenarioResult.data : null;
-  const subdivisions = subdivisionsResult.success ? subdivisionsResult.data : [];
   const allPieces = allPiecesResult.success ? allPiecesResult.data : [];
 
   // The `key` prop forces React to unmount + remount EditorClient whenever the
@@ -54,7 +53,6 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
             }
           : null
       }
-      initialSubdivisions={subdivisions}
       allPieces={allPieces}
     />
   );
