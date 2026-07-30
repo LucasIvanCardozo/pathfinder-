@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -158,15 +165,25 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
   }, []);
 
   // Begin a pan drag. Caller-provided coords (typically `event.clientX/Y`).
-  const beginPan = (clientX: number, clientY: number) => {
-    dragStartRef.current = {
-      mouseX: clientX,
-      mouseY: clientY,
-      panX: pan.x,
-      panY: pan.y,
-    };
-    setIsPanning(true);
-  };
+  // Wrapped in `useCallback` so consumers (FloorCanvas via memo) see a stable
+  // reference unless pan itself changes.
+  const beginPan = useCallback(
+    (clientX: number, clientY: number) => {
+      // Read live coordinates through `panRef` so this callback's
+      // identity stays stable across pan updates. Without this indirection,
+      // `[pan.x, pan.y]` deps would flip `beginPan` on every mousemove
+      // during a drag, propagating through FloorCanvas's memo and
+      // forcing re-renders of inactive floors.
+      dragStartRef.current = {
+        mouseX: clientX,
+        mouseY: clientY,
+        panX: panRef.current.x,
+        panY: panRef.current.y,
+      };
+      setIsPanning(true);
+    },
+    [],
+  );
 
   // Window-level mouse listeners for panning so the drag survives the
   // cursor leaving the canvas area.

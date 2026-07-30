@@ -5,33 +5,34 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  type PaintTool,
-  PaintToolbar,
-  PiecePalette,
-  SubdivisionTabs,
-  WeatherOverlay,
-  WeatherPanel,
   applyEraseStroke,
   applyPaintStroke,
   bumpBrushSizeDown,
   bumpBrushSizeUp,
   normalizeBrushSize,
+  type PaintTool,
+  PaintToolbar,
+  PiecePalette,
+  SubdivisionTabs,
   useKeyboardShortcuts,
+  WeatherOverlay,
+  WeatherPanel,
 } from '@/canvas';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
-import { reorderSubdivisions } from '@/lib/server/actions/subdivision.action';
-import { newId } from '@/lib/shared/utils/generateId';
-import { usePieceMap, useReload } from '@/hooks';
 import { Button } from '@/components/Button';
 import { Empty } from '@/components/Empty';
 import { SubdivisionManager } from '@/components/SubdivisionManager';
+import { usePieceMap, useReload } from '@/hooks';
+import { BenchmarkPanel, PerfHud, telemetry } from '@/lib/dev/perf';
+import { reorderSubdivisions } from '@/lib/server/actions/subdivision.action';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { newId } from '@/lib/shared/utils/generateId';
+import styles from './editor.module.css';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useScenarioAutosave } from './hooks/use-scenario-autosave';
 import { useTraitMenu } from './hooks/use-trait-menu';
 import { useWeatherSession } from './hooks/use-weather-session';
 import { useZoomControl } from './hooks/use-zoom-control';
-import styles from './editor.module.css';
 
 const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorStack), {
   ssr: false,
@@ -73,25 +74,28 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   const [isManaging, setIsManaging] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  const mapDims = {
-    baseCellSize: initialScenario?.baseCellSize ?? 64,
-    width: initialScenario?.width ?? 100,
-    height: initialScenario?.height ?? 300,
-  };
+  // Memoize so FloorCanvas memo comparator sees a stable reference.
+  // Before this fix `mapDims` was a fresh object every render, which
+  // invalidated every FloorCanvas on every paint.
+  const mapDims = useMemo(
+    () => ({
+      baseCellSize: initialScenario?.baseCellSize ?? 64,
+      width: initialScenario?.width ?? 100,
+      height: initialScenario?.height ?? 300,
+    }),
+    [initialScenario?.baseCellSize, initialScenario?.width, initialScenario?.height],
+  );
   const { zoom, zoomIn, zoomOut } = useZoomControl();
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
   // Pieces are global — every piece is paintable in any subdivision cell.
   const activePieces = allPieces;
 
-  // Derive the "used" set from the actual painted cells (not from subdivision
-  // declarations). Pieces are global per `lib/shared/types/piece.types.ts` —
-  // every piece can be painted into any subdivision cell on any floor.
-  const usedPieceIds = useMemo(() => new Set(paintedCells.map((c) => c.pieceId)), [paintedCells]);
-  const allUsedPieces = useMemo(
-    () => allPieces.filter((p) => usedPieceIds.has(p.id)),
-    [allPieces, usedPieceIds],
-  );
-
+  // `pieceById` is built from `allPieces` (full catalogue). FloorCanvas
+  // receives the same `allPieces` directly and builds its own `usePieceMap`
+  // internally. Previously we filtered upstream to a derived
+  // `allUsedPieces`, but that filter ran every paint and broke the
+  // FloorCanvas `React.memo` comparator. FloorCanvas only needs the
+  // `pieceId → piece` lookup, which it builds itself.
   const pieceById = usePieceMap(allPieces);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -139,6 +143,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
       markDirty();
 
       if (tool === 'erase') {
+        telemetry.recordEvent('erase');
         setPaintedCells((prev) =>
           applyEraseStroke({ stroke: { floorId, subdivisionId, cells }, paintedCells: prev }),
         );
@@ -147,6 +152,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
 
       if (!pieceId) return;
 
+      telemetry.recordEvent('paint');
       setPaintedCells((prev) =>
         applyPaintStroke({
           stroke: { floorId, subdivisionId, cells },
@@ -274,6 +280,33 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
   };
 
   const paintedInFloor = paintedCells.filter((c) => c.floorId === activeFloorId).length;
+
+  // Dev-only stubs for the benchmark harness. Real pan/drag dispatches land in
+  // the viewport / piece hooks; for now we just record the event so the
+  // benchmark counter reflects the workload.
+  const benchmarkDispatchPan = useCallback((dx: number, dy: number) => {
+    telemetry.recordEvent('pan');
+    void dx;
+    void dy;
+  }, []);
+  const benchmarkDispatchDrag = useCallback((pieceId: string, steps: number) => {
+    telemetry.recordEvent('drag');
+    void pieceId;
+    void steps;
+  }, []);
+  const benchmarkGetValidPaintTarget = useCallback(() => {
+    if (!activeSubdivisionId) return null;
+    return {
+      floorId: activeFloorId,
+      subdivisionId: activeSubdivisionId,
+      pieceId: activePieceId,
+      bounds: { w: mapDims.width, h: mapDims.height },
+    };
+  }, [activeFloorId, activeSubdivisionId, activePieceId, mapDims.height, mapDims.width]);
+  const benchmarkGetRandomPieceId = useCallback(
+    () => activePieceId ?? allPieces[0]?.id ?? null,
+    [activePieceId, allPieces],
+  );
 
   return (
     <div className={styles.editor}>
@@ -453,7 +486,7 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
           zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
-          pieces={allUsedPieces}
+          pieces={allPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
           tool={tool}
@@ -468,6 +501,15 @@ export function EditorClient({ initialScenario, initialSubdivisions, allPieces }
         isOpen={isManaging}
         onClose={handleCloseManager}
         subdivisions={subdivisions}
+      />
+
+      <PerfHud />
+      <BenchmarkPanel
+        dispatchPaint={handlePaint}
+        dispatchPan={benchmarkDispatchPan}
+        dispatchDrag={benchmarkDispatchDrag}
+        getValidPaintTarget={benchmarkGetValidPaintTarget}
+        getRandomPieceId={benchmarkGetRandomPieceId}
       />
 
       {traitMenu.render}
