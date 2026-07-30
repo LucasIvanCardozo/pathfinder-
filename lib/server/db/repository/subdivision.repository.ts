@@ -1,9 +1,9 @@
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { runInTx } from '@/lib/server/utils/runInTx';
 import type {
   SubdivisionConfig,
   SubdivisionConfigInput,
 } from '@/lib/shared/types/subdivision.types';
-import { runInTx } from '@/lib/server/utils/runInTx';
 
 /**
  * Subdivision repository. Pieces are NOT scoped to a subdivision, so the

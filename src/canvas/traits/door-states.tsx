@@ -1,7 +1,7 @@
 'use client';
 
-import { StateMenu } from './StateMenu';
 import type { PaintedCell, Piece } from '@/lib/shared/types';
+import { StateMenu } from './StateMenu';
 
 export const DOOR_STATES = ['closed', 'open', 'locked'] as const;
 export type DoorState = (typeof DOOR_STATES)[number];

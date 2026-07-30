@@ -1,5 +1,5 @@
-import type { PrismaClient } from '@/generated/prisma/client';
 import z from 'zod';
+import type { PrismaClient } from '@/generated/prisma/client';
 import { capitalize } from '@/lib/shared/utils/capitalize';
 
 export default function createAction<T extends z.Schema, K>(

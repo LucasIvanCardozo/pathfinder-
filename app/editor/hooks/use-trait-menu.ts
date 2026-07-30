@@ -1,10 +1,10 @@
 import {
   createElement,
+  type Dispatch,
+  type SetStateAction,
   useCallback,
   useMemo,
   useState,
-  type Dispatch,
-  type SetStateAction,
 } from 'react';
 import { getInteractiveTrait } from '@/canvas';
 import type { PaintedCell, Piece } from '@/lib/shared/types';

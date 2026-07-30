@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { FormProvider, useForm, useWatch, type Control } from 'react-hook-form';
+import { type Control, FormProvider, useForm, useWatch } from 'react-hook-form';
 import { FormField, FormSelect, FormSlider } from '@/components/form';
-import styles from './weather-panel.module.css';
 import { WEATHERS, type WeatherDef } from './registry';
+import styles from './weather-panel.module.css';
 
 export type WeatherState = {
   weatherId: string;
@@ -25,7 +25,13 @@ export const WEATHER_DEFAULT: WeatherState = DEFAULT;
  * fields are touched, registered, or blurred. Pushes the merged state up to
  * the parent via `onChange`.
  */
-function WeatherWatcher({ control, onChange }: { control: Control<WeatherState>; onChange: (state: WeatherState) => void }) {
+function WeatherWatcher({
+  control,
+  onChange,
+}: {
+  control: Control<WeatherState>;
+  onChange: (state: WeatherState) => void;
+}) {
   const weatherId = useWatch({ control, name: 'weatherId' }) ?? DEFAULT.weatherId;
   const volume = useWatch({ control, name: 'volume' }) ?? DEFAULT.volume;
 

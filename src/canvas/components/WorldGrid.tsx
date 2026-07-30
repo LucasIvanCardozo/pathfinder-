@@ -1,7 +1,7 @@
 'use client';
 
 import { Layer, Line, Stage } from 'react-konva';
-import { gridLines, type GridConfig } from '../grid';
+import { type GridConfig, gridLines } from '../grid';
 
 type Props = {
   mapDims: { baseCellSize: number; width: number; height: number };

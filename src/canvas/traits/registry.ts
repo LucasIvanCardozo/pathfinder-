@@ -9,8 +9,8 @@
 //   3. Add the entry to `traitRegistry` below.
 
 import type { PaintedCell, Piece } from '@/lib/shared/types';
-import { doorStatesTrait, type DoorState } from './door-states';
 import { blocksLightTrait } from './blocks-light';
+import { type DoorState, doorStatesTrait } from './door-states';
 
 export type TraitMenuProps<TState> = {
   cell: PaintedCell;

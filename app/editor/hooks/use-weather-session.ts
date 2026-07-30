@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { type WeatherState, WEATHER_DEFAULT, getWeather, useWeatherAudio } from '@/canvas';
+import { getWeather, useWeatherAudio, WEATHER_DEFAULT, type WeatherState } from '@/canvas';
 
 export function useWeatherSession() {
   const [weatherState, setWeatherState] = useState<WeatherState>(WEATHER_DEFAULT);

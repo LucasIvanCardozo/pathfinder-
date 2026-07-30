@@ -1,12 +1,12 @@
-import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { cacheLife, cacheTag } from 'next/cache';
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { subdivisionRepository } from '@/lib/server/db/repository/subdivision.repository';
 import type { Piece } from '@/lib/shared/types/piece.types';
 import {
   DEFAULT_SUBDIVISIONS,
   type SubdivisionConfig,
   type SubdivisionConfigInput,
 } from '@/lib/shared/types/subdivision.types';
-import { subdivisionRepository } from '@/lib/server/db/repository/subdivision.repository';
 
 /**
  * Subdivision use cases.

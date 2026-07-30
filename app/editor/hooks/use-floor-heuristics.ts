@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { Floor } from '@/lib/shared/types';
 import { findPlantaBajaIndex, floorNameForIndex } from '@/lib/shared/floors/naming';
+import type { Floor } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 
 type UseFloorHeuristicsParams = {

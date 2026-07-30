@@ -68,11 +68,7 @@ export function brushOffsets(size: BrushSize): ReadonlyArray<Offset> {
  * cells are skipped (the brush is clipped at the map edge). The returned
  * list is de-duplicated so callers can hand it directly to React keys.
  */
-export function brushCellsAt(
-  center: BrushCell,
-  size: BrushSize,
-  bounds: BrushBounds,
-): BrushCell[] {
+export function brushCellsAt(center: BrushCell, size: BrushSize, bounds: BrushBounds): BrushCell[] {
   const offsets = brushOffsets(size);
   const seen = new Set<string>();
   const out: BrushCell[] = [];
@@ -93,10 +89,7 @@ export function brushCellsAt(
  * algorithm and emit every cell the line touches. Used by the stroke
  * interpolator to fill the gap between two drag samples.
  */
-function iterateGridLine(
-  start: BrushCell,
-  end: BrushCell,
-): Array<[number, number]> {
+function iterateGridLine(start: BrushCell, end: BrushCell): Array<[number, number]> {
   let x0 = start.gridX;
   let y0 = start.gridY;
   const x1 = end.gridX;

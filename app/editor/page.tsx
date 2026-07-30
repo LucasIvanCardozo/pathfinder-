@@ -2,8 +2,8 @@ import { connection } from 'next/server';
 import { Suspense } from 'react';
 import { loadScenario } from '@/lib/server/actions/scenario.action';
 import { listAllPieces, listSubdivisions } from '@/lib/server/actions/subdivision.action';
-import styles from './editor.module.css';
 import { EditorClient } from './EditorClient';
+import styles from './editor.module.css';
 
 type SearchParams = Promise<{ id?: string }>;
 

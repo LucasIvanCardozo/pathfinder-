@@ -1,6 +1,5 @@
-import type { Prisma } from '@/generated/prisma/client';
 import { cacheLife, cacheTag } from 'next/cache';
-import type { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { scenarioRepository } from '@/lib/server/db/repository/scenario.repository';
 import type {
   LoadScenarioResult,

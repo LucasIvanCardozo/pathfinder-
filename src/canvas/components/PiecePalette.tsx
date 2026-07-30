@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import type { Piece } from '@/lib/shared/types';
 import traitBadgeStyles from '@/components/trait-badge.module.css';
+import type { Piece } from '@/lib/shared/types';
 import styles from './piece-palette.module.css';
 
 type Props = {

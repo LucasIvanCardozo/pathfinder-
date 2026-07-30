@@ -2,9 +2,9 @@
 
 import { FogEffect } from './FogEffect';
 import { RainEffect } from './RainEffect';
+import { getWeather } from './registry';
 import { SnowEffect } from './SnowEffect';
 import { StormEffect } from './StormEffect';
-import { getWeather } from './registry';
 import styles from './weather-overlay.module.css';
 
 /**

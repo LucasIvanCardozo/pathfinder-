@@ -3,7 +3,7 @@
 // reducer is safe to call inside `setPaintedCells((prev) => applyPaintStroke(...))`.
 
 import { defaultEntityStateFor } from '@/canvas/traits';
-import type { BrushCell, PaintStrokeInput, PaintedCell } from './types';
+import type { BrushCell, PaintedCell, PaintStrokeInput } from './types';
 
 function cellKey(floorId: string, subdivisionId: string, gridX: number, gridY: number): string {
   return `${floorId}|${subdivisionId}|${gridX}|${gridY}`;

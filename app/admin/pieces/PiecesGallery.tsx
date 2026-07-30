@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-import type { Piece } from '@/lib/shared/types';
 import { Empty } from '@/components/Empty';
 import traitBadgeStyles from '@/components/trait-badge.module.css';
+import type { Piece } from '@/lib/shared/types';
 import styles from './pieces-gallery.module.css';
 
 type Props = {

@@ -2,10 +2,10 @@
 
 import { useId } from 'react';
 import {
-  MAX_BRUSH_SIZE,
-  MIN_BRUSH_SIZE,
   bumpBrushSizeDown,
   bumpBrushSizeUp,
+  MAX_BRUSH_SIZE,
+  MIN_BRUSH_SIZE,
   normalizeBrushSize,
 } from '../tools';
 import styles from './paint-toolbar.module.css';
