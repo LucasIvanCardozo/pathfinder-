@@ -10,17 +10,16 @@
 }
 
 .tier0 {
-  filter: drop-shadow(5px 5px 5px #222);
 }
 
 .tier1 {
-  filter: drop-shadow(3px 3px 3px #222) blur(2px) brightness(0.8);
+  filter: brightness(0.7) ;
 }
 
 .tier2 {
-  filter: drop-shadow(2px 2px 2px #222) blur(4px) brightness(0.6);
+  filter: brightness(0.5);
 }
 
 .tier3 {
-  filter: drop-shadow(1px 1px 1px #222) blur(6px) brightness(0.4);
+  filter: brightness(0.3);
 }
