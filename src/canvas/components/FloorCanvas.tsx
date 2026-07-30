@@ -145,6 +145,37 @@ function FloorCanvasImpl({
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
 
+  // Group cells by subdivision, dropping any whose subdivision is missing
+  // from `subById` (defensive against a stale id after a config change),
+  // then sort the buckets ascending by `subdivision.order`. Konva draws
+  // children in DOM order, so the first Layer renders at the bottom and
+  // each subsequent Layer paints over the previous one — matching the
+  // z-stack declared on each subdivision config (Suelo=0 ... Estructuras=3).
+  //
+  // Pre-fix this map was implicit: cells rendered in insertion order, so
+  // painting Suelo (z=0) on top of Objetos pequeños (z=2) at the same
+  // position ended up hiding the higher layer — the new cell was appended
+  // to the array and painted last by the single Layer.
+  const cellsBySub = useMemo(() => {
+    const buckets = new Map<string, PaintedCell[]>();
+    for (const c of cells) {
+      const arr = buckets.get(c.subdivisionId);
+      if (arr) {
+        arr.push(c);
+      } else {
+        buckets.set(c.subdivisionId, [c]);
+      }
+    }
+    const out: Array<{ sub: SubdivisionConfig; cells: PaintedCell[] }> = [];
+    for (const [subId, subCells] of buckets) {
+      const sub = subById.get(subId);
+      if (!sub) continue;
+      out.push({ sub, cells: subCells });
+    }
+    out.sort((a, b) => a.sub.order - b.sub.order);
+    return out;
+  }, [cells, subById]);
+
   // Render-time cellSize helper (world coords; the Stage scales on output).
   const cellSizeFor = (sub: SubdivisionConfig): number => mapDims.baseCellSize / sub.cellSizeRatio;
 
@@ -394,30 +425,30 @@ function FloorCanvasImpl({
         onTouchMove={handleTouchEnd}
         onTouchEnd={handleTouchEnd}
       >
-        <Layer listening={false}>
-          {cells.map((cell) => {
-            const sub = subById.get(cell.subdivisionId);
-            if (!sub) return null;
-            const cellSize = cellSizeFor(sub);
-            const piece = pieceById.get(cell.pieceId);
-            const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
-            const fallbackPath = def?.imagePath ?? '';
-            const imagePath = resolveRenderImagePath(cell, fallbackPath);
-            const img = textureImages.get(imagePath);
-            if (!img) return null;
-            return (
-              <KonvaImage
-                key={cell.id}
-                image={img}
-                x={cell.gridX * cellSize}
-                y={cell.gridY * cellSize}
-                width={cellSize}
-                height={cellSize}
-                perfectDrawEnabled={false}
-              />
-            );
-          })}
-        </Layer>
+        {cellsBySub.map(({ sub, cells: subCells }) => (
+          <Layer key={sub.id} listening={false}>
+            {subCells.map((cell) => {
+              const cellSize = cellSizeFor(sub);
+              const piece = pieceById.get(cell.pieceId);
+              const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
+              const fallbackPath = def?.imagePath ?? '';
+              const imagePath = resolveRenderImagePath(cell, fallbackPath);
+              const img = textureImages.get(imagePath);
+              if (!img) return null;
+              return (
+                <KonvaImage
+                  key={cell.id}
+                  image={img}
+                  x={cell.gridX * cellSize}
+                  y={cell.gridY * cellSize}
+                  width={cellSize}
+                  height={cellSize}
+                  perfectDrawEnabled={false}
+                />
+              );
+            })}
+          </Layer>
+        ))}
         <Layer listening={false}>
           {previewCells.map((cell) => (
             <Rect
