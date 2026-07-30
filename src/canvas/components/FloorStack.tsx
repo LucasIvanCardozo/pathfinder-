@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import { useStageViewport } from '@/hooks/useStageViewport';
-import { useTextureImages } from '../useTextureImages';
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import type { BrushCell, BrushSize, ToolKind } from '../tools';
+import { useTextureImages } from '../useTextureImages';
 import { FloorCanvas } from './FloorCanvas';
-import { WorldGrid } from './WorldGrid';
 import styles from './floor-stack.module.css';
+import { WorldGrid } from './WorldGrid';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -24,7 +24,12 @@ type Props = {
   activePieceId: string | null;
   tool: ToolKind;
   brushSize: BrushSize;
-  onPaint: (floorId: string, subdivisionId: string, cells: BrushCell[], pieceId: string | null) => void;
+  onPaint: (
+    floorId: string,
+    subdivisionId: string,
+    cells: BrushCell[],
+    pieceId: string | null,
+  ) => void;
   onOpenTraitMenu?: (
     cellId: string,
     traitKind: string,
@@ -102,28 +107,27 @@ function FloorStackImpl({
         const isActive = idx === activeIndex;
         const cells = cellsForFloor.get(floor.id) ?? [];
         return (
-          <FloorCanvas
-            key={floor.id}
-            floor={floor}
-            cells={cells}
-            depthFromActive={Math.max(0, activeIndex - idx)}
-            isActive={isActive}
-            mapDims={mapDims}
-            subdivisions={subdivisions}
-            pieces={pieces}
-            textureImages={textureImages}
-            activeSubdivisionId={activeSubdivisionId}
-            activePieceId={activePieceId}
-            tool={tool}
-            brushSize={brushSize}
-            viewportSize={viewportSize}
-            pan={pan}
-            zoom={zoom}
-            beginPan={beginPan}
-            isSpaceDown={isSpaceDown}
-            isPanning={isPanning}
-            onPaint={onPaint}
-            onOpenTraitMenu={onOpenTraitMenu}
+          <FloorCanvas key={floor.id}
+              floor={floor}
+              cells={cells}
+              depthFromActive={Math.max(0, activeIndex - idx)}
+              isActive={isActive}
+              mapDims={mapDims}
+              subdivisions={subdivisions}
+              pieces={pieces}
+              textureImages={textureImages}
+              activeSubdivisionId={activeSubdivisionId}
+              activePieceId={activePieceId}
+              tool={tool}
+              brushSize={brushSize}
+              viewportSize={viewportSize}
+              pan={pan}
+              zoom={zoom}
+              beginPan={beginPan}
+              isSpaceDown={isSpaceDown}
+              isPanning={isPanning}
+              onPaint={onPaint}
+              onOpenTraitMenu={onOpenTraitMenu}
           />
         );
       })}

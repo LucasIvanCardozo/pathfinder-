@@ -1,18 +1,19 @@
 'use client';
 
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
 import type Konva from 'konva';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
 import { usePieceMap, useSubdivisionMap } from '@/hooks';
-import { findInteractiveCellAtPixel, getTrait } from '../traits';
+import { telemetry } from '@/lib/dev/perf';
+import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import {
-  brushCellsAt,
-  computeStrokeCells,
   type BrushCell,
   type BrushSize,
+  brushCellsAt,
+  computeStrokeCells,
   type ToolKind,
 } from '../tools';
+import { findInteractiveCellAtPixel, getTrait } from '../traits';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -113,6 +114,33 @@ function FloorCanvasImpl({
   // Throttle hover state updates to once per cell change so the preview
   // doesn't re-render the whole tree on every mouse-move tick.
   const [hoverCell, setHoverCell] = useState<BrushCell | null>(null);
+
+  // Render counter. Lives inside FloorCanvas (not in a wrapper) so React.memo
+  // actually gates it: when the comparator returns true the useLayoutEffect
+  // never runs and `recordRender` is never called. Previous design wrapped
+  // this in `ProfiledTree` which re-ran on every parent render regardless
+  // of memo outcome, producing inflated counts.
+  //
+  // `useLayoutEffect` fires synchronously after the DOM commit but BEFORE
+  // paint. That makes the measured duration closer to actual render cost;
+  // `useEffect` would bracket in the paint phase too, inflating the number
+  // with browser paint work.
+  //
+  // NOTE on React 19 Strict Mode (default in dev only, not in `pnpm start`):
+  // the mount effect runs twice (effect -> cleanup -> effect), which in
+  // dev inflates the per-floor count by exactly +2 per logical mount
+  // (Strict Mode's effect -> cleanup -> effect sequence runs the body
+  // twice on mount). A `useRef(false)` guard previously caused
+  // `renders: {}` in a snapshot because the ref persists across the
+  // same instance lifetime and silently suppressed all subsequent
+  // renders. Production runs (`pnpm start` is the main target of
+  // this HUD) have Strict Mode off, so the count is exact there. The
+  // +2 per mount in dev is the smaller evil.
+  const renderStartRef = useRef(0);
+  renderStartRef.current = performance.now();
+  useLayoutEffect(() => {
+    telemetry.recordRender(floor.id, performance.now() - renderStartRef.current);
+  });
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
@@ -411,4 +439,102 @@ function FloorCanvasImpl({
   );
 }
 
-export const FloorCanvas = memo(FloorCanvasImpl);
+/**
+     * Content-equality check for `PaintedCell[]` props. Used by the custom
+     * `memo` comparator below to fix a known re-render storm in the layer
+     * stack: every paint rebuilds the per-floor bucket in `FloorStack`, so
+     * `cells` arrives here with a new reference even when its content is
+     * identical. The default `memo` shallow compare then invalidates the
+     * FloorCanvas and re-renders the inactive floors unnecessarily. We compare
+     * the visible fields of each cell (id, piece, position, subdivision) so
+     * unrelated state changes do not force a re-render.
+     */
+    /**
+     * Shallow-equal for `entityState` records. Trait-menu changes
+     * (e.g. door-states: closed -> open) mutate only this field on
+     * a single cell; the comparator MUST detect that change or the
+     * FloorCanvas memo will skip the render and the door texture
+     * stays stale until an unrelated event forces a re-render.
+     * `null` and `undefined` are both treated as the empty state.
+     */
+    function entityStatesEqual(
+      a: Record<string, string | number | boolean> | undefined,
+      b: Record<string, string | number | boolean> | undefined,
+    ): boolean {
+      if (a === b) return true;
+      // `noUncheckedIndexedAccess` makes `a[k]` `T | undefined`. Narrow with
+      // `b[k]`-aware check: if `b` is missing, the loop already short-circuits.
+      const ak = a ? Object.keys(a) : [];
+      const bk = b ? Object.keys(b) : [];
+      if (ak.length !== bk.length) return false;
+      const bNonNull = b as Record<string, string | number | boolean>;
+      const aNonNull = a as Record<string, string | number | boolean>;
+      for (const k of ak) {
+        if (aNonNull[k] !== bNonNull[k]) return false;
+      }
+      return true;
+    }
+
+    /**
+         * Content-equality check for `PaintedCell[]` props. Used by the custom
+         * `memo` comparator below to fix a known re-render storm in the layer
+         * stack: every paint rebuilds the per-floor bucket in `FloorStack`, so
+         * `cells` arrives here with a new reference even when its content is
+         * identical. The default `memo` shallow compare then invalidates the
+         * FloorCanvas and re-renders the inactive floors unnecessarily. We compare
+         * the visible fields of each cell (id, piece, position, subdivision,
+         * and entity state via the helper above) so unrelated state changes
+         * do not force a re-render.
+         */
+    function cellsContentEqual(a: PaintedCell[], b: PaintedCell[]): boolean {
+      if (a === b) return true;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        const x = a[i];
+        const y = b[i];
+        if (!x || !y) return false;
+        if (x.id !== y.id) return false;
+        if (x.floorId !== y.floorId) return false;
+        if (x.subdivisionId !== y.subdivisionId) return false;
+        if (x.pieceId !== y.pieceId) return false;
+        if (x.gridX !== y.gridX) return false;
+        if (x.gridY !== y.gridY) return false;
+        if (!entityStatesEqual(x.entityState, y.entityState)) return false;
+      }
+      return true;
+    }
+
+    /**
+     * Custom comparator for `React.memo`. Most props are already reference-stable
+     * (state objects, useCallback handlers, primitive zoom/pan). The notable
+     * exception is `cells`, which the parent re-buckets on every paintedCells
+     * change — see `cellsContentEqual`. All other props are checked by reference
+     * identity because the editor only passes the same object when nothing in
+     * that prop has changed.
+     */
+    function floorCanvasPropsAreEqual(prev: Props, next: Props): boolean {
+      return (
+        prev.floor === next.floor &&
+        cellsContentEqual(prev.cells, next.cells) &&
+        prev.depthFromActive === next.depthFromActive &&
+        prev.isActive === next.isActive &&
+        prev.mapDims === next.mapDims &&
+        prev.subdivisions === next.subdivisions &&
+        prev.pieces === next.pieces &&
+        prev.activeSubdivisionId === next.activeSubdivisionId &&
+        prev.activePieceId === next.activePieceId &&
+        prev.tool === next.tool &&
+        prev.brushSize === next.brushSize &&
+        prev.textureImages === next.textureImages &&
+        prev.viewportSize === next.viewportSize &&
+        prev.pan === next.pan &&
+        prev.zoom === next.zoom &&
+        prev.beginPan === next.beginPan &&
+        prev.isSpaceDown === next.isSpaceDown &&
+        prev.isPanning === next.isPanning &&
+        prev.onPaint === next.onPaint &&
+        prev.onOpenTraitMenu === next.onOpenTraitMenu
+      );
+    }
+
+    export const FloorCanvas = memo(FloorCanvasImpl, floorCanvasPropsAreEqual);
