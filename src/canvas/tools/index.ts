@@ -1,25 +1,25 @@
 // Public barrel for the canvas tool layer. Server-safe (no React/Konva).
 
+export {
+  brushCellsAt,
+  brushOffsets,
+  bumpBrushSizeDown,
+  bumpBrushSizeUp,
+  computeStrokeCells,
+  MAX_BRUSH_SIZE,
+  MIN_BRUSH_SIZE,
+  normalizeBrushSize,
+} from './brush';
+export { applyEraseStroke } from './erase';
+export { applyPaintStroke } from './paint';
 export type {
-  ToolKind,
-  BrushSize,
-  BrushCell,
   BrushBounds,
+  BrushCell,
+  BrushSize,
   BrushStroke,
-  PieceProjection,
-  PaintStrokeInput,
   EraseStrokeInput,
   PaintedCell,
+  PaintStrokeInput,
+  PieceProjection,
+  ToolKind,
 } from './types';
-export {
-  MIN_BRUSH_SIZE,
-  MAX_BRUSH_SIZE,
-  normalizeBrushSize,
-  bumpBrushSizeUp,
-  bumpBrushSizeDown,
-  brushOffsets,
-  brushCellsAt,
-  computeStrokeCells,
-} from './brush';
-export { applyPaintStroke } from './paint';
-export { applyEraseStroke } from './erase';

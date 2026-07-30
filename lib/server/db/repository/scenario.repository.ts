@@ -1,15 +1,15 @@
-import { Prisma } from '@/generated/prisma/client';
 import type { PrismaClient } from '@/generated/prisma/client';
-import { isPlantaBajaName } from '@/lib/shared/floors/naming';
-import type {
-  LoadScenarioResult,
-  ScenarioSummary,
-  SaveScenarioInput,
-} from '@/lib/shared/types/scenario.types';
-import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
-import { runInTx } from '@/lib/server/utils/runInTx';
+import { Prisma } from '@/generated/prisma/client';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
+import { runInTx } from '@/lib/server/utils/runInTx';
+import { isPlantaBajaName } from '@/lib/shared/floors/naming';
+import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
+import type {
+  LoadScenarioResult,
+  SaveScenarioInput,
+  ScenarioSummary,
+} from '@/lib/shared/types/scenario.types';
 
 /**
  * Scenario repository. Pure Prisma. Returns DTOs only; never exposes a

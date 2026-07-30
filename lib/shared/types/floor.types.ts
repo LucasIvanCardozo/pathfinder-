@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import type { FloorSchema } from '@/lib/shared/schemas/floor.schemas';
 import { DEFAULT_FLOOR_NAMES } from '@/lib/shared/floors/naming';
+import type { FloorSchema } from '@/lib/shared/schemas/floor.schemas';
 
 /**
  * A single floor inside a scenario. Carries only its identity and display
