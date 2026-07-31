@@ -343,6 +343,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     })),
     bindShortcut('floorUp', handleFloorUp),
     bindShortcut('floorDown', handleFloorDown),
+    bindShortcut('zoomIn', zoomIn),
+    bindShortcut('zoomOut', zoomOut),
   ]);
 
   const handleToolChange = (newTool: PaintTool) => {

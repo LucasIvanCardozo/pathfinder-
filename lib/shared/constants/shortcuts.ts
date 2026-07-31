@@ -175,6 +175,25 @@ export const SHORTCUTS = {
     label: 'Bajar de piso',
     category: 'navigation',
   },
+  /**
+   * Zoom in / out. Bound to `=` and `-` (no modifier) — matches the Figma /
+   * Photoshop convention and keeps the binding single-key so a typo can't
+   * require both `Ctrl` and Shift (which is what `+` would need). If you
+   * want the Ctrl/Cmd-prefixed convention (VSCode, browsers), change these
+   * to `key: KEYS.equals, ctrl: true` and `key: KEYS.minus, ctrl: true`.
+   */
+  zoomIn: {
+    id: 'zoomIn',
+    key: KEYS.equals,
+    label: 'Aumentar zoom',
+    category: 'navigation',
+  },
+  zoomOut: {
+    id: 'zoomOut',
+    key: KEYS.minus,
+    label: 'Reducir zoom',
+    category: 'navigation',
+  },
   subdivisionTemplate: {
     // No `key` — the consumer assigns `String(i + 1)` per subdivision.
     id: 'subdivisionTemplate',

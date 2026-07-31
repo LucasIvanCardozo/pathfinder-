@@ -48,6 +48,9 @@ export const KEYS = {
   // Punctuation / bracket keys we use (`[` / `]` for brush size)
   leftBracket: '[',
   rightBracket: ']',
+  equals: '=',
+  minus: '-',
+  plus: '+',
 
   // Named keys
   escape: 'Escape',
@@ -96,6 +99,8 @@ export const KEYS_BY_CODE = {
   // Punctuation
   bracketLeft: 'BracketLeft',
   bracketRight: 'BracketRight',
+  equal: 'Equal',
+  minus: 'Minus',
 
   // Whitespace and editing
   space: 'Space',
