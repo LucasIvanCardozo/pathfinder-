@@ -20,7 +20,7 @@ export type FloorCanvasEvents = {
 type UseCanvasEventHandlersArgs = {
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   isActive: boolean;
-  isSpaceDown: boolean;
+  isPanDown: boolean;
   isPanning: boolean;
   isDrawingRef: React.MutableRefObject<boolean>;
   lastStrokeCellRef: React.MutableRefObject<BrushCell | null>;
@@ -49,7 +49,7 @@ type UseCanvasEventHandlersArgs = {
 export function useCanvasEventHandlers(
   args: UseCanvasEventHandlersArgs,
 ): FloorCanvasEvents {
-  const { isActive, isSpaceDown, isPanning, floorId, cells, onOpenTraitMenu } = args;
+  const { isActive, isPanDown, isPanning, floorId, cells, onOpenTraitMenu } = args;
 
   const getPointer = useCallback((): { x: number; y: number } | null => {
     const stage = args.stageRef.current;
@@ -64,7 +64,7 @@ export function useCanvasEventHandlers(
       // it must not start a paint stroke or pan.
       if (e.evt.button === 2) return;
       // Left-click + space: pan.
-      if (e.evt.button === 0 && isSpaceDown) {
+      if (e.evt.button === 0 && isPanDown) {
         e.evt.preventDefault();
         args.beginPan(e.evt.clientX, e.evt.clientY);
         return;
@@ -77,7 +77,7 @@ export function useCanvasEventHandlers(
         args.isDrawingRef.current = true;
       }
     },
-    [isActive, isSpaceDown, args, getPointer],
+    [isActive, isPanDown, args, getPointer],
   );
 
   const onMouseMove = useCallback(

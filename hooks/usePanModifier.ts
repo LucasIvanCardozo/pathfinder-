@@ -4,23 +4,27 @@ import { useEffect, useState } from 'react';
 import { SHORTCUTS } from '@/lib/shared/constants';
 
 /**
- * Tracks whether the pan modifier (space) is held. `preventDefault` stops the
- * browser from scrolling the page when space is held; the `keyup` listener
- * always clears the flag even if the focus has moved.
+ * Tracks whether the pan modifier (Ctrl) is held. `preventDefault` stops the
+ * browser from interpreting Ctrl + click as a context menu or other default
+ * action; the `keyup` listener always clears the flag even if the focus has
+ * moved.
+ *
+ * The actual key is read from `SHORTCUTS.panModifier.code` so re-binding the
+ * pan modifier (e.g. back to Space) only requires editing the registry.
  */
-export function useSpaceKey(): boolean {
-  const [isSpaceDown, setIsSpaceDown] = useState(false);
+export function usePanModifier(): boolean {
+  const [isPanDown, setIsPanDown] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === SHORTCUTS.panModifier.code && !e.repeat) {
         e.preventDefault();
-        setIsSpaceDown(true);
+        setIsPanDown(true);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === SHORTCUTS.panModifier.code) {
-        setIsSpaceDown(false);
+        setIsPanDown(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -31,5 +35,5 @@ export function useSpaceKey(): boolean {
     };
   }, []);
 
-  return isSpaceDown;
+  return isPanDown;
 }

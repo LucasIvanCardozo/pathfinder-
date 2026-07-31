@@ -51,7 +51,7 @@ export function StateMenu({
       // automatically. `KeyboardEvent.key` is already canonical ('Escape'
       // is returned exactly for that physical key), so direct equality is
       // sufficient — no `.toLowerCase()` needed.
-      if (e.key === SHORTCUTS.closeOverlay.key) onClose();
+      if (e.code === SHORTCUTS.closeOverlay.code) onClose();
     };
     const t = setTimeout(() => {
       document.addEventListener('pointerdown', handlePointerDown, true);

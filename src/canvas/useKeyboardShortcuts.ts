@@ -4,15 +4,26 @@ import { useEffect, useRef } from 'react';
 
 export type Shortcut = {
   /** Lowercase key or special name like "Escape", "ArrowUp".
-   *  Matched against `KeyboardEvent.key`. */
+   *  Matched against `KeyboardEvent.key` (case-insensitive). */
   key?: string;
-  /** Physical key code like "Space", "Digit1".
-   *  Matched against `KeyboardEvent.code`. Required for non-character keys
-   *  (Space, Tab) where `e.key` is ambiguous or unprintable. */
+  /** Physical key code like "KeyB", "BracketLeft", "Digit1".
+   *  Matched against `KeyboardEvent.code`. Use `code` whenever possible — it's
+   *  layout-independent between US, LATAM, UK, German, French and most other
+   *  QWERTY-based layouts (the key's *position* is the same even when the
+   *  character it produces differs). */
   code?: string;
   /** Require Ctrl or Cmd. */
   ctrl?: boolean;
-  /** Require Shift. */
+  /**
+   * When `undefined` (the default), the shortcut matches with or without Shift.
+   * This is what you want for bindings to characters that require Shift on
+   * some layouts but not others (e.g. `?` on US is `Shift+/`).
+   *
+   * Set to `true` only when the shortcut must distinguish Shift state from
+   * another binding on the same physical key (e.g. `B` paint vs `Shift+B`
+   * toggle brush shape). The matching loop processes explicit-shift shortcuts
+   * first so the conflict resolves deterministically.
+   */
   shift?: boolean;
   handler: () => void;
   /**
@@ -49,20 +60,29 @@ export function useKeyboardShortcuts(
     if (!enabled) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target;
-      for (const shortcut of shortcutsRef.current) {
+      // Process shortcuts with explicit `shift` first so a `Shift+B` binding
+      // wins over a `B` binding on the same physical key. Within each group,
+      // declaration order is honored.
+      const current = shortcutsRef.current;
+      const explicit = current.filter((s) => s.shift !== undefined);
+      const agnostic = current.filter((s) => s.shift === undefined);
+      const ordered = explicit.concat(agnostic);
+      for (const shortcut of ordered) {
         if (!shortcut.allowInInputs && isTypingTarget(target)) return;
-        // Prefer `code` when present — it's the physical key identifier,
-        // which is unambiguous for keys like Space where `e.key` is `' '`.
-        // Fall back to `key` (case-insensitive) for character-bound
-        // shortcuts like 'b', 'Escape', 'ArrowUp'.
         const codeMatches = shortcut.code !== undefined && e.code === shortcut.code;
         const keyMatches =
           shortcut.key !== undefined && e.key.toLowerCase() === shortcut.key.toLowerCase();
         if (!codeMatches && !keyMatches) continue;
         const ctrlMatches = !!shortcut.ctrl === (e.ctrlKey || e.metaKey);
         if (!ctrlMatches) continue;
-        const shiftMatches = !!shortcut.shift === e.shiftKey;
-        if (!shiftMatches) continue;
+        // Shift is enforced only when the shortcut declares it explicitly.
+        // When `shift` is undefined, both Shift-down and Shift-up match — this
+        // is what makes `?` (Shift+/ in US/LATAM) work without the consumer
+        // having to declare `shift: true` for layout-specific reasons.
+        if (shortcut.shift !== undefined) {
+          const shiftMatches = !!shortcut.shift === e.shiftKey;
+          if (!shiftMatches) continue;
+        }
         e.preventDefault();
         e.stopPropagation();
         shortcut.handler();

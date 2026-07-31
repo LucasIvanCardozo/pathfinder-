@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faKeyboard } from '@fortawesome/free-solid-svg-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   applyEraseStroke,
@@ -17,6 +19,7 @@ import {
   type PaintTool,
 } from '@/canvas';
 import { Button } from '@/components/Button';
+import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
 import { telemetry } from '@/dev/perf/telemetry';
@@ -81,6 +84,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [showBrushPreview, setShowBrushPreview] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Memoized so the FloorCanvas memo comparator sees a stable reference.
   const mapDims = useMemo(
@@ -235,6 +240,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setTool,
       setBrushSize,
       setBrushShape,
+      setShowBrushPreview,
+      setShowShortcuts,
       save: () => {
         if (isSaving) return;
         save(false);
@@ -420,6 +427,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             type="button"
             variant="default"
             size="mini"
+            onClick={() => setShowShortcuts(true)}
+            aria-label="Ver atajos de teclado"
+            title="Atajos de teclado (?)"
+          >
+            <FontAwesomeIcon icon={faKeyboard} />
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            size="mini"
             onClick={() => setIsCanvasExpanded((expanded) => !expanded)}
             title={
               isCanvasExpanded
@@ -463,6 +480,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           tool={tool}
           brushSize={brushSize}
           brushShape={brushShape}
+          showBrushPreview={showBrushPreview}
           onPaint={handlePaint}
           onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
@@ -481,6 +499,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       )}
 
       {traitMenu.render}
+
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 }

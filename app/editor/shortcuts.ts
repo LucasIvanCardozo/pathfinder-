@@ -7,13 +7,20 @@ import {
   type PaintTool,
   type Shortcut,
 } from '@/canvas';
-import { bindShortcut, SHORTCUTS, type ShortcutTemplate } from '@/lib/shared/constants';
+import {
+  bindShortcut,
+  KEYS_BY_CODE,
+  SHORTCUTS,
+  type ShortcutTemplate,
+} from '@/lib/shared/constants';
 import type { SubdivisionConfig } from '@/lib/shared/types';
 
 type Args = {
   setTool: (t: PaintTool) => void;
   setBrushSize: Dispatch<SetStateAction<number>>;
   setBrushShape: Dispatch<SetStateAction<BrushShape>>;
+  setShowBrushPreview: Dispatch<SetStateAction<boolean>>;
+  setShowShortcuts: Dispatch<SetStateAction<boolean>>;
   /** Wrapped save — the call site decides whether the autosave is currently
    *  in progress and short-circuits if so. */
   save: () => void;
@@ -30,7 +37,7 @@ type Args = {
 /** Subdivision entries are generated dynamically; this alias keeps the cast
  *  local to the map call rather than scattering casts across the file. */
 type SubdivisionEntry = ShortcutTemplate & {
-  key: string;
+  code: string;
   handler: () => void;
 };
 
@@ -55,6 +62,8 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('toggleBrushShape', () =>
       args.setBrushShape((current) => (current === 'circle' ? 'square' : 'circle')),
     ),
+    bindShortcut('toggleBrushPreview', () => args.setShowBrushPreview((v) => !v)),
+    bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
     bindShortcut('save', () => args.save()),
     bindShortcut('closeOverlay', () => {
       args.traitMenu.close();
@@ -65,7 +74,7 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     // everything else (label, category) is shared.
     ...args.subdivisions.map<SubdivisionEntry>((sub, i) => ({
       ...SHORTCUTS.subdivisionTemplate,
-      key: String(i + 1),
+      code: KEYS_BY_CODE[`digit${i + 1}` as keyof typeof KEYS_BY_CODE],
       handler: () => args.handleSubdivisionChange(sub.id),
     })),
     bindShortcut('floorUp', args.handleFloorUp),

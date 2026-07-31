@@ -51,6 +51,8 @@ export const KEYS = {
   equals: '=',
   minus: '-',
   plus: '+',
+  slash: '/',
+  questionMark: '?',
 
   // Named keys
   escape: 'Escape',
@@ -101,10 +103,13 @@ export const KEYS_BY_CODE = {
   bracketRight: 'BracketRight',
   equal: 'Equal',
   minus: 'Minus',
+  slash: 'Slash',
+  backslash: 'Backslash',
 
   // Whitespace and editing
   space: 'Space',
   enter: 'Enter',
+  escape: 'Escape',
   tab: 'Tab',
   backspace: 'Backspace',
   delete: 'Delete',

@@ -40,6 +40,10 @@ export type Props = {
    *  through `computeStrokeCells` so the painter and the hover preview
    *  agree on the same footprint. */
   brushShape: BrushShape;
+  /** When false, skip rendering the brush footprint preview Layer. Defaults
+   *  to true so the prop is optional and existing callers don't have to
+   *  change. Toggled by the editor's `toggleBrushPreview` shortcut. */
+  showBrushPreview?: boolean;
   /** Loaded texture images keyed by `imagePath`. One HTMLImageElement per path
    *  — depth blur is now done in CSS. */
   textureImages: Map<string, HTMLImageElement>;
@@ -48,7 +52,7 @@ export type Props = {
   zoom: number;
   /** Begin a pan drag (from the viewport hook). */
   beginPan: (clientX: number, clientY: number) => void;
-  isSpaceDown: boolean;
+  isPanDown: boolean;
   isPanning: boolean;
   /**
    * Fired when the user clicks or drags across the active floor with the paint
@@ -85,12 +89,13 @@ function FloorCanvasImpl({
   tool,
   brushSize,
   brushShape,
+  showBrushPreview = true,
   textureImages,
   viewportSize,
   pan,
   zoom,
   beginPan,
-  isSpaceDown,
+  isPanDown,
   isPanning,
   onPaint,
   onOpenTraitMenu,
@@ -214,7 +219,7 @@ function FloorCanvasImpl({
   const events = useCanvasEventHandlers({
     stageRef,
     isActive,
-    isSpaceDown,
+    isPanDown,
     isPanning,
     isDrawingRef,
     lastStrokeCellRef,
@@ -233,7 +238,7 @@ function FloorCanvasImpl({
   // Cursor reflects the current interaction: default crosshair (paint),
   // grab when space is held, grabbing while a pan drag is in progress.
   const baseCursor = tool === 'erase' ? 'cell' : 'crosshair';
-  const cursor = isSpaceDown ? (isPanning ? 'grabbing' : 'grab') : baseCursor;
+  const cursor = isPanDown ? (isPanning ? 'grabbing' : 'grab') : baseCursor;
 
   // Pick the CSS tier class for this floor. tier0 is the active floor
   // (sharp + fully opaque); tier1..tier3 are progressively blurred + dimmed.
@@ -311,22 +316,24 @@ function FloorCanvasImpl({
             })}
           </Layer>
         ))}
-        <Layer listening={false}>
-          {previewCells.map((cell) => (
-            <Rect
-              key={`preview-${cell.gridX}-${cell.gridY}`}
-              x={cell.gridX * previewCellSize}
-              y={cell.gridY * previewCellSize}
-              width={previewCellSize}
-              height={previewCellSize}
-              stroke={previewStyle.stroke}
-              strokeWidth={1.5}
-              fill={previewStyle.fill}
-              perfectDrawEnabled={false}
-              listening={false}
-            />
-          ))}
-        </Layer>
+        {showBrushPreview && (
+          <Layer listening={false}>
+            {previewCells.map((cell) => (
+              <Rect
+                key={`preview-${cell.gridX}-${cell.gridY}`}
+                x={cell.gridX * previewCellSize}
+                y={cell.gridY * previewCellSize}
+                width={previewCellSize}
+                height={previewCellSize}
+                stroke={previewStyle.stroke}
+                strokeWidth={1.5}
+                fill={previewStyle.fill}
+                perfectDrawEnabled={false}
+                listening={false}
+              />
+            ))}
+          </Layer>
+        )}
       </Stage>
     </div>
   );

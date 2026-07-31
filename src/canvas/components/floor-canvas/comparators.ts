@@ -70,8 +70,9 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
       if (prev.tool !== next.tool) changes.push('tool');
       if (prev.brushSize !== next.brushSize) changes.push('brushSize');
       if (prev.brushShape !== next.brushShape) changes.push('brushShape');
+      if (prev.showBrushPreview !== next.showBrushPreview) changes.push('showBrushPreview');
       if (prev.beginPan !== next.beginPan) changes.push('beginPan');
-      if (prev.isSpaceDown !== next.isSpaceDown) changes.push('isSpaceDown');
+      if (prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
       if (prev.isPanning !== next.isPanning) changes.push('isPanning');
       if (prev.onPaint !== next.onPaint) changes.push('onPaint');
       if (prev.onOpenTraitMenu !== next.onOpenTraitMenu) changes.push('onOpenTraitMenu');
@@ -96,12 +97,13 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     prev.tool === next.tool &&
     prev.brushSize === next.brushSize &&
     prev.brushShape === next.brushShape &&
+    prev.showBrushPreview === next.showBrushPreview &&
     prev.textureImages === next.textureImages &&
     prev.viewportSize === next.viewportSize &&
     prev.pan === next.pan &&
     prev.zoom === next.zoom &&
     prev.beginPan === next.beginPan &&
-    prev.isSpaceDown === next.isSpaceDown &&
+    prev.isPanDown === next.isPanDown &&
     prev.isPanning === next.isPanning &&
     prev.onPaint === next.onPaint &&
     prev.onOpenTraitMenu === next.onOpenTraitMenu

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { usePanState } from './usePanState';
-import { useSpaceKey } from './useSpaceKey';
+import { usePanModifier } from './usePanModifier';
 import { useViewportSize } from './useViewportSize';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -29,7 +29,7 @@ type Return = {
    * updates (avoids invalidating FloorCanvas's memo on every pan change).
    */
   beginPan: (clientX: number, clientY: number) => void;
-  isSpaceDown: boolean;
+  isPanDown: boolean;
   /**
    * Reactive mirror of the drag-start ref so cursor computation in child
    * components can re-render when the pan starts/ends. Non-active floors
@@ -49,14 +49,14 @@ type Return = {
  * pan offset, space-key tracking, and the math that keeps the world centred
  * on first paint and preserves the visual centre across zoom changes.
  *
- * Composes three single-responsibility hooks (`useViewportSize`, `useSpaceKey`,
+ * Composes three single-responsibility hooks (`useViewportSize`, `usePanModifier`,
  * `usePanState`) plus the centre-on-mount and preserve-centre-on-zoom effects
  * that orchestrate them.
  */
 export function useStageViewport({ mapDims, zoom }: Params): Return {
   const { containerRef, viewportSize } = useViewportSize();
   const { pan, setPan, beginPan, isPanning } = usePanState();
-  const isSpaceDown = useSpaceKey();
+  const isPanDown = usePanModifier();
 
   // Centre the world on first valid viewport size; the ref guard prevents
   // re-centring on subsequent viewport changes.
@@ -115,7 +115,7 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
     pan,
     setPan,
     beginPan,
-    isSpaceDown,
+    isPanDown,
     isPanning,
     worldBounds,
   };

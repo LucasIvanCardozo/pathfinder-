@@ -30,6 +30,9 @@ type Props = {
    *  to each FloorCanvas so the painter and the hover preview agree on
    *  the same footprint. */
   brushShape: BrushShape;
+  /** When false, FloorCanvas skips rendering the brush footprint preview.
+   *  Toggled by the `toggleBrushPreview` shortcut in the editor. */
+  showBrushPreview?: boolean;
   onPaint: (
     floorId: string,
     subdivisionId: string,
@@ -63,11 +66,12 @@ function FloorStackImpl({
   tool,
   brushSize,
   brushShape,
+  showBrushPreview = true,
   onPaint,
   onOpenTraitMenu,
   overlay,
 }: Props) {
-  const { containerRef, viewportSize, pan, beginPan, isSpaceDown, isPanning, worldBounds } =
+  const { containerRef, viewportSize, pan, beginPan, isPanDown, isPanning, worldBounds } =
     useStageViewport({ mapDims, zoom });
 
   const cellsForFloor = useFloorCellsByFloor(paintedCells);
@@ -106,11 +110,12 @@ function FloorStackImpl({
               tool={tool}
               brushSize={brushSize}
               brushShape={brushShape}
+              showBrushPreview={showBrushPreview}
               viewportSize={viewportSize}
               pan={pan}
               zoom={zoom}
               beginPan={beginPan}
-              isSpaceDown={isSpaceDown}
+              isPanDown={isPanDown}
               isPanning={isPanning}
               onPaint={onPaint}
               onOpenTraitMenu={onOpenTraitMenu}

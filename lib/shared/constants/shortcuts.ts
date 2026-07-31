@@ -1,4 +1,4 @@
-import { KEYS, KEYS_BY_CODE } from './keyboard';
+import { KEYS_BY_CODE } from './keyboard';
 
 /**
  * Centralised registry of editor keyboard shortcuts.
@@ -11,10 +11,11 @@ import { KEYS, KEYS_BY_CODE } from './keyboard';
  *
  * ## Where the values come from
  *
- * - `key` values come from `KEYS` in `./keyboard` (e.g. `KEYS.b` = `'b'`,
- *   `KEYS.escape` = `'Escape'`).
  * - `code` values come from `KEYS_BY_CODE` in `./keyboard` (e.g.
- *   `KEYS_BY_CODE.space` = `'Space'`).
+ *   `KEYS_BY_CODE.keyB` = `'KeyB'`, `KEYS_BY_CODE.space` = `'Space'`).
+ *   We prefer `code` over `key` because it's layout-independent: the same
+ *   physical key returns the same `code` regardless of the OS keyboard
+ *   layout (US, LATAM, UK, German, French, etc.).
  * - `ctrl` / `shift` are **booleans**, not strings — `ctrl: true` requires
  *   Ctrl (or Cmd on Mac). See `./keyboard`'s `MODIFIER_HELP` for details.
  *
@@ -102,45 +103,57 @@ export type ShortcutTemplate = Omit<ShortcutDef, 'key'>;
 export const SHORTCUTS = {
   paintTool: {
     id: 'paintTool',
-    key: KEYS.b,
+    code: KEYS_BY_CODE.keyB,
     label: 'Pincel (pintar)',
     category: 'tool',
   },
   eraseTool: {
     id: 'eraseTool',
-    key: KEYS.e,
+    code: KEYS_BY_CODE.keyE,
     label: 'Borrador',
     category: 'tool',
   },
   brushSizeDown: {
     id: 'brushSizeDown',
-    key: KEYS.leftBracket,
+    code: KEYS_BY_CODE.bracketLeft,
     label: 'Reducir tamaño del pincel',
     category: 'brush',
   },
   brushSizeUp: {
     id: 'brushSizeUp',
-    key: KEYS.rightBracket,
+    code: KEYS_BY_CODE.bracketRight,
     label: 'Aumentar tamaño del pincel',
     category: 'brush',
   },
   toggleBrushShape: {
     id: 'toggleBrushShape',
-    key: KEYS.b,
+    code: KEYS_BY_CODE.keyB,
     shift: true,
     label: 'Cambiar forma del pincel (circular ↔ cuadrada)',
     category: 'brush',
   },
+  toggleBrushPreview: {
+    id: 'toggleBrushPreview',
+    code: KEYS_BY_CODE.keyV,
+    label: 'Mostrar / ocultar previsualización del pincel',
+    category: 'brush',
+  },
+  toggleShortcutsModal: {
+    id: 'toggleShortcutsModal',
+    code: KEYS_BY_CODE.slash,
+    label: 'Ver atajos de teclado',
+    category: 'overlay',
+  },
   save: {
     id: 'save',
-    key: KEYS.s,
+    code: KEYS_BY_CODE.keyS,
     ctrl: true,
     label: 'Guardar manualmente',
     category: 'save',
   },
   closeOverlay: {
     id: 'closeOverlay',
-    key: KEYS.escape,
+    code: KEYS_BY_CODE.escape,
     label: 'Cerrar menú o colapsar vista expandida',
     category: 'overlay',
   },
@@ -152,25 +165,28 @@ export const SHORTCUTS = {
    * source of truth for *which* key acts as the pan modifier — re-bind
    * here to use a different key for panning.
    *
-   * Uses `code` (not `key`) because `KeyboardEvent.key` for the space bar
-   * is the literal character `' '`, which is awkward to spell in source.
+   * The Ctrl key (specifically the left Ctrl), used as a press-and-hold
+   * modifier for click-and-drag panning. Tracked by `usePanModifier` via
+   * `keydown`/`keyup` listeners (not via `useKeyboardShortcuts`, because the
+   * latter only fires on press, not while the key is held). The entry here
+   * is the single source of truth for *which* key acts as the pan modifier.
    */
   panModifier: {
     id: 'panModifier',
     code: KEYS_BY_CODE.controlLeft,
-    label: 'Mantener + click+drag = mover el mapa',
+    label: 'Ctrl + click+drag = mover el mapa',
     category: 'navigation',
   },
   floorUp: {
     id: 'floorUp',
-    key: KEYS.arrowUp,
+    code: KEYS_BY_CODE.arrowUp,
     shift: true,
     label: 'Subir de piso',
     category: 'navigation',
   },
   floorDown: {
     id: 'floorDown',
-    key: KEYS.arrowDown,
+    code: KEYS_BY_CODE.arrowDown,
     shift: true,
     label: 'Bajar de piso',
     category: 'navigation',
@@ -184,13 +200,13 @@ export const SHORTCUTS = {
    */
   zoomIn: {
     id: 'zoomIn',
-    key: KEYS.equals,
+    code: KEYS_BY_CODE.equal,
     label: 'Aumentar zoom',
     category: 'navigation',
   },
   zoomOut: {
     id: 'zoomOut',
-    key: KEYS.minus,
+    code: KEYS_BY_CODE.minus,
     label: 'Reducir zoom',
     category: 'navigation',
   },
@@ -243,9 +259,25 @@ export function bindShortcut(
 ) {
   const def = SHORTCUTS[id] as ShortcutBinding;
   return {
-    key: def.key,
+    // Prefer `code` (layout-independent physical key); fall back to `key`
+    // (character-based) for any legacy shortcut that still uses it. The
+    // matching loop in `useKeyboardShortcuts` tries both.
+    ...(def.code !== undefined && { code: def.code }),
+    ...(def.key !== undefined && { key: def.key }),
     ...(def.ctrl !== undefined && { ctrl: def.ctrl }),
     ...(def.shift !== undefined && { shift: def.shift }),
     handler,
   };
+}
+
+/**
+ * Flat list of every shortcut the editor exposes, in registry order, with the
+ * `subdivisionTemplate` (no `key` of its own) filtered out so consumers can
+ * iterate without special-casing. Use this to drive the "keyboard shortcuts"
+ * help modal — keeps the registry as the single source of truth.
+ */
+export function listShortcuts(): ShortcutDef[] {
+  return (Object.values(SHORTCUTS) as Array<ShortcutDef | ShortcutTemplate>).filter(
+    (def): def is ShortcutDef => 'key' in def || 'code' in def,
+  );
 }
