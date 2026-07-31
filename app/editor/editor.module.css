@@ -6,6 +6,83 @@
   color: var(--fg);
 }
 
+/* Expanded mode: hide the sidebar and let the canvas area take the full
+   viewport. The transition makes the change feel intentional rather than
+   abrupt. `padding: 0` removes the 1rem gutter so the canvas truly fills
+   the available space. */
+.editor.expanded {
+  /* Without an explicit row template the grid auto-sizes the single row to
+     the content height — which would shrink the canvas area to its header
+     + tabs and leave the FloorStack (flex: 1) collapsed to 0, exposing the
+     near-black bg of `.editor`. Forcing the row to 100vh makes the canvas
+     area span the viewport so its inner flex layout can distribute the
+     space correctly.
+
+     `grid-template-columns: 1fr` (a single column instead of `0 1fr`) is
+     intentional: the sidebar is `display: none` in this state, so a
+     `0 1fr` template combined with grid auto-placement would put the
+     remaining visible `<main>` in column 1 (0 wide) instead of column 2
+     (1fr), collapsing the canvas to 0 width and showing the bg. Using a
+     single full-width column lets grid auto-placement land the canvas
+     correctly. */
+  grid-template-columns: 1fr;
+  grid-template-rows: 100vh;
+}
+
+.editor.expanded .paintSidebar {
+  display: none;
+}
+
+.canvasArea.expanded {
+  padding: 0;
+  height: 100vh;
+  gap: 0.5rem;
+}
+
+/* In expanded mode the user wants to see ONLY the map — no header, no
+   subdivision tabs. We hide them here so the FloorStack fills the entire
+   canvas area. The "Comprimir" button lives outside this hierarchy as a
+   floating overlay (see `.exitExpandedButton` below). */
+.editor.expanded .canvasHeader {
+  display: none;
+}
+
+/* Floating "exit expanded mode" button. Positioned in the top-right corner
+   of the viewport with `position: fixed` so it stays visible regardless
+   of where the user pans the map. Slightly transparent at rest so it
+   doesn't distract from the canvas, full opacity on hover for a clear
+   affordance. */
+.exitExpandedButton {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.exitExpandedButton:hover,
+.exitExpandedButton:focus-visible {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
 .paintSidebar {
   background: var(--bg-elevated);
   border-right: 1px solid var(--border);

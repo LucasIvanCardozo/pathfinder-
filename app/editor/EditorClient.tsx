@@ -15,15 +15,16 @@ import {
   PiecePalette,
   SubdivisionTabs,
   useKeyboardShortcuts,
-  WeatherOverlay,
+    WeatherOverlay,
   WeatherPanel,
+  type BrushShape,
 } from '@/canvas';
 import { Button } from '@/components/Button';
 import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
 import { BenchmarkPanel, PerfHud, telemetry } from '@/lib/dev/perf';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import { SUBDIVISIONS } from '@/lib/shared/constants';
+import { DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
@@ -78,6 +79,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>('paint');
   const [brushSize, setBrushSize] = useState<number>(1);
+  const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
+  /**
+   * Toggle that hides the sidebar and lets the canvas area take the whole
+   * viewport. Reset to `false` on each mount (per user choice: no
+   * persistence). Browser F11 still works in parallel and hides the
+   * browser chrome on top of this — they're independent.
+   */
+  const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   // Memoize so FloorCanvas memo comparator sees a stable reference.
@@ -305,6 +314,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     { key: 'e', handler: () => setTool('erase') },
     { key: '[', handler: () => setBrushSize((s) => bumpBrushSizeDown(normalizeBrushSize(s))) },
     { key: ']', handler: () => setBrushSize((s) => bumpBrushSizeUp(normalizeBrushSize(s))) },
+    // Shift+B toggles between circular and square brush shape. Modifying B
+    // (the paint tool shortcut) is intentional — the same key covers both
+    // paint-tool and brush-shape, with Shift as the modifier. The segmented
+    // control in the PaintToolbar is the alternative.
+    {
+      key: 'b',
+      shift: true,
+      handler: () =>
+        setBrushShape((current) => (current === 'circle' ? 'square' : 'circle')),
+    },
     {
       key: 's',
       ctrl: true,
@@ -315,7 +334,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     },
     {
       key: 'Escape',
-      handler: traitMenu.close,
+      handler: () => {
+        // Close the trait menu first (it's the more common reason the user
+        // pressed Escape). Then, if it's already closed and the canvas is in
+        // expanded mode, collapse it. This priority makes Escape feel like
+        // "back out of whatever UI is on top".
+        traitMenu.close();
+        setIsCanvasExpanded(false);
+      },
     },
     ...subdivisions.map((sub, i) => ({
       key: String(i + 1),
@@ -397,7 +423,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   );
 
   return (
-    <div className={styles.editor}>
+    <div className={`${styles.editor} ${isCanvasExpanded ? styles.expanded : ''}`}>
       <aside className={styles.paintSidebar}>
         <Link href="/" className={styles.backLink}>
           ← Escenarios
@@ -407,6 +433,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onChange={handleToolChange}
           brushSize={brushSize}
           onBrushSizeChange={handleBrushSizeChange}
+          brushShape={brushShape}
+          onBrushShapeChange={setBrushShape}
         />
         <div className={styles.dangerZone}>
           <Button
@@ -459,7 +487,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         <WeatherPanel onChange={setWeatherState} initial={weatherState} />
       </aside>
 
-      <main className={styles.canvasArea}>
+      <main className={`${styles.canvasArea} ${isCanvasExpanded ? styles.expanded : ''}`}>
         <header className={styles.canvasHeader}>
           <input
             type="text"
@@ -558,6 +586,25 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             {autosaveStatus === 'error' && '✗ Error al guardar'}
             {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
           </span>
+          {/* Expand / collapse the canvas. Independent from the browser's
+              native F11 fullscreen — that one hides the chrome but keeps the
+              sidebar visible, this one hides the sidebar and lets the canvas
+              area take the whole viewport. Both can be active at the same
+              time. */}
+          <Button
+            type="button"
+            variant="default"
+            size="mini"
+            onClick={() => setIsCanvasExpanded((expanded) => !expanded)}
+            title={
+              isCanvasExpanded
+                ? 'Salir del modo expandido (Esc)'
+                : 'Expandir canvas a pantalla completa (F11)'
+            }
+            aria-pressed={isCanvasExpanded}
+          >
+            {isCanvasExpanded ? '⤢ Comprimir' : '⤡ Expandir'}
+          </Button>
           <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
             {isSaving ? (
               <>
@@ -570,11 +617,17 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           </Button>
         </header>
 
-        <SubdivisionTabs
-          subdivisions={subdivisions}
-          activeId={activeSubdivisionId}
-          onChange={handleSubdivisionChange}
-        />
+        {/* Subdivision tabs are hidden in expanded mode so the canvas is
+            the only thing on screen. The state still updates via the
+            keyboard shortcut (keys 1..N) — we just don't render the
+            strip. */}
+        {!isCanvasExpanded && (
+          <SubdivisionTabs
+            subdivisions={subdivisions}
+            activeId={activeSubdivisionId}
+            onChange={handleSubdivisionChange}
+          />
+        )}
 
         <FloorStack
           floors={floors}
@@ -588,11 +641,26 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           activePieceId={activePieceId}
           tool={tool}
           brushSize={brushSize}
+          brushShape={brushShape}
           onPaint={handlePaint}
           onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </main>
+
+      {/* Floating exit button — only rendered in expanded mode so the
+          canvas is the only thing on screen and the user always has a way
+          out. ESC also collapses, but the button is the visible affordance. */}
+      {isCanvasExpanded && (
+        <button
+          type="button"
+          className={styles.exitExpandedButton}
+          onClick={() => setIsCanvasExpanded(false)}
+          title="Salir del modo expandido (Esc)"
+        >
+          ⤢ Comprimir
+        </button>
+      )}
 
       <PerfHud />
       <BenchmarkPanel
