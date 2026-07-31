@@ -8,10 +8,10 @@
  */
 
 /** World size in cells, horizontal axis. */
-export const MAP_WORLD_WIDTH = 60;
+export const MAP_WORLD_WIDTH = 80;
 
 /** World size in cells, vertical axis. */
-export const MAP_WORLD_HEIGHT = 30;
+export const MAP_WORLD_HEIGHT = 40;
 
 /** Default world cell size in pixels. Persisted on each scenario as
  *  `baseCellSize`; the editor can change it per-scenario later. */
