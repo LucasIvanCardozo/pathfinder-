@@ -8,6 +8,7 @@ import {
   useRef,
   useState
 } from 'react';
+import { SHORTCUTS } from '@/lib/shared/constants';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -146,13 +147,13 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
   // the browser from scrolling the page when space is held.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) {
+      if (e.code === SHORTCUTS.panModifier.code && !e.repeat) {
         e.preventDefault();
         setIsSpaceDown(true);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === SHORTCUTS.panModifier.code) {
         setIsSpaceDown(false);
       }
     };

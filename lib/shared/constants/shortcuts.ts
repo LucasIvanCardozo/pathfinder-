@@ -1,3 +1,5 @@
+import { KEYS, KEYS_BY_CODE } from './keyboard';
+
 /**
  * Centralised registry of editor keyboard shortcuts.
  *
@@ -6,6 +8,19 @@
  * settings UI. The runtime **handler** lives in the consumer (the editor
  * wires it up at registration time) so this file stays free of React state
  * and can be consumed by any caller, not just the editor.
+ *
+ * ## Where the values come from
+ *
+ * - `key` values come from `KEYS` in `./keyboard` (e.g. `KEYS.b` = `'b'`,
+ *   `KEYS.escape` = `'Escape'`).
+ * - `code` values come from `KEYS_BY_CODE` in `./keyboard` (e.g.
+ *   `KEYS_BY_CODE.space` = `'Space'`).
+ * - `ctrl` / `shift` are **booleans**, not strings — `ctrl: true` requires
+ *   Ctrl (or Cmd on Mac). See `./keyboard`'s `MODIFIER_HELP` for details.
+ *
+ * Use the constants instead of string literals so the IDE can autocomplete
+ * and a typo (`'Escap'`) becomes a compile error rather than a silent
+ * dead binding.
  *
  * ## Why this exists
  *
@@ -34,10 +49,20 @@
  */
 
 /** The key + modifier combo the OS event must match. Mirrors the binding
- *  shape consumed by `useKeyboardShortcuts` (without the handler). */
+ *  shape consumed by `useKeyboardShortcuts` (without the handler).
+ *
+ * `key` matches against `KeyboardEvent.key` (the character / virtual key
+ * name like `'Escape'`, `'ArrowUp'`, `'b'`). `code` matches against
+ * `KeyboardEvent.code` (the physical key identifier like `'Space'`,
+ * `'Digit1'`). For most keys, either works; for the space bar you must
+ * use `code: 'Space'` because `e.key` returns `' '` (a literal space
+ * character) which is awkward to spell in source. */
 export type ShortcutBinding = {
   /** Lowercase key or special name like "Escape", "ArrowUp". */
-  key: string;
+  key?: string;
+  /** Physical key code like "Space", "Digit1". Required for non-character
+   *  keys (Space, Tab) where `key` is ambiguous. */
+  code?: string;
   /** Require Ctrl or Cmd. */
   ctrl?: boolean;
   /** Require Shift. */
@@ -77,58 +102,75 @@ export type ShortcutTemplate = Omit<ShortcutDef, 'key'>;
 export const SHORTCUTS = {
   paintTool: {
     id: 'paintTool',
-    key: 'b',
+    key: KEYS.b,
     label: 'Pincel (pintar)',
     category: 'tool',
   },
   eraseTool: {
     id: 'eraseTool',
-    key: 'e',
+    key: KEYS.e,
     label: 'Borrador',
     category: 'tool',
   },
   brushSizeDown: {
     id: 'brushSizeDown',
-    key: '[',
+    key: KEYS.leftBracket,
     label: 'Reducir tamaño del pincel',
     category: 'brush',
   },
   brushSizeUp: {
     id: 'brushSizeUp',
-    key: ']',
+    key: KEYS.rightBracket,
     label: 'Aumentar tamaño del pincel',
     category: 'brush',
   },
   toggleBrushShape: {
     id: 'toggleBrushShape',
-    key: 'b',
+    key: KEYS.b,
     shift: true,
     label: 'Cambiar forma del pincel (circular ↔ cuadrada)',
     category: 'brush',
   },
   save: {
     id: 'save',
-    key: 's',
+    key: KEYS.s,
     ctrl: true,
     label: 'Guardar manualmente',
     category: 'save',
   },
   closeOverlay: {
     id: 'closeOverlay',
-    key: 'Escape',
+    key: KEYS.escape,
     label: 'Cerrar menú o colapsar vista expandida',
     category: 'overlay',
   },
+  /**
+   * The space bar, used as a press-and-hold modifier for click-and-drag
+   * panning. Tracked by `useStageViewport` via `keydown`/`keyup` listeners
+   * (not via `useKeyboardShortcuts`, because the latter only fires on
+   * press, not while the key is held). The entry here is the single
+   * source of truth for *which* key acts as the pan modifier — re-bind
+   * here to use a different key for panning.
+   *
+   * Uses `code` (not `key`) because `KeyboardEvent.key` for the space bar
+   * is the literal character `' '`, which is awkward to spell in source.
+   */
+  panModifier: {
+    id: 'panModifier',
+    code: KEYS_BY_CODE.controlLeft,
+    label: 'Mantener + click+drag = mover el mapa',
+    category: 'navigation',
+  },
   floorUp: {
     id: 'floorUp',
-    key: 'ArrowUp',
+    key: KEYS.arrowUp,
     shift: true,
     label: 'Subir de piso',
     category: 'navigation',
   },
   floorDown: {
     id: 'floorDown',
-    key: 'ArrowDown',
+    key: KEYS.arrowDown,
     shift: true,
     label: 'Bajar de piso',
     category: 'navigation',

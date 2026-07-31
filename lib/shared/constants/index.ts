@@ -19,6 +19,7 @@
 export * from './brush';
 export * from './catalog';
 export * from './floors';
+export * from './keyboard';
 export * from './map';
 export * from './perf';
 export * from './shortcuts';

@@ -3,8 +3,13 @@
 import { useEffect, useRef } from 'react';
 
 export type Shortcut = {
-  /** Lowercase key or special name like "Escape", "ArrowUp". */
-  key: string;
+  /** Lowercase key or special name like "Escape", "ArrowUp".
+   *  Matched against `KeyboardEvent.key`. */
+  key?: string;
+  /** Physical key code like "Space", "Digit1".
+   *  Matched against `KeyboardEvent.code`. Required for non-character keys
+   *  (Space, Tab) where `e.key` is ambiguous or unprintable. */
+  code?: string;
   /** Require Ctrl or Cmd. */
   ctrl?: boolean;
   /** Require Shift. */
@@ -46,8 +51,14 @@ export function useKeyboardShortcuts(
       const target = e.target;
       for (const shortcut of shortcutsRef.current) {
         if (!shortcut.allowInInputs && isTypingTarget(target)) return;
-        const keyMatches = e.key.toLowerCase() === shortcut.key.toLowerCase();
-        if (!keyMatches) continue;
+        // Prefer `code` when present — it's the physical key identifier,
+        // which is unambiguous for keys like Space where `e.key` is `' '`.
+        // Fall back to `key` (case-insensitive) for character-bound
+        // shortcuts like 'b', 'Escape', 'ArrowUp'.
+        const codeMatches = shortcut.code !== undefined && e.code === shortcut.code;
+        const keyMatches =
+          shortcut.key !== undefined && e.key.toLowerCase() === shortcut.key.toLowerCase();
+        if (!codeMatches && !keyMatches) continue;
         const ctrlMatches = !!shortcut.ctrl === (e.ctrlKey || e.metaKey);
         if (!ctrlMatches) continue;
         const shiftMatches = !!shortcut.shift === e.shiftKey;
