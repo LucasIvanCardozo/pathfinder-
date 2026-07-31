@@ -1,5 +1,6 @@
 // Shared types for the paint/erase tool layer. No React, no Konva.
 
+import type { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { PaintedCell, Piece } from '@/lib/shared/types';
 
 /** Which tool is currently active. `paint` writes a piece; `erase` clears. */
@@ -12,6 +13,14 @@ export type ToolKind = 'paint' | 'erase';
  * stroke shape.
  */
 export type BrushSize = number;
+
+/**
+ * Geometric shape of the brush footprint. Mirrors the `BRUSH_SHAPES` const
+ * array in `@/lib/shared/constants/brush` so adding a new shape is a
+ * single-source-of-truth edit. The `brushOffsets` cache and the PaintToolbar
+ * segmented control both key off this union.
+ */
+export type BrushShape = (typeof BRUSH_SHAPES)[number];
 
 /** A single grid cell at integer coordinates inside the active subdivision. */
 export type BrushCell = { gridX: number; gridY: number };

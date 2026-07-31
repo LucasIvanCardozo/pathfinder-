@@ -8,6 +8,7 @@ import { telemetry } from '@/lib/dev/perf';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import {
   type BrushCell,
+  type BrushShape,
   type BrushSize,
   brushCellsAt,
   computeStrokeCells,
@@ -35,6 +36,10 @@ type Props = {
   tool: ToolKind;
   /** Brush footprint in active-subdivision cells. Always odd; size 1 = single cell. */
   brushSize: BrushSize;
+  /** Geometric shape of the brush footprint (circle vs. square). Propagated
+   *  through `computeStrokeCells` so the painter and the hover preview
+   *  agree on the same footprint. */
+  brushShape: BrushShape;
   /** Loaded texture images keyed by `imagePath`. One HTMLImageElement per path
    *  — depth blur is now done in CSS. */
   textureImages: Map<string, HTMLImageElement>;
@@ -95,6 +100,7 @@ function FloorCanvasImpl({
   activePieceId,
   tool,
   brushSize,
+  brushShape,
   textureImages,
   viewportSize,
   pan,
@@ -238,10 +244,13 @@ function FloorCanvasImpl({
         return;
       }
       const start = isDragging ? lastStrokeCellRef.current : null;
-      const cells = computeStrokeCells(start, target, brushSize, {
-        maxX: activeMaxX,
-        maxY: activeMaxY,
-      });
+      const cells = computeStrokeCells(
+        start,
+        target,
+        brushSize,
+        { maxX: activeMaxX, maxY: activeMaxY },
+        brushShape,
+      );
       lastStrokeCellRef.current = target;
 
       if (tool === 'paint') {
@@ -260,6 +269,7 @@ function FloorCanvasImpl({
       activePieceId,
       activeSubdivisionId,
       brushSize,
+      brushShape,
       floor.id,
       onPaint,
       pointerToCell,
@@ -405,10 +415,10 @@ function FloorCanvasImpl({
       maxX: mapDims.width * activeSubdivision.cellSizeRatio,
       maxY: mapDims.height * activeSubdivision.cellSizeRatio,
     };
-    return brushCellsAt(hoverCell, brushSize, bounds);
+    return brushCellsAt(hoverCell, brushSize, bounds, brushShape);
     // We intentionally depend on hoverCell (the throttled state value), not
     // the raw pointer, so re-renders are bounded by cell changes.
-  }, [activeSubdivision, hoverCell, brushSize, mapDims.width, mapDims.height]);
+  }, [activeSubdivision, hoverCell, brushSize, brushShape, mapDims.width, mapDims.height]);
   const previewCellSize = activeSubdivision
     ? mapDims.baseCellSize / activeSubdivision.cellSizeRatio
     : 0;
@@ -591,6 +601,7 @@ function FloorCanvasImpl({
           if (prev.activePieceId !== next.activePieceId) changes.push('activePieceId');
           if (prev.tool !== next.tool) changes.push('tool');
           if (prev.brushSize !== next.brushSize) changes.push('brushSize');
+          if (prev.brushShape !== next.brushShape) changes.push('brushShape');
           if (prev.beginPan !== next.beginPan) changes.push('beginPan');
           if (prev.isSpaceDown !== next.isSpaceDown) changes.push('isSpaceDown');
           if (prev.isPanning !== next.isPanning) changes.push('isPanning');
@@ -616,6 +627,7 @@ function FloorCanvasImpl({
         prev.activePieceId === next.activePieceId &&
         prev.tool === next.tool &&
         prev.brushSize === next.brushSize &&
+        prev.brushShape === next.brushShape &&
         prev.textureImages === next.textureImages &&
         prev.viewportSize === next.viewportSize &&
         prev.pan === next.pan &&

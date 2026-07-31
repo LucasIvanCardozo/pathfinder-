@@ -10,6 +10,7 @@ export { SubdivisionTabs } from './components/SubdivisionTabs';
 export type {
   BrushBounds,
   BrushCell,
+  BrushShape,
   BrushSize,
   BrushStroke,
   EraseStrokeInput,

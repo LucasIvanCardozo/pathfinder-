@@ -3,7 +3,7 @@
 import { memo,  useMemo } from 'react';
 import { useStageViewport } from '@/hooks/useStageViewport';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
-import type { BrushCell, BrushSize, ToolKind } from '../tools';
+import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../tools';
 import { useTextureImages } from '../useTextureImages';
 import { FloorCanvas } from './FloorCanvas';
 import styles from './floor-stack.module.css';
@@ -24,6 +24,10 @@ type Props = {
   activePieceId: string | null;
   tool: ToolKind;
   brushSize: BrushSize;
+  /** Geometric shape of the brush footprint (circle vs. square). Propagated
+   *  to each FloorCanvas so the painter and the hover preview agree on
+   *  the same footprint. */
+  brushShape: BrushShape;
   onPaint: (
     floorId: string,
     subdivisionId: string,
@@ -56,6 +60,7 @@ function FloorStackImpl({
   activePieceId,
   tool,
   brushSize,
+  brushShape,
   onPaint,
   onOpenTraitMenu,
   overlay,
@@ -120,6 +125,7 @@ function FloorStackImpl({
               activePieceId={activePieceId}
               tool={tool}
               brushSize={brushSize}
+              brushShape={brushShape}
               viewportSize={viewportSize}
               pan={pan}
               zoom={zoom}

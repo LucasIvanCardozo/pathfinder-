@@ -1,6 +1,8 @@
 'use client';
 
-import { useId } from 'react';
+import React, { useId } from 'react';
+import { BRUSH_SHAPES } from '@/lib/shared/constants';
+import type { BrushShape } from '../tools';
 import {
   bumpBrushSizeDown,
   bumpBrushSizeUp,
@@ -21,6 +23,26 @@ type Props = {
    */
   brushSize: number;
   onBrushSizeChange: (size: number) => void;
+  /**
+   * Geometric shape of the brush footprint. Toggleable from the toolbar; the
+   * parent owns the value so the choice survives tool changes and (until
+   * persisted, which is intentionally not today) reloads.
+   */
+  brushShape: BrushShape;
+  onBrushShapeChange: (shape: BrushShape) => void;
+};
+
+// Shape iconography: circle uses a single-character glyph; square uses a small
+// rectangle made from box-drawing characters so the visual matches the geometric
+// footprint the brush will actually stamp.
+const SHAPE_GLYPHS: Record<BrushShape, string> = {
+  circle: '○',
+  square: '⬜',
+};
+
+const SHAPE_LABELS: Record<BrushShape, string> = {
+  circle: 'Circular',
+  square: 'Cuadrada',
 };
 
 /**
@@ -30,7 +52,14 @@ type Props = {
  * lives on the canvas (FloorCanvas); this component only exposes the
  * controls.
  */
-export function PaintToolbar({ tool, onChange, brushSize, onBrushSizeChange }: Props) {
+export function PaintToolbar({
+  tool,
+  onChange,
+  brushSize,
+  onBrushSizeChange,
+  brushShape,
+  onBrushShapeChange,
+}: Props) {
   const size = normalizeBrushSize(brushSize);
   const sliderId = useId();
 
@@ -106,6 +135,43 @@ export function PaintToolbar({ tool, onChange, brushSize, onBrushSizeChange }: P
           </button>
         </div>
       </div>
+
+      {/* Brush-shape segmented control. Mirrors the pattern of the tool
+          selector above — two buttons in a flex row with an `active` state on
+          the selected one. Source of truth for the shape options is
+          `BRUSH_SHAPES` so a new shape only needs to extend that array (plus
+          the SHAPE_GLYPHS / SHAPE_LABELS maps and the CSS rules). */}
+      <fieldset className={styles.brushSection}>
+        <legend className={styles.brushLabel}>Forma</legend>
+        <div className={styles.shapeGroup}>
+          {BRUSH_SHAPES.map((shape) => {
+            const inputId = `brush-shape-${shape}`;
+            return (
+              <React.Fragment key={shape}>
+                <input
+                  id={inputId}
+                  type="radio"
+                  name="brush-shape"
+                  value={shape}
+                  checked={brushShape === shape}
+                  onChange={() => onBrushShapeChange(shape)}
+                  className={styles.shapeInput}
+                />
+                <label
+                  htmlFor={inputId}
+                  className={`${styles.shape} ${brushShape === shape ? styles.shapeActive : ''}`}
+                  title={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
+                >
+                  <span aria-hidden="true" className={styles.shapeGlyph}>
+                    {SHAPE_GLYPHS[shape]}
+                  </span>
+                  <span className={styles.shapeLabel}>{SHAPE_LABELS[shape]}</span>
+                </label>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </fieldset>
     </div>
   );
 }

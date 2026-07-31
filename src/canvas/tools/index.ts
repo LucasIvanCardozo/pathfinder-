@@ -15,6 +15,7 @@ export { applyPaintStroke } from './paint';
 export type {
   BrushBounds,
   BrushCell,
+  BrushShape,
   BrushSize,
   BrushStroke,
   EraseStrokeInput,

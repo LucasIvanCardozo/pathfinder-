@@ -1,8 +1,8 @@
 // Pure brush geometry — no React, no Konva. All functions are deterministic
 // and side-effect-free so they can be unit-tested or reused by future tools.
 
-import { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '@/lib/shared/constants';
-import type { BrushBounds, BrushCell, BrushSize } from './types';
+import { DEFAULT_BRUSH_SHAPE, MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '@/lib/shared/constants';
+import type { BrushBounds, BrushCell, BrushShape, BrushSize } from './types';
 
 export { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE };
 
@@ -34,31 +34,41 @@ export function bumpBrushSizeDown(value: BrushSize): BrushSize {
 type Offset = { dx: number; dy: number };
 
 /**
- * Cache of cell offsets for each odd brush size. Computing a 9x9 footprint
- * is cheap, but caching avoids re-walking the disc on every stroke segment.
+ * Cache of cell offsets for each (size, shape) combination. Computing a 9x9
+ * footprint is cheap, but caching avoids re-walking the disc on every stroke
+ * segment. Keyed on `${size}|${shape}` so a stroke that toggles shape in
+ * between doesn't pollute the wrong footprint.
  */
-const offsetCache = new Map<BrushSize, ReadonlyArray<Offset>>();
+const offsetCache = new Map<string, ReadonlyArray<Offset>>();
 
 /**
  * Returns the (dx, dy) offsets from the brush centre that fall inside the
- * circular footprint. Distance is the standard rounded disc:
- *   dx² + dy² ≤ radius²
- * which keeps edges crisp (no fuzzy anti-aliased corners) and matches what
- * the user expects when they ask for a "3x3" brush.
+ * footprint for the requested shape:
+ *   - `circle`: rounded disc via `dx² + dy² ≤ radius²` (matches the
+ *     historical default; crisp edges, no fuzzy anti-aliased corners).
+ *   - `square`: full odd-by-odd footprint with crisp corners; useful for
+ *     fill work or when the user wants grid-aligned strokes without the
+ *     rounded corners that `circle` produces.
+ *
+ * Default shape is `'circle'` so existing callers (and tests that don't
+ * pass a shape) keep the historical behaviour.
  */
-export function brushOffsets(size: BrushSize): ReadonlyArray<Offset> {
-  const cached = offsetCache.get(size);
-  if (cached) return cached;
+export function brushOffsets(size: BrushSize, shape: BrushShape = DEFAULT_BRUSH_SHAPE): ReadonlyArray<Offset> {
   const normalized = normalizeBrushSize(size);
+  const key = `${normalized}|${shape}`;
+  const cached = offsetCache.get(key);
+  if (cached) return cached;
   const radius = (normalized - 1) / 2;
   const r2 = radius * radius;
   const out: Offset[] = [];
   for (let dy = -radius; dy <= radius; dy++) {
     for (let dx = -radius; dx <= radius; dx++) {
-      if (dx * dx + dy * dy <= r2) out.push({ dx, dy });
+      const inside =
+        shape === 'circle' ? dx * dx + dy * dy <= r2 : dx * dx <= r2 && dy * dy <= r2;
+      if (inside) out.push({ dx, dy });
     }
   }
-  offsetCache.set(normalized, out);
+  offsetCache.set(key, out);
   return out;
 }
 
@@ -67,8 +77,13 @@ export function brushOffsets(size: BrushSize): ReadonlyArray<Offset> {
  * cells are skipped (the brush is clipped at the map edge). The returned
  * list is de-duplicated so callers can hand it directly to React keys.
  */
-export function brushCellsAt(center: BrushCell, size: BrushSize, bounds: BrushBounds): BrushCell[] {
-  const offsets = brushOffsets(size);
+export function brushCellsAt(
+  center: BrushCell,
+  size: BrushSize,
+  bounds: BrushBounds,
+  shape: BrushShape = DEFAULT_BRUSH_SHAPE,
+): BrushCell[] {
+  const offsets = brushOffsets(size, shape);
   const seen = new Set<string>();
   const out: BrushCell[] = [];
   for (const { dx, dy } of offsets) {
@@ -133,10 +148,11 @@ export function computeStrokeCells(
   end: BrushCell,
   size: BrushSize,
   bounds: BrushBounds,
+  shape: BrushShape = DEFAULT_BRUSH_SHAPE,
 ): BrushCell[] {
-  if (!start) return brushCellsAt(end, size, bounds);
+  if (!start) return brushCellsAt(end, size, bounds, shape);
   const line = iterateGridLine(start, end);
-  const offsets = brushOffsets(size);
+  const offsets = brushOffsets(size, shape);
   const seen = new Set<string>();
   const out: BrushCell[] = [];
   for (const [gx, gy] of line) {
