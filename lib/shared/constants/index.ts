@@ -17,8 +17,8 @@
  * through the codebase.
  */
 export * from './brush';
-export * from './catalog';
 export * from './floors';
+export * from './image-pipeline';
 export * from './keyboard';
 export * from './map';
 export * from './perf';

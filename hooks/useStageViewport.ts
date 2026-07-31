@@ -1,14 +1,9 @@
 'use client';
 
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react';
-import { SHORTCUTS } from '@/lib/shared/constants';
+import { useEffect, useMemo, useRef } from 'react';
+import { usePanState } from './usePanState';
+import { useSpaceKey } from './useSpaceKey';
+import { useViewportSize } from './useViewportSize';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
 
@@ -24,16 +19,14 @@ type Params = {
 type WorldBounds = { x: number; y: number; width: number; height: number };
 
 type Return = {
-  containerRef: RefObject<HTMLDivElement | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   viewportSize: { width: number; height: number };
   pan: { x: number; y: number };
   setPan: (next: { x: number; y: number }) => void;
   /**
-   * Begin a pan drag at the given client coords. The window-level
-   * mousemove/touchmove handlers (registered by this hook) read the latest
-   * drag start and update `pan` accordingly. Calling code is responsible for
-   * calling this from the appropriate pointer-down event (typically the
-   * active FloorCanvas's `onMouseDown` or `onTouchStart`).
+   * Begin a pan drag at the given client coords. Reads the live `pan`
+   * via `panRef` so the callback stays referentially stable across pan
+   * updates (avoids invalidating FloorCanvas's memo on every pan change).
    */
   beginPan: (clientX: number, clientY: number) => void;
   isSpaceDown: boolean;
@@ -56,43 +49,17 @@ type Return = {
  * pan offset, space-key tracking, and the math that keeps the world centred
  * on first paint and preserves the visual centre across zoom changes.
  *
- * Window-level mouse/touch listeners are registered here so a pan drag
- * survives the cursor leaving the floor div — this matches the prior
- * behaviour of the monolithic `PaintCanvas`.
+ * Composes three single-responsibility hooks (`useViewportSize`, `useSpaceKey`,
+ * `usePanState`) plus the centre-on-mount and preserve-centre-on-zoom effects
+ * that orchestrate them.
  */
 export function useStageViewport({ mapDims, zoom }: Params): Return {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isSpaceDown, setIsSpaceDown] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const dragStartRef = useRef<{
-    mouseX: number;
-    mouseY: number;
-    panX: number;
-    panY: number;
-  } | null>(null);
+  const { containerRef, viewportSize } = useViewportSize();
+  const { pan, setPan, beginPan, isPanning } = usePanState();
+  const isSpaceDown = useSpaceKey();
 
-  // Track viewport size. The Stage uses these as its intrinsic dimensions
-  // so the rendered area matches the editor canvas region regardless of zoom.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setViewportSize({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
-      }
-    });
-    ro.observe(el);
-    setViewportSize({ width: el.clientWidth, height: el.clientHeight });
-    return () => ro.disconnect();
-  }, []);
-
-  // Centre the world on first valid viewport size. The `initialCenteredRef`
-  // guard keeps this from re-centring on subsequent viewport changes.
+  // Centre the world on first valid viewport size; the ref guard prevents
+  // re-centring on subsequent viewport changes.
   const initialCenteredRef = useRef(false);
   useEffect(() => {
     if (initialCenteredRef.current) return;
@@ -104,13 +71,12 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
       y: viewportSize.height / 2 - (worldHeight * zoom) / 2,
     });
     initialCenteredRef.current = true;
-  }, [viewportSize, zoom, mapDims]);
+  }, [viewportSize, zoom, mapDims, setPan]);
 
-  // Preserve the visual centre on zoom changes. Math: the world point at the
-  // viewport centre before the change is `(viewportCenter - pan) / oldZoom`;
-  // multiply by the new zoom and subtract the viewport half-size to position
-  // the same world point back at the centre. The latest `pan` is read via a
-  // ref so the effect doesn't refire on every pan change, only on zoom.
+  // Preserve the visual centre on zoom. The latest `pan` is read via a
+  // ref so the effect only fires on zoom, not on pan. Math: the world
+  // point at the viewport centre before the change is `(viewportCenter - pan)
+  // / oldZoom`; multiply by the new zoom and re-anchor.
   const panRef = useRef(pan);
   useEffect(() => {
     panRef.current = pan;
@@ -129,7 +95,7 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
       y: viewportSize.height / 2 - worldCy * zoom,
     });
     prevZoomRef.current = zoom;
-  }, [zoom, viewportSize.width, viewportSize.height]);
+  }, [zoom, viewportSize.width, viewportSize.height, setPan]);
 
   // Visible world rect (world coords). Konva applies the zoom as a stage
   // transform, so dividing viewport pixels by zoom gives world units.
@@ -142,103 +108,6 @@ export function useStageViewport({ mapDims, zoom }: Params): Return {
       height: viewportSize.height / zoom,
     };
   }, [pan.x, pan.y, zoom, viewportSize.width, viewportSize.height]);
-
-  // Track the space key to enable space+drag panning. `preventDefault` stops
-  // the browser from scrolling the page when space is held.
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === SHORTCUTS.panModifier.code && !e.repeat) {
-        e.preventDefault();
-        setIsSpaceDown(true);
-      }
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === SHORTCUTS.panModifier.code) {
-        setIsSpaceDown(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  // Begin a pan drag. Caller-provided coords (typically `event.clientX/Y`).
-  // Wrapped in `useCallback` so consumers (FloorCanvas via memo) see a stable
-  // reference unless pan itself changes.
-  const beginPan = useCallback(
-    (clientX: number, clientY: number) => {
-      // Read live coordinates through `panRef` so this callback's
-      // identity stays stable across pan updates. Without this indirection,
-      // `[pan.x, pan.y]` deps would flip `beginPan` on every mousemove
-      // during a drag, propagating through FloorCanvas's memo and
-      // forcing re-renders of inactive floors.
-      dragStartRef.current = {
-        mouseX: clientX,
-        mouseY: clientY,
-        panX: panRef.current.x,
-        panY: panRef.current.y,
-      };
-      setIsPanning(true);
-    },
-    [],
-  );
-
-  // Window-level mouse listeners for panning so the drag survives the
-  // cursor leaving the canvas area.
-  useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
-      if (!dragStartRef.current) return;
-      const drag = dragStartRef.current;
-      setPan({
-        x: drag.panX + (e.clientX - drag.mouseX),
-        y: drag.panY + (e.clientY - drag.mouseY),
-      });
-    };
-    const handleUp = () => {
-      if (dragStartRef.current) {
-        dragStartRef.current = null;
-        setIsPanning(false);
-      }
-    };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, []);
-
-  // Touch listeners mirror the mouse handlers. Single-finger drag pans; a
-  // future two-finger gesture could hook in here for pinch-zoom. The
-  // `touchmove` listener is intentionally passive so the browser can scroll
-  // elsewhere without waiting for JS.
-  useEffect(() => {
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!dragStartRef.current) return;
-      const t = e.touches[0];
-      if (!t) return;
-      const drag = dragStartRef.current;
-      setPan({
-        x: drag.panX + (t.clientX - drag.mouseX),
-        y: drag.panY + (t.clientY - drag.mouseY),
-      });
-    };
-    const handleTouchEnd = () => {
-      if (dragStartRef.current) {
-        dragStartRef.current = null;
-        setIsPanning(false);
-      }
-    };
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd);
-    return () => {
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, []);
 
   return {
     containerRef,

@@ -78,7 +78,7 @@ export function PaintToolbar({
           title="Pintar (click + drag)"
           aria-pressed={tool === 'paint'}
         >
-          🖌 Pintar
+          Pintar
         </button>
         <button
           type="button"
@@ -87,7 +87,7 @@ export function PaintToolbar({
           title="Borrar (click + drag)"
           aria-pressed={tool === 'erase'}
         >
-          🧹 Borrar
+          Borrar
         </button>
       </div>
 

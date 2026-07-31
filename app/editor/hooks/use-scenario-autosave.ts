@@ -56,46 +56,41 @@ export function useScenarioAutosave({
 
   // Mirror frequently-changing inputs in refs so `save` doesn't get
   // recreated (and the autosave `useEffect` doesn't re-run its interval)
-  // on every paint / scenario-name keystroke / baselineVersion bump. Same
-  // pattern we used in `handlePaint` — see the `paintedCellsRef` comment
-  // there for the full rationale.
+  // on every paint / scenario-name keystroke / baselineVersion bump.
   const paintedCellsRef = useRef(paintedCells);
   paintedCellsRef.current = paintedCells;
   const floorsRef = useRef(floors);
   floorsRef.current = floors;
-  // `useOpsBuffer` returns a fresh object on every render, so capturing
-  // the object directly would recreate `save` every render. Destructuring
-  // the individual pushers (which are `useCallback([])`-stable) avoids
-  // that and keeps the `save` callback referentially stable.
+  // `useOpsBuffer` returns a fresh object on every render; destructuring
+  // the (stable) pushers keeps `save` referentially stable.
   const { drain: drainOps, restore: restoreOps } = opsBuffer;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: drainOps/restoreOps are destructured from opsBuffer and are stable across renders; adding opsBuffer would invalidate the callback every render.
   const save = useCallback(
     (isAutosave = false) => {
       if (isAutosave && !isDirty) return;
 
-      // Cancel any in-flight save before starting a new one. Without this
-      // two saves could race to `setAutosaveStatus('saved')` and leave the
-      // status badge flickering between states.
+      // Cancel any in-flight save to avoid two saves racing on
+      // `setAutosaveStatus('saved')` and flickering the badge.
       abortRef.current?.abort();
       const abort = new AbortController();
       abortRef.current = abort;
 
-      // Hard ceiling on the round-trip. If the server doesn't respond within
-      // SAVE_TIMEOUT_MS the request is aborted and we surface a 'timeout'
-      // status so the user knows the autosave didn't land.
+      // Hard ceiling on the round-trip. If the server doesn't respond
+      // within SAVE_TIMEOUT_MS the request is aborted and we surface
+      // 'timeout' so the user knows the autosave didn't land.
       const timeoutId = setTimeout(() => abort.abort('save-timeout'), SAVE_TIMEOUT_MS);
 
-      // Apply the "loading" state immediately, OUTSIDE any React transition.
-      // Wrapping these in `startTransition` (which the previous version of
-      // this hook did) marks them as low-priority — the transition only
-      // resolves once the await below returns, by which time `finally` has
-      // already cleared `isSaving`. The spinner never gets a chance to render.
+      // Apply loading state OUTSIDE any React transition: wrapping in
+      // `startTransition` (as the previous version did) marks the
+      // setter as low-priority — the transition only resolves after
+      // the await, by which time `finally` has cleared `isSaving`.
       setAutosaveStatus('saving');
       setIsSaving(true);
 
       (async () => {
-        // Drain the ops buffer atomically before shipping. If the save fails
-        // we restore the same list back into the buffer (see catch arm).
+        // Drain the ops buffer atomically before shipping. If the save
+        // fails we restore the same list back into the buffer.
         const ops = opsBuffer.drain();
 
         const request: ScenarioSaveRequest = {
@@ -111,8 +106,8 @@ export function useScenarioAutosave({
                   baseCellSize: mapDims.baseCellSize,
                   width: mapDims.width,
                   height: mapDims.height,
-                  floors,
-                  paintedCells,
+                  floors: floorsRef.current,
+                  paintedCells: paintedCellsRef.current,
                 }
               : undefined,
         };
@@ -121,9 +116,8 @@ export function useScenarioAutosave({
           const result = await saveScenarioOps(request);
           if (abort.signal.aborted) return;
           if (!result.success) {
-            // Server rejected the request — keep the ops in the buffer so
-            // the next attempt re-tries them, not just whatever the user
-            // does afterwards.
+            // Server rejected — keep ops in the buffer so the next
+            // attempt re-tries them, not just whatever the user does next.
             opsBuffer.restore(ops);
             setAutosaveStatus('error');
             return;
@@ -141,14 +135,11 @@ export function useScenarioAutosave({
         } finally {
           clearTimeout(timeoutId);
           // Always clear `isSaving` — checking `abortRef.current === abort`
-          // here is racy because the useEffect cleanup at the bottom of
-          // this hook also calls `abort()` on the current controller
-          // whenever `save` is recreated by `useCallback` (which happens
-          // every time `baselineVersion` changes, i.e. after every
-          // successful save). That path could trip the check and leave
-          // the spinner running even though the save landed. Clearing
-          // unconditionally is the safe default; a newer save will
-          // re-set the flag synchronously before its own await starts.
+          // would race with the cleanup effect: `save` is recreated
+          // whenever `baselineVersion` changes (after every successful
+          // save), and the cleanup aborts the current controller too.
+          // Clearing unconditionally is safe because a newer save re-sets
+          // the flag synchronously before its own await starts.
           setIsSaving(false);
           if (abortRef.current === abort) {
             abortRef.current = null;
@@ -174,22 +165,16 @@ export function useScenarioAutosave({
     }, AUTOSAVE_INTERVAL_MS);
     return () => {
       clearInterval(id);
-      // Note: we intentionally do NOT abort in-flight saves here. The
-      // autosave interval is recreated whenever `save` (a `useCallback`)
-      // is recreated — which happens every time `baselineVersion`
-      // changes (after every successful save). Aborting on that cleanup
-      // races with the save's own `finally` block and breaks the
-      // `isSaving` reset (the spinner would stay on even after a
-      // successful save). Saves are cancelled when:
-      //   - a newer save starts (handled by `abortRef.current?.abort()`
-      //     at the top of `save`)
-      //   - the component unmounts (see useEffect below)
+      // Intentionally NOT aborting in-flight saves here. The autosave
+      // interval is recreated when `save` is recreated (which happens
+      // every `baselineVersion` change). Aborting on cleanup would race
+      // with the save's own `finally` and leave the spinner stuck on
+      // even after a successful save. Saves are cancelled when a newer
+      // one starts (inside `save`) or on unmount (see below).
     };
   }, [isDirty, save]);
 
-  // Cancel any in-flight save on unmount only. Single-instance because
-  // `useEffect(..., [])` runs once at mount and its cleanup runs once at
-  // unmount — no risk of mid-cycle aborts from re-renders.
+  // Cancel in-flight save on unmount only — single-instance via `[]`.
   useEffect(() => {
     return () => {
       abortRef.current?.abort();

@@ -296,15 +296,6 @@ function subscribe(fn: (snap: PerfSnapshot) => void): () => void {
   };
 }
 
-const EMPTY_SNAPSHOT: PerfSnapshot = {
-  timestamp: new Date(0).toISOString(),
-  durationMs: 0,
-  fps: { avg: 0, p95: 0, min: 0, max: 0, samples: 0 },
-  memory: { usedJSHeapMB: null },
-  renders: {},
-  events: {},
-  konva: { drawCount: 0, avgDrawMs: 0, maxDrawMs: 0 },
-};
 
 export const telemetry = {
   recordRender,

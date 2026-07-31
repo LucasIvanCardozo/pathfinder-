@@ -3,6 +3,8 @@
 import { memo,  useMemo } from 'react';
 import { useStageViewport } from '@/hooks/useStageViewport';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
+import { useVisibleFloors } from '../hooks/useVisibleFloors';
 import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../tools';
 import { useTextureImages } from '../useTextureImages';
 import { FloorCanvas } from './FloorCanvas';
@@ -68,30 +70,8 @@ function FloorStackImpl({
   const { containerRef, viewportSize, pan, beginPan, isSpaceDown, isPanning, worldBounds } =
     useStageViewport({ mapDims, zoom });
 
-  const cellsForFloor = useMemo(() => {
-    const m = new Map<string, PaintedCell[]>();
-    for (const cell of paintedCells) {
-      const bucket = m.get(cell.floorId);
-      if (bucket) {
-        bucket.push(cell);
-      } else {
-        m.set(cell.floorId, [cell]);
-      }
-    }
-    return m;
-  }, [paintedCells]);
-
-  // Resolve the active index defensively — if the id isn't found (degenerate
-  // empty scenario), fall back to the first floor so the canvas still
-  // initialises something visible.
-  const activeIndex = Math.max(
-    0,
-    floors.findIndex((f) => f.id === activeFloorId),
-  );
-
-  // Only floors at or below the active one render. Floors above are not
-  // drawn (matches the prior PaintCanvas behaviour: no painted cells shown).
-  const visibleFloors = useMemo(() => floors.slice(0, activeIndex + 1), [floors, activeIndex]);
+  const cellsForFloor = useFloorCellsByFloor(paintedCells);
+  const { activeIndex, visibleFloors } = useVisibleFloors(floors, activeFloorId);
 
   // Load every piece's texture image once and share the map with all
   // FloorCanvas instances — the browser deduplicates the network requests
@@ -115,7 +95,7 @@ function FloorStackImpl({
           <FloorCanvas key={floor.id}
               floor={floor}
               cells={cells}
-              depthFromActive={Math.max(0, activeIndex - idx)}
+              depthFromActive={activeIndex - idx}
               isActive={isActive}
               mapDims={mapDims}
               subdivisions={subdivisions}

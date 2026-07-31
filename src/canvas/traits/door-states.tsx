@@ -1,10 +1,13 @@
 'use client';
 
-import type { PaintedCell, Piece } from '@/lib/shared/types';
+import { DoorStateSchema } from '@/lib/shared/schemas';
+import type { DoorState, PaintedCell, Piece } from '@/lib/shared/types';
 import { StateMenu } from './StateMenu';
 
-export const DOOR_STATES = ['closed', 'open', 'locked'] as const;
-export type DoorState = (typeof DOOR_STATES)[number];
+// Source of truth is `DoorStateSchema` in `lib/shared/schemas/piece.schemas.ts`.
+// `DOOR_STATES` is derived here only because `StateMenu` and `DOOR_LABELS`
+// need a runtime array; the canonical order comes from the Zod enum.
+export const DOOR_STATES = DoorStateSchema.options;
 
 const DOOR_LABELS: Record<DoorState, string> = {
   closed: 'Cerrada',

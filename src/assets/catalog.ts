@@ -5,23 +5,6 @@ import type { Piece } from "@/lib/shared/types";
 
 export const ALL_PIECES: Piece[] = [
   {
-    "id": "decoration-marker",
-    "name": "Decoration Marker",
-    "category": "decoration",
-    "visualStates": [
-      {
-        "id": "default",
-        "imagePath": "/pieces/textures/decoration/marker.svg",
-        "isDefault": true
-      }
-    ],
-    "width": 16,
-    "height": 16,
-    "tags": [
-      "decoration"
-    ]
-  },
-  {
     "id": "door",
     "name": "Door",
     "category": "door",
@@ -53,30 +36,13 @@ export const ALL_PIECES: Piece[] = [
     ]
   },
   {
-    "id": "floor-pasto",
-    "name": "Floor Pasto",
+    "id": "floor-agua",
+    "name": "Floor Agua",
     "category": "floor",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/floor/pasto.webp",
-        "isDefault": true
-      }
-    ],
-    "width": 128,
-    "height": 128,
-    "tags": [
-      "floor"
-    ]
-  },
-  {
-    "id": "floor-sand",
-    "name": "Floor Sand",
-    "category": "floor",
-    "visualStates": [
-      {
-        "id": "default",
-        "imagePath": "/pieces/textures/floor/sand.svg",
+        "imagePath": "/pieces/textures/floor/agua.webp",
         "isDefault": true
       }
     ],
@@ -87,13 +53,13 @@ export const ALL_PIECES: Piece[] = [
     ]
   },
   {
-    "id": "floor-stone",
-    "name": "Floor Stone",
+    "id": "floor-arena",
+    "name": "Floor Arena",
     "category": "floor",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/floor/stone.svg",
+        "imagePath": "/pieces/textures/floor/arena.webp",
         "isDefault": true
       }
     ],
@@ -104,13 +70,234 @@ export const ALL_PIECES: Piece[] = [
     ]
   },
   {
-    "id": "floor-wood",
-    "name": "Floor Wood",
+    "id": "floor-azul",
+    "name": "Floor Azul",
     "category": "floor",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/floor/wood.svg",
+        "imagePath": "/pieces/textures/floor/azul.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-azul_grande",
+    "name": "Floor Azul Grande",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/azul_grande.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-cesped",
+    "name": "Floor Cesped",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/cesped.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-cesped_agujero",
+    "name": "Floor Cesped Agujero",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/cesped_agujero.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-madera",
+    "name": "Floor Madera",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/madera.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-madera_rota",
+    "name": "Floor Madera Rota",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/madera_rota.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-marfil",
+    "name": "Floor Marfil",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/marfil.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-marfil_grande",
+    "name": "Floor Marfil Grande",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/marfil_grande.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-ocre",
+    "name": "Floor Ocre",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/ocre.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-ocre_grande",
+    "name": "Floor Ocre Grande",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/ocre_grande.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-pantano",
+    "name": "Floor Pantano",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/pantano.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-piedra",
+    "name": "Floor Piedra",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/piedra.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-piedra_lisa",
+    "name": "Floor Piedra Lisa",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/piedra_lisa.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "floor"
+    ]
+  },
+  {
+    "id": "floor-tierra",
+    "name": "Floor Tierra",
+    "category": "floor",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/floor/tierra.webp",
         "isDefault": true
       }
     ],
@@ -138,30 +325,47 @@ export const ALL_PIECES: Piece[] = [
     ]
   },
   {
-    "id": "wall-azul",
-    "name": "Wall Azul",
-    "category": "wall",
+    "id": "roof-paja_centro",
+    "name": "Roof Paja Centro",
+    "category": "other",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/wall/azul.webp",
+        "imagePath": "/pieces/textures/roof/paja_centro.webp",
         "isDefault": true
       }
     ],
-    "width": 128,
-    "height": 128,
+    "width": 64,
+    "height": 64,
     "tags": [
-      "wall"
+      "other"
     ]
   },
   {
-    "id": "wall-stone",
-    "name": "Wall Stone",
+    "id": "roof-teja_roja",
+    "name": "Roof Teja Roja",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/roof/teja_roja.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "wall-marco",
+    "name": "Wall Marco",
     "category": "wall",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/wall/stone.svg",
+        "imagePath": "/pieces/textures/wall/marco.webp",
         "isDefault": true
       }
     ],
@@ -172,20 +376,258 @@ export const ALL_PIECES: Piece[] = [
     ]
   },
   {
-    "id": "water-plain",
-    "name": "Water Plain",
-    "category": "water",
+    "id": "wall-marco_diagonal",
+    "name": "Wall Marco Diagonal",
+    "category": "wall",
     "visualStates": [
       {
         "id": "default",
-        "imagePath": "/pieces/textures/water/plain.svg",
+        "imagePath": "/pieces/textures/wall/marco_diagonal.webp",
         "isDefault": true
       }
     ],
     "width": 64,
     "height": 64,
     "tags": [
-      "water"
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-marco_fondo",
+    "name": "Wall Marco Fondo",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/marco_fondo.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-marco_fondo_diagonal",
+    "name": "Wall Marco Fondo Diagonal",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/marco_fondo_diagonal.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-tablas",
+    "name": "Wall Tablas",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/tablas.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-tablas_clavadas",
+    "name": "Wall Tablas Clavadas",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/tablas_clavadas.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-tablas_cruz",
+    "name": "Wall Tablas Cruz",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/tablas_cruz.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "wall-tablas_diagonal",
+    "name": "Wall Tablas Diagonal",
+    "category": "wall",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/wall/tablas_diagonal.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "wall"
+    ]
+  },
+  {
+    "id": "window-ventana",
+    "name": "Window Ventana",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_cerrada",
+    "name": "Window Ventana Cerrada",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_cerrada.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_cruz",
+    "name": "Window Ventana Cruz",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_cruz.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_cruz_luz",
+    "name": "Window Ventana Cruz Luz",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_cruz_luz.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_horizontal",
+    "name": "Window Ventana Horizontal",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_horizontal.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_luz",
+    "name": "Window Ventana Luz",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_luz.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_metal",
+    "name": "Window Ventana Metal",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_metal.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
+    ]
+  },
+  {
+    "id": "window-ventana_vertical",
+    "name": "Window Ventana Vertical",
+    "category": "other",
+    "visualStates": [
+      {
+        "id": "default",
+        "imagePath": "/pieces/textures/window/ventana_vertical.webp",
+        "isDefault": true
+      }
+    ],
+    "width": 64,
+    "height": 64,
+    "tags": [
+      "other"
     ]
   }
 ];

@@ -3,14 +3,9 @@
 //   2. Implement it in `src/canvas/traits/<kind>.ts`.
 //   3. Add the entry to `traitRegistry` below.
 
-// Central registry of piece traits. To add a new trait:
-//   1. Add the trait data type to `src/pieces/traits.ts` (with Zod schema).
-//   2. Implement it in `src/canvas/traits/<kind>.ts`.
-//   3. Add the entry to `traitRegistry` below.
-
 import type { PaintedCell, Piece } from '@/lib/shared/types';
 import { blocksLightTrait } from './blocks-light';
-import { type DoorState, doorStatesTrait } from './door-states';
+import { doorStatesTrait } from './door-states';
 
 export type TraitMenuProps<TState> = {
   cell: PaintedCell;
@@ -77,4 +72,4 @@ export function defaultEntityStateFor(
   return undefined;
 }
 
-export type { DoorState };
+

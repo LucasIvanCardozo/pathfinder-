@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { listAllPieces } from '@/lib/server/actions/piece.action';
-import styles from '../../page.module.css';
+import styles from './page.module.css';
 import { PiecesGallery } from './PiecesGallery';
 
 export default async function PiecesGalleryPage() {

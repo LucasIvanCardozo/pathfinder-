@@ -165,21 +165,13 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
 
     /**
      * Apply a batch of `ScenarioOp`s to an existing scenario inside one
-     * transaction. Each op is small and targeted (a few rows at most), so
-     * the TX stays under Prisma's default 5 s timeout for any realistic
-     * batch — the previous "delete everything + re-insert" path was the
-     * real source of the timeout (memory observation
-     * "pathfinder-diff-based-autosave").
-     *
-     * Ops are applied in order. Order matters:
-     *   - paintCells then eraseCells on the same id → cell ends up deleted
-     *   - eraseCells then paintCells on the same id → cell ends up created
-     * The client buffers ops in the order the user produced them, so
-     * replaying in array order reproduces the final state.
-     *
-     * If `request.scenarioId === null`, the client sent `initialState`
-     * (the full first-save payload) and we create the scenario first, then
-     * replay ops on top.
+     * transaction. Each op is small and targeted, so the TX stays under
+     * Prisma's 5 s timeout for any realistic batch — the previous
+     * "delete everything + re-insert" path was the real source of the
+     * timeout. Ops run in array order (paint then erase on the same id
+     * → erased; erase then paint → created). On first save
+     * (`scenarioId === null`) the `initialState` payload seeds the
+     * scenario and ops replay on top.
      */
     async applyOpsInTx(request: ScenarioSaveRequest) {
       return runInTx(db)(async (tx) => {
@@ -329,11 +321,9 @@ async function applyOp(
           })),
         });
       }
-      // Replaces are still per-row because pieceId and entityState may
-      // differ per cell. A future optimisation could collapse strokes that
-      // share pieceId + entityState into a single `updateMany` (memory
-      // observation "pathfinder-collapsed-replace"); today the common case
-      // is new paints, so the cost here is negligible.
+      // Replaces stay per-row because pieceId / entityState may differ
+      // per cell. A future optimisation could collapse strokes that share
+      // pieceId + entityState into a single `updateMany`.
       for (const cell of replacedCells) {
         await tx.paintedCell.update({
           where: { id: cell.id },
@@ -385,8 +375,7 @@ async function applyOp(
     }
     case 'addFloor': {
       // Compute `order` so the new floor lands at the top or bottom of the
-      // stack. We read the current max/min in the same TX to keep the
-      // operation race-free.
+      // stack. Read current max/min in the same TX to stay race-free.
       if (op.position === 'above') {
         const max = await tx.floor.aggregate({
           where: { scenarioId },
@@ -429,9 +418,6 @@ async function applyOp(
       return;
     }
     default: {
-      // Discriminated-union exhaustiveness: every variant of `ScenarioOp`
-      // is handled above; if you add a new one and forget to wire it here,
-      // this line fails the typecheck.
       const _exhaustive: never = op;
       throw new Error(`applyOp: unknown op type`);
     }

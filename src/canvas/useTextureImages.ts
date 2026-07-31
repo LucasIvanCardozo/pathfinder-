@@ -24,6 +24,7 @@ export function useTextureImages(paths: readonly string[]): Map<string, HTMLImag
   // Cheap vs. the network roundtrip it gates: O(N log N) only on content shift.
   const signature = useMemo(() => paths.slice().sort().join('\x1f'), [paths]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: signature derives from paths (content equality); depending on the array directly would re-fetch on every parent re-bucket.
   useEffect(() => {
     if (paths.length === 0) {
       setImages(new Map());

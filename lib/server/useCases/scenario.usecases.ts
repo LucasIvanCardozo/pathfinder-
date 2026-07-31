@@ -51,12 +51,9 @@ export const scenarioUseCases = {
   /**
    * Apply a batch of `ScenarioOp`s to a scenario. Returns the persisted id
    * and the bumped `updatedAt` (used as the next round's `baselineVersion`).
-   *
-   * This is the new op-based save path: small targeted Prisma operations
-   * inside one TX, replacing the previous "delete everything + re-insert"
-   * upsert. Payload size drops from O(cells) to O(changes-since-last-save)
-   * and the TX timeout (memory observation "pathfinder-diff-based-autosave")
-   * goes away because no single statement is expensive.
+   * Replaces the legacy "delete everything + re-insert" upsert with small
+   * targeted Prisma operations inside one TX, dropping the payload size
+   * from O(cells) to O(changes-since-last-save).
    */
   async applyOps(db: TxOrClient, request: ScenarioSaveRequest) {
     return scenarioRepository(db).applyOpsInTx(request);
@@ -64,9 +61,9 @@ export const scenarioUseCases = {
 
   /**
    * Create a starter scenario with the default three floors (Subsuelo 1,
-   * Planta Baja, Piso 1) and the map dimensions supplied by the caller.
-   * Used by the redirect-issuing `createBlankScenario` action — the
-   * redirect signal would be lost if this were wrapped in `createAction`.
+   * Planta Baja, Piso 1) and the caller-supplied map dimensions. Used by
+   * the redirect-issuing `createBlankScenario` action — `createAction`
+   * would swallow the redirect signal.
    */
   async createBlank(
     db: TxOrClient,
