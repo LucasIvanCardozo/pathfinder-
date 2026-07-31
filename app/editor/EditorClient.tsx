@@ -24,7 +24,7 @@ import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
 import { BenchmarkPanel, PerfHud, telemetry } from '@/lib/dev/perf';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import { DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
+import { DEFAULT_BRUSH_SHAPE, SHORTCUTS, SUBDIVISIONS, bindShortcut } from '@/lib/shared/constants';
 import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
@@ -310,45 +310,39 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   };
 
   useKeyboardShortcuts([
-    { key: 'b', handler: () => setTool('paint') },
-    { key: 'e', handler: () => setTool('erase') },
-    { key: '[', handler: () => setBrushSize((s) => bumpBrushSizeDown(normalizeBrushSize(s))) },
-    { key: ']', handler: () => setBrushSize((s) => bumpBrushSizeUp(normalizeBrushSize(s))) },
-    // Shift+B toggles between circular and square brush shape. Modifying B
-    // (the paint tool shortcut) is intentional — the same key covers both
-    // paint-tool and brush-shape, with Shift as the modifier. The segmented
-    // control in the PaintToolbar is the alternative.
-    {
-      key: 'b',
-      shift: true,
-      handler: () =>
-        setBrushShape((current) => (current === 'circle' ? 'square' : 'circle')),
-    },
-    {
-      key: 's',
-      ctrl: true,
-      handler: () => {
-        if (isSaving) return;
-        save(false);
-      },
-    },
-    {
-      key: 'Escape',
-      handler: () => {
-        // Close the trait menu first (it's the more common reason the user
-        // pressed Escape). Then, if it's already closed and the canvas is in
-        // expanded mode, collapse it. This priority makes Escape feel like
-        // "back out of whatever UI is on top".
-        traitMenu.close();
-        setIsCanvasExpanded(false);
-      },
-    },
+    bindShortcut('paintTool', () => setTool('paint')),
+    bindShortcut('eraseTool', () => setTool('erase')),
+    bindShortcut('brushSizeDown', () =>
+      setBrushSize((s) => bumpBrushSizeDown(normalizeBrushSize(s))),
+    ),
+    bindShortcut('brushSizeUp', () =>
+      setBrushSize((s) => bumpBrushSizeUp(normalizeBrushSize(s))),
+    ),
+    bindShortcut('toggleBrushShape', () =>
+      setBrushShape((current) => (current === 'circle' ? 'square' : 'circle')),
+    ),
+    bindShortcut('save', () => {
+      if (isSaving) return;
+      save(false);
+    }),
+    bindShortcut('closeOverlay', () => {
+      // Close the trait menu first (it's the more common reason the user
+      // pressed Escape). Then, if it's already closed and the canvas is in
+      // expanded mode, collapse it. This priority makes Escape feel like
+      // "back out of whatever UI is on top".
+      traitMenu.close();
+      setIsCanvasExpanded(false);
+    }),
+    // Subdivision switches are generated dynamically (one per subdivision,
+    // bound to keys '1'..'9'). Spread the template entry and override the
+    // `key` per item; everything else (label, category) is shared.
     ...subdivisions.map((sub, i) => ({
+      ...SHORTCUTS.subdivisionTemplate,
       key: String(i + 1),
       handler: () => handleSubdivisionChange(sub.id),
     })),
-    { key: 'ArrowUp', shift: true, handler: handleFloorUp },
-    { key: 'ArrowDown', shift: true, handler: handleFloorDown },
+    bindShortcut('floorUp', handleFloorUp),
+    bindShortcut('floorDown', handleFloorDown),
   ]);
 
   const handleToolChange = (newTool: PaintTool) => {

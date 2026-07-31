@@ -21,6 +21,7 @@ export * from './catalog';
 export * from './floors';
 export * from './map';
 export * from './perf';
+export * from './shortcuts';
 export * from './subdivisions';
 export * from './timing';
 export * from './validation';

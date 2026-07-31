@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { SHORTCUTS } from '@/lib/shared/constants';
 import styles from './state-menu.module.css';
 
 type StateMenuProps = {
@@ -45,7 +46,12 @@ export function StateMenu({
       if (!target.closest('[data-state-menu]')) onClose();
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      // Read from the centralised registry so re-binding the close-overlay
+      // shortcut (e.g. to something other than 'Escape') takes effect here
+      // automatically. `KeyboardEvent.key` is already canonical ('Escape'
+      // is returned exactly for that physical key), so direct equality is
+      // sufficient — no `.toLowerCase()` needed.
+      if (e.key === SHORTCUTS.closeOverlay.key) onClose();
     };
     const t = setTimeout(() => {
       document.addEventListener('pointerdown', handlePointerDown, true);
