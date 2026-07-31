@@ -3,11 +3,12 @@ import { Prisma } from '@/generated/prisma/client';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
 import { runInTx } from '@/lib/server/utils/runInTx';
+import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
+import type { SaveScenarioInput } from '@/lib/shared/types/scenario.types';
 import { isPlantaBajaName } from '@/lib/shared/floors/naming';
 import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
 import type {
   LoadScenarioResult,
-  SaveScenarioInput,
   ScenarioSummary,
 } from '@/lib/shared/types/scenario.types';
 
@@ -102,6 +103,9 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
      * deleted, the new floor set is bulk-inserted, painted cells are
      * bulk-inserted. Branches on `input.id` to update vs. create. Map
      * dimensions are persisted on the scenario row.
+     *
+     * Kept for the legacy `saveScenario` action. New code should use
+     * `applyOpsInTx` which is a fraction of the cost for incremental saves.
      */
     upsertInTx(tx: PrismaClient | Prisma.TransactionClient, input: SaveScenarioInput) {
       return runInTx(tx)(async (dbTx) => {
@@ -160,6 +164,97 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
     },
 
     /**
+     * Apply a batch of `ScenarioOp`s to an existing scenario inside one
+     * transaction. Each op is small and targeted (a few rows at most), so
+     * the TX stays under Prisma's default 5 s timeout for any realistic
+     * batch — the previous "delete everything + re-insert" path was the
+     * real source of the timeout (memory observation
+     * "pathfinder-diff-based-autosave").
+     *
+     * Ops are applied in order. Order matters:
+     *   - paintCells then eraseCells on the same id → cell ends up deleted
+     *   - eraseCells then paintCells on the same id → cell ends up created
+     * The client buffers ops in the order the user produced them, so
+     * replaying in array order reproduces the final state.
+     *
+     * If `request.scenarioId === null`, the client sent `initialState`
+     * (the full first-save payload) and we create the scenario first, then
+     * replay ops on top.
+     */
+    async applyOpsInTx(request: ScenarioSaveRequest) {
+      return runInTx(db)(async (tx) => {
+        let scenarioId: string;
+
+        if (request.scenarioId === null) {
+          if (!request.initialState) {
+            throw new Error('applyOpsInTx: scenarioId === null requires initialState');
+          }
+          // Seed: create scenario + floors + bulk-insert cells, then replay
+          // any ops the client already accumulated against the (empty)
+          // initial state. This mirrors what `upsertInTx` did for the first
+          // save but with the new op-based path so the client can stay
+          // op-buffer-shaped even on first save.
+          const created = await tx.scenario.create({
+            data: {
+              name: request.initialState.name,
+              baseCellSize: request.initialState.baseCellSize,
+              width: request.initialState.width,
+              height: request.initialState.height,
+              floors: {
+                create: request.initialState.floors.map((f, i) => ({
+                  id: f.id,
+                  name: f.name,
+                  order: i,
+                })),
+              },
+            },
+          });
+          scenarioId = created.id;
+
+          const initialCells = request.initialState.paintedCells.map((c) => ({
+            id: c.id,
+            floorId: c.floorId,
+            subdivisionId: c.subdivisionId,
+            gridX: c.gridX,
+            gridY: c.gridY,
+            pieceId: c.pieceId,
+            entityState: (c.entityState ?? Prisma.JsonNull) as
+              | Prisma.InputJsonValue
+              | typeof Prisma.JsonNull,
+          }));
+          if (initialCells.length > 0) {
+            await paintedCellRepository(tx).createManyInTx(tx, initialCells);
+          }
+        } else {
+          scenarioId = request.scenarioId;
+          // Light existence check so the caller gets a clean 404-style error
+          // instead of a Prisma foreign-key violation mid-replay.
+          const exists = await tx.scenario.findUnique({
+            where: { id: scenarioId },
+            select: { id: true },
+          });
+          if (!exists) {
+            throw new Error(`applyOpsInTx: scenario ${scenarioId} not found`);
+          }
+        }
+
+        for (const op of request.ops) {
+          await applyOp(tx, scenarioId, op);
+        }
+
+        // Bump `updatedAt` so the next save's `baselineVersion` can be
+        // compared. Returning the new value lets the client capture it for
+        // the next round.
+        const updated = await tx.scenario.update({
+          where: { id: scenarioId },
+          data: { updatedAt: new Date() },
+          select: { id: true, updatedAt: true },
+        });
+        return { id: updated.id, updatedAt: updated.updatedAt };
+      });
+    },
+
+    /**
      * Create the starter scenario with the default three floors used by
      * `createBlankScenario`. Map dimensions come from `input` so the
      * scenario-level constants drive both the new scenario row and the
@@ -188,4 +283,157 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       });
     },
   };
+}
+
+/**
+ * Replay one op against an open transaction. Throws on unknown ids or
+ * constraint violations — the surrounding `runInTx` rolls back the whole
+ * batch so the scenario never lands in a half-applied state.
+ */
+async function applyOp(
+  tx: Prisma.TransactionClient,
+  scenarioId: string,
+  op: ScenarioOp,
+): Promise<void> {
+  switch (op.type) {
+    case 'paintCells': {
+      if (op.cells.length === 0) return;
+      // Batch upsert: 1 SELECT to detect existing ids, 1 createMany for
+      // the new rows, N updates for the replaces. Replaces are typically a
+      // minority of the cells in a stroke (most paints are over empty
+      // cells or paint the same piece), so this avoids the N-times-SELECT
+      // pattern of the previous per-cell `upsert`. For 10k+ cells this
+      // drops server time from ~5 s to <500 ms (memory observation
+      // "pathfinder-batch-upsert"; tracked in PR #10362 upstream).
+      const ids = op.cells.map((c) => c.id);
+      const existing = await tx.paintedCell.findMany({
+        where: { id: { in: ids } },
+        select: { id: true },
+      });
+      const existingIds = new Set(existing.map((e) => e.id));
+      const newCells = op.cells.filter((c) => !existingIds.has(c.id));
+      const replacedCells = op.cells.filter((c) => existingIds.has(c.id));
+
+      if (newCells.length > 0) {
+        await tx.paintedCell.createMany({
+          data: newCells.map((c) => ({
+            id: c.id,
+            floorId: op.floorId,
+            subdivisionId: op.subdivisionId,
+            gridX: c.gridX,
+            gridY: c.gridY,
+            pieceId: c.pieceId,
+            entityState: (c.entityState ?? Prisma.JsonNull) as
+              | Prisma.InputJsonValue
+              | typeof Prisma.JsonNull,
+          })),
+        });
+      }
+      // Replaces are still per-row because pieceId and entityState may
+      // differ per cell. A future optimisation could collapse strokes that
+      // share pieceId + entityState into a single `updateMany` (memory
+      // observation "pathfinder-collapsed-replace"); today the common case
+      // is new paints, so the cost here is negligible.
+      for (const cell of replacedCells) {
+        await tx.paintedCell.update({
+          where: { id: cell.id },
+          data: {
+            pieceId: cell.pieceId,
+            entityState: (cell.entityState ?? Prisma.JsonNull) as
+              | Prisma.InputJsonValue
+              | typeof Prisma.JsonNull,
+          },
+        });
+      }
+      return;
+    }
+    case 'eraseCells': {
+      await tx.paintedCell.deleteMany({ where: { id: { in: op.cellIds } } });
+      return;
+    }
+    case 'setEntityState': {
+      await tx.paintedCell.update({
+        where: { id: op.cellId },
+        data: {
+          entityState: op.entityState === null
+            ? Prisma.JsonNull
+            : (op.entityState as Prisma.InputJsonValue),
+        },
+      });
+      return;
+    }
+    case 'clearAllCells': {
+      await tx.paintedCell.deleteMany({
+        where: { floor: { scenarioId } },
+      });
+      return;
+    }
+    case 'clearFloor': {
+      await tx.paintedCell.deleteMany({
+        where: { floorId: op.floorId },
+      });
+      return;
+    }
+    case 'clearSubdivision': {
+      await tx.paintedCell.deleteMany({
+        where: {
+          floorId: op.floorId,
+          subdivisionId: op.subdivisionId,
+        },
+      });
+      return;
+    }
+    case 'addFloor': {
+      // Compute `order` so the new floor lands at the top or bottom of the
+      // stack. We read the current max/min in the same TX to keep the
+      // operation race-free.
+      if (op.position === 'above') {
+        const max = await tx.floor.aggregate({
+          where: { scenarioId },
+          _max: { order: true },
+        });
+        await tx.floor.create({
+          data: {
+            id: op.floor.id,
+            scenarioId,
+            name: op.floor.name,
+            order: (max._max.order ?? -1) + 1,
+          },
+        });
+      } else {
+        const min = await tx.floor.aggregate({
+          where: { scenarioId },
+          _min: { order: true },
+        });
+        await tx.floor.create({
+          data: {
+            id: op.floor.id,
+            scenarioId,
+            name: op.floor.name,
+            order: (min._min.order ?? 0) - 1,
+          },
+        });
+        // Shift existing floors down by one so the new one is index 0.
+        await tx.floor.updateMany({
+          where: { scenarioId, id: { not: op.floor.id } },
+          data: { order: { increment: 1 } },
+        });
+      }
+      return;
+    }
+    case 'setScenarioName': {
+      await tx.scenario.update({
+        where: { id: scenarioId },
+        data: { name: op.name },
+      });
+      return;
+    }
+    default: {
+      // Discriminated-union exhaustiveness: every variant of `ScenarioOp`
+      // is handled above; if you add a new one and forget to wire it here,
+      // this line fails the typecheck.
+      const _exhaustive: never = op;
+      throw new Error(`applyOp: unknown op type`);
+    }
+  }
 }

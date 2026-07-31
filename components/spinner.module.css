@@ -1,0 +1,30 @@
+/* Spinner — single quarter-arc that rotates. The arc length (stroke-dasharray)
+ * matches a 25 % gap so the rotation looks continuous even at low frame rates. */
+
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  flex: 0 0 auto;
+}
+
+.spinner svg {
+  width: 100%;
+  height: 100%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Honor the OS-level motion preference — still show the arc but don't spin.
+   * Users can still see the affordance; we just don't animate. */
+  .spinner svg {
+    animation: none;
+  }
+}

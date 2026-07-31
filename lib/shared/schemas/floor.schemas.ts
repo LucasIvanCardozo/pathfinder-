@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FLOOR_LIMITS } from '@/lib/shared/constants';
 
 /**
  * A single floor inside a scenario. Floors are vertical slices of the same
@@ -7,5 +8,5 @@ import { z } from 'zod';
  */
 export const FloorSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(FLOOR_LIMITS.NAME_MAX),
 });

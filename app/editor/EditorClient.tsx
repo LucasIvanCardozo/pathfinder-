@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   applyEraseStroke,
   applyPaintStroke,
@@ -19,13 +19,16 @@ import {
   WeatherPanel,
 } from '@/canvas';
 import { Button } from '@/components/Button';
+import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
 import { BenchmarkPanel, PerfHud, telemetry } from '@/lib/dev/perf';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import { SUBDIVISIONS, type Floor, type PaintedCell, type Piece } from '@/lib/shared/types';
+import { SUBDIVISIONS } from '@/lib/shared/constants';
+import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
+import { useOpsBuffer } from './hooks/use-ops-buffer';
 import { useScenarioAutosave } from './hooks/use-scenario-autosave';
 import { useTraitMenu } from './hooks/use-trait-menu';
 import { useWeatherSession } from './hooks/use-weather-session';
@@ -56,6 +59,12 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const router = useRouter();
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenario?.id ?? null);
   const [scenarioName, setScenarioName] = useState(initialScenario?.name ?? '');
+  /**
+   * `updatedAt` of the scenario at the moment we loaded it (or last
+   * successful save). Server-returned after each save; used as
+   * `baselineVersion` in the save request. `null` until the first save.
+   */
+  const [baselineVersion, setBaselineVersion] = useState<string | null>(null);
   const [floors, setFloors] = useState<Floor[]>(initialScenario?.floors ?? []);
   const [activeFloorId, setActiveFloorId] = useState(initialScenario?.activeFloorId ?? '');
   // Subdivisions are an immutable hardcoded set (see `SUBDIVISIONS`);
@@ -96,6 +105,28 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const pieceById = usePieceMap(allPieces);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
+
+  // Ops buffer: every mutation that affects the scenario pushes an op here
+  // instead of relying on `setPaintedCells` alone. The autosave hook drains
+  // the buffer atomically when shipping the request. See `use-ops-buffer.ts`
+  // for the full rationale (memory observation
+  // "pathfinder-diff-based-autosave").
+  const opsBuffer = useOpsBuffer();
+
+  // Mirror `paintedCells` in a ref so `handlePaint` can read the current
+  // cells without listing it in its useCallback deps. Including it would
+  // recreate `handlePaint` on every paint (the state is a fresh array
+  // every time), which propagates to FloorStack and invalidates the
+  // `React.memo` on every `FloorCanvas` — defeating the inactive-floor
+  // skip-render optimisation.
+  const paintedCellsRef = useRef(paintedCells);
+  paintedCellsRef.current = paintedCells;
+  // Same trick for the ops buffer: `useOpsBuffer` returns a fresh object on
+  // every render, so capturing it directly would recreate `handlePaint`
+  // every render. Destructuring the individual pushers — which are
+  // `useCallback([])`-stable — gives us stable references.
+  const { pushPaint, pushErase } = opsBuffer;
+
   const { isSaving, autosaveStatus, savedAt, save } = useScenarioAutosave({
     scenarioName,
     scenarioId,
@@ -103,11 +134,22 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     floors,
     paintedCells,
     isDirty,
+    opsBuffer,
+    baselineVersion,
     onSaved: useCallback(
-      (savedId: string) => {
+      (savedId: string, newVersion: string) => {
         setScenarioId(savedId);
-        router.replace(`/editor?id=${savedId}`);
+        setBaselineVersion(newVersion);
         setIsDirty(false);
+        // `router.replace` only changes the URL bar — it does NOT re-fetch
+        // the RSC payload. After a save that wiped state (e.g. clearAllCells)
+        // or rewrote cell rows in place, the server component's `findById`
+        // may still return what the cache had pre-save on the next render.
+        // `router.refresh()` forces a fresh fetch and discards the RSC
+        // payload, so the next render reflects the post-save DB row count
+        // exactly.
+        router.replace(`/editor?id=${savedId}`);
+        router.refresh();
       },
       [router],
     ),
@@ -125,9 +167,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     setActiveFloorId,
     setFloors,
     markDirty,
+    pushAddFloor: opsBuffer.pushAddFloor,
   });
   const { weatherState, setWeatherState, thunderAt } = useWeatherSession();
-  const traitMenu = useTraitMenu({ paintedCells, setPaintedCells, pieceById, markDirty });
+  const traitMenu = useTraitMenu({
+    paintedCells,
+    setPaintedCells,
+    pieceById,
+    markDirty,
+    pushEntityState: opsBuffer.pushEntityState,
+  });
 
   const handlePaint = useCallback(
     (
@@ -139,28 +188,110 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       if (cells.length === 0) return;
       markDirty();
 
+      const stroke = { floorId, subdivisionId, cells };
+      // Two distinct composite keys, deliberately NOT the same closure:
+      //   - `existingKey(c)` uses the floorId/subdivisionId from the
+      //     existing cell. This is how we index the lookup maps so cells
+      //     from DIFFERENT floors with the same (gridX, gridY) don't
+      //     collide — that bug (caught in the op-based autosave refactor)
+      //     caused `eraseIds` to receive the id of a cell from a different
+      //     floor when painting/erasing on top of one with the same
+      //     logical coordinates.
+      //   - `strokeKey(gx, gy)` uses the stroke's floorId/subdivisionId.
+      //     This is how we look up "is there an existing cell at this
+      //     stroke position?" — the stroke is always one specific
+      //     (floor, subdivision) so the lookup key matches.
+      // The previous version used `floorId|subdivisionId` from the closure
+      // for both — that meant cells from other floors had the wrong key
+      // suffix in the map and were overwritten by the last cell to land on
+      // that (gridX, gridY) coordinate.
+      const existingKey = (c: {
+        floorId: string;
+        subdivisionId: string;
+        gridX: number;
+        gridY: number;
+      }) => `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`;
+      const strokeKey = (gx: number, gy: number) =>
+        `${floorId}|${subdivisionId}|${gx}|${gy}`;
+
+      // Read the latest `paintedCells` from the ref, not the closure —
+      // that's how we keep `paintedCells` out of this callback's deps.
+      const currentPaintedCells = paintedCellsRef.current;
+
       if (tool === 'erase') {
         telemetry.recordEvent('erase');
-        setPaintedCells((prev) =>
-          applyEraseStroke({ stroke: { floorId, subdivisionId, cells }, paintedCells: prev }),
+        const next = applyEraseStroke({ stroke, paintedCells: currentPaintedCells });
+        // Find which prev cells landed in the stroke but were removed —
+        // these are the ids the server must delete.
+        const prevByKey = new Map(
+          currentPaintedCells.map((c) => [existingKey(c), c]),
         );
+        const removedIds: string[] = [];
+        for (const cell of cells) {
+          const existing = prevByKey.get(strokeKey(cell.gridX, cell.gridY));
+          if (existing) removedIds.push(existing.id);
+        }
+        if (removedIds.length > 0) pushErase(removedIds);
+        setPaintedCells(next);
         return;
       }
 
       if (!pieceId) return;
 
       telemetry.recordEvent('paint');
-      setPaintedCells((prev) =>
-        applyPaintStroke({
-          stroke: { floorId, subdivisionId, cells },
-          pieceId,
-          pieceById,
-          paintedCells: prev,
-          generateId: () => newId('cell'),
-        }),
+      const next = applyPaintStroke({
+        stroke,
+        pieceId,
+        pieceById,
+        paintedCells: currentPaintedCells,
+        generateId: () => newId('cell'),
+      });
+
+      // Diff prev vs next. Cells that:
+      //   - exist in next but not in prev → new (paint)
+      //   - exist in both with the SAME pieceId → no-op (skip)
+      //   - exist in both with a DIFFERENT pieceId → replace: erase the
+      //     old id AND paint the new one (the old row stays in DB otherwise)
+      const prevByKey = new Map(
+        currentPaintedCells.map((c) => [existingKey(c), c]),
       );
+      const nextByKey = new Map(next.map((c) => [existingKey(c), c]));
+
+      const eraseIds: string[] = [];
+      const paintCells: Array<{
+        id: string;
+        gridX: number;
+        gridY: number;
+        pieceId: string;
+        entityState?: Record<string, string | number | boolean>;
+      }> = [];
+
+      for (const strokeCell of cells) {
+        const key = strokeKey(strokeCell.gridX, strokeCell.gridY);
+        const resulting = nextByKey.get(key);
+        if (!resulting) continue;
+        const prevCell = prevByKey.get(key);
+        if (prevCell?.pieceId === pieceId) continue; // no-op
+        if (prevCell) eraseIds.push(prevCell.id);
+        paintCells.push({
+          id: resulting.id,
+          gridX: resulting.gridX,
+          gridY: resulting.gridY,
+          pieceId: resulting.pieceId,
+          entityState: resulting.entityState,
+        });
+      }
+      if (eraseIds.length > 0) pushErase(eraseIds);
+      if (paintCells.length > 0) pushPaint(floorId, subdivisionId, paintCells);
+
+      setPaintedCells(next);
     },
-    [tool, markDirty, pieceById],
+    // Deps are intentionally minimal: `paintedCells` and `opsBuffer` are
+    // read via refs (paintedCellsRef / destructured pushers) so this
+    // callback stays referentially stable across paints — that's what
+    // lets FloorCanvas's `React.memo` actually skip re-rendering the
+    // inactive floors below the active one.
+    [tool, markDirty, pieceById, pushPaint, pushErase],
   );
 
   const handleSubdivisionChange = (id: string) => {
@@ -206,6 +337,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     if (!confirm('¿Borrar TODO el scenario (pintadas de todos los pisos)? No se puede deshacer.'))
       return;
     setPaintedCells([]);
+    opsBuffer.pushClearAll();
     markDirty();
   };
 
@@ -216,6 +348,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       return;
     const fid = activeFloor.id;
     setPaintedCells((prev) => prev.filter((c) => c.floorId !== fid));
+    opsBuffer.pushClearFloor(fid);
     markDirty();
   };
 
@@ -230,6 +363,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     const fid = activeFloor.id;
     const sid = activeSubdivisionId;
     setPaintedCells((prev) => prev.filter((c) => !(c.floorId === fid && c.subdivisionId === sid)));
+    opsBuffer.pushClearSubdivision(fid, sid);
     markDirty();
   };
 
@@ -330,7 +464,11 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           <input
             type="text"
             value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setScenarioName(next);
+              opsBuffer.pushScenarioName(next);
+            }}
             className={styles.scenarioNameInput}
             placeholder="Nombre del escenario"
           />
@@ -404,13 +542,31 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             data-status={autosaveStatus}
             title="Autoguardado cada 1 min"
           >
-            {autosaveStatus === 'saving' && '⟳ Guardando…'}
+            {autosaveStatus === 'saving' && (
+              <>
+                <Spinner size={12} label="Guardando" />
+                Guardando…
+              </>
+            )}
             {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
+            {autosaveStatus === 'timeout' && (
+              <>
+                <Spinner size={12} label="Timeout" />
+                Timeout — reintentá
+              </>
+            )}
             {autosaveStatus === 'error' && '✗ Error al guardar'}
             {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
           </span>
           <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
-            {isSaving ? 'Guardando…' : scenarioId ? 'Guardar' : 'Crear'}
+            {isSaving ? (
+              <>
+                <Spinner size={14} label="Guardando" />
+                Guardando…
+              </>
+            ) : (
+              scenarioId ? 'Guardar' : 'Crear'
+            )}
           </Button>
         </header>
 

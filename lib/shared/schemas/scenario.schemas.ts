@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SCENARIO_LIMITS } from '@/lib/shared/constants';
 import { FloorSchema } from '@/lib/shared/schemas/floor.schemas';
 import { PaintedCellSchema } from '@/lib/shared/schemas/paintedCell.schemas';
 
@@ -10,10 +11,10 @@ import { PaintedCellSchema } from '@/lib/shared/schemas/paintedCell.schemas';
  */
 export const ScenarioSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(200),
-  baseCellSize: z.number().int().min(10).max(200),
-  width: z.number().int().min(1).max(500),
-  height: z.number().int().min(1).max(500),
+  name: z.string().min(1).max(SCENARIO_LIMITS.NAME_MAX),
+  baseCellSize: z.number().int().min(SCENARIO_LIMITS.BASE_CELL_SIZE.MIN).max(SCENARIO_LIMITS.BASE_CELL_SIZE.MAX),
+  width: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
+  height: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
   floors: z.array(FloorSchema).min(1, 'Al menos un piso requerido'),
   activeFloorId: z.string().min(1),
   paintedCells: z.array(PaintedCellSchema),
@@ -30,10 +31,10 @@ export const ScenarioSchema = z.object({
  */
 export const ScenarioInputSchema = z.object({
   id: z.string().min(1).optional(),
-  name: z.string().min(1).max(200),
-  baseCellSize: z.number().int().min(10).max(200),
-  width: z.number().int().min(1).max(500),
-  height: z.number().int().min(1).max(500),
+  name: z.string().min(1).max(SCENARIO_LIMITS.NAME_MAX),
+  baseCellSize: z.number().int().min(SCENARIO_LIMITS.BASE_CELL_SIZE.MIN).max(SCENARIO_LIMITS.BASE_CELL_SIZE.MAX),
+  width: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
+  height: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
   floors: z.array(FloorSchema).min(1),
   paintedCells: z.array(PaintedCellSchema),
 });

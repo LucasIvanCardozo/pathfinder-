@@ -1,12 +1,11 @@
 // Pure brush geometry — no React, no Konva. All functions are deterministic
 // and side-effect-free so they can be unit-tested or reused by future tools.
 
+import { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '@/lib/shared/constants';
 import type { BrushBounds, BrushCell, BrushSize } from './types';
 
-/** Minimum supported brush footprint (1x1 cell). */
-export const MIN_BRUSH_SIZE = 1;
-/** Maximum supported brush footprint (9x9 cells). Odd by contract. */
-export const MAX_BRUSH_SIZE = 9;
+export { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE };
+
 
 /**
  * Round an arbitrary number up to the nearest odd value within the supported

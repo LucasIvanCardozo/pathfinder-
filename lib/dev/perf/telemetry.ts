@@ -43,9 +43,9 @@ export type PerfSnapshot = {
   konva: { drawCount: number; avgDrawMs: number; maxDrawMs: number };
 };
 
-const FPS_BUFFER_CAP = 720; // ~12s of samples at 60fps
-const SUBSCRIBE_INTERVAL_MS = 250;
-const MEMORY_POLL_MS = 500;
+// PERF.* knobs (PERF.FPS_BUFFER_CAP / PERF.SUBSCRIBE_INTERVAL_MS / PERF.MEMORY_POLL_MS /
+// FPS_P95_QUANTILE) come from `@/lib/shared/constants/perf.ts` so the perf
+// layer is configurable from one place.
 
 type InternalRender = Omit<RenderStat, 'avgMs'>;
 type InternalKonva = { drawCount: number; totalMs: number; maxDrawMs: number };
@@ -64,7 +64,7 @@ interface State {
 function createEmptyState(): State {
   return {
     startMs: performance.now(),
-    fpsBuffer: new Float64Array(FPS_BUFFER_CAP),
+    fpsBuffer: new Float64Array(PERF.FPS_BUFFER_CAP),
     fpsHead: 0,
     fpsSize: 0,
     renders: new Map(),
@@ -78,11 +78,13 @@ let state: State = createEmptyState();
 let cachedSnapshot: PerfSnapshot | null = null;
 /**
  * Set to `true` by every `record*` function, cleared by `pushToSubscribers`.
- * The push timer fires every SUBSCRIBE_INTERVAL_MS regardless of activity;
+ * The push timer fires every PERF.SUBSCRIBE_INTERVAL_MS regardless of activity;
  * without this flag, `useSyncExternalStore`-backed PerfHud would be
  * re-rendered four times a second with no actual data change, violating
  * the snapshot-stability contract.
  */
+import { PERF } from '@/lib/shared/constants';
+
 let dirty = false;
 const subscribers = new Set<(snap: PerfSnapshot) => void>();
 let pushTimer: ReturnType<typeof setInterval> | null = null;
@@ -96,10 +98,10 @@ function buildSnapshot(): PerfSnapshot {
     let min = Number.POSITIVE_INFINITY;
     let max = 0;
     // Walk the ring buffer in chronological order.
-    const start = (state.fpsHead - n + FPS_BUFFER_CAP) % FPS_BUFFER_CAP;
+    const start = (state.fpsHead - n + PERF.FPS_BUFFER_CAP) % PERF.FPS_BUFFER_CAP;
     const samples: number[] = [];
     for (let i = 0; i < n; i++) {
-      const idx = (start + i) % FPS_BUFFER_CAP;
+      const idx = (start + i) % PERF.FPS_BUFFER_CAP;
       const v = state.fpsBuffer[idx] ?? 0;
       samples.push(v);
       sum += v;
@@ -110,7 +112,7 @@ function buildSnapshot(): PerfSnapshot {
     fps.min = min;
     fps.max = max;
     const sorted = [...samples].sort((a, b) => a - b);
-    const p95Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+    const p95Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * PERF.FPS_P95_QUANTILE));
     fps.p95 = sorted[p95Idx] ?? 0;
   }
 
@@ -169,7 +171,7 @@ function pushToSubscribers(): void {
 
 function ensurePushTimer(): void {
   if (pushTimer !== null) return;
-  pushTimer = setInterval(pushToSubscribers, SUBSCRIBE_INTERVAL_MS);
+  pushTimer = setInterval(pushToSubscribers, PERF.SUBSCRIBE_INTERVAL_MS);
 }
 
 function clearPushTimer(): void {
@@ -212,8 +214,8 @@ function recordKonvaDraw(durationMs: number): void {
 function recordFps(fps: number): void {
   if (!Number.isFinite(fps) || fps <= 0) return;
   state.fpsBuffer[state.fpsHead] = fps;
-  state.fpsHead = (state.fpsHead + 1) % FPS_BUFFER_CAP;
-  if (state.fpsSize < FPS_BUFFER_CAP) state.fpsSize += 1;
+  state.fpsHead = (state.fpsHead + 1) % PERF.FPS_BUFFER_CAP;
+  if (state.fpsSize < PERF.FPS_BUFFER_CAP) state.fpsSize += 1;
   invalidate();
   dirty = true;
 }
@@ -259,7 +261,7 @@ function startSamplingMemory(): () => void {
       // same 250ms window (e.g. background tab with throttled FPS).
       dirty = true;
     }
-  }, MEMORY_POLL_MS);
+  }, PERF.MEMORY_POLL_MS);
   return () => clearInterval(interval);
 }
 

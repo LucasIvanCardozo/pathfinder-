@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from 'next/cache';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { scenarioRepository } from '@/lib/server/db/repository/scenario.repository';
+import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
 import type {
   LoadScenarioResult,
   SaveScenarioInput,
@@ -37,10 +38,28 @@ export const scenarioUseCases = {
     return scenarioRepository(db).findByIdWithFloors(id);
   },
 
-  /** Upsert a scenario. Returns the persisted id (newly-generated or existing). */
+  /** Upsert a scenario. Returns the persisted id (newly-generated or existing).
+   *
+   *  Legacy full-state path. New callers should use `applyOps` (op-based
+   *  saves) — the payload is a fraction of the size and the TX finishes
+   *  in milliseconds instead of seconds. */
   async save(db: TxOrClient, input: SaveScenarioInput) {
     const scenario = await scenarioRepository(db).upsertInTx(db, input);
     return { id: scenario.id };
+  },
+
+  /**
+   * Apply a batch of `ScenarioOp`s to a scenario. Returns the persisted id
+   * and the bumped `updatedAt` (used as the next round's `baselineVersion`).
+   *
+   * This is the new op-based save path: small targeted Prisma operations
+   * inside one TX, replacing the previous "delete everything + re-insert"
+   * upsert. Payload size drops from O(cells) to O(changes-since-last-save)
+   * and the TX timeout (memory observation "pathfinder-diff-based-autosave")
+   * goes away because no single statement is expensive.
+   */
+  async applyOps(db: TxOrClient, request: ScenarioSaveRequest) {
+    return scenarioRepository(db).applyOpsInTx(request);
   },
 
   /**
@@ -59,3 +78,7 @@ export const scenarioUseCases = {
     return { scenarioId };
   },
 };
+
+// Re-export the op type so callers don't have to import from `@/lib/shared/types`
+// separately when they only need this one.
+export type { ScenarioOp, ScenarioSaveRequest };

@@ -19,12 +19,13 @@ import { join, relative } from 'node:path';
 import imageSize from 'image-size';
 import sharp from 'sharp';
 import { optimize as svgoOptimize } from 'svgo';
+import { MAX_PIECE_IMAGE_SIZE_PX } from '@/lib/shared/constants';
 import type { Piece, PieceCategory, VisualState } from '@/lib/shared/types';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
 const TEXTURES_DIR = join(REPO_ROOT, 'public/pieces/textures');
 const CATALOG_PATH = join(REPO_ROOT, 'src/assets/catalog.ts');
-const MAX_SIZE = 128;
+
 
 const VALID_CATEGORIES = ['floor', 'wall', 'water', 'lava', 'decoration', 'door', 'other'] as const;
 
@@ -79,7 +80,7 @@ async function generateWebpVariant(
   const buf = readFileSync(file);
   const pipeline = ext === 'svg' ? sharp(buf, { density: 300 }) : sharp(buf);
   await pipeline
-    .resize(MAX_SIZE, MAX_SIZE, {
+    .resize(MAX_PIECE_IMAGE_SIZE_PX, MAX_PIECE_IMAGE_SIZE_PX, {
       fit: 'cover',
       position: 'center',
     })
@@ -459,7 +460,7 @@ export function findPiecesByIds(ids: string[]): Piece[] {
     `\n✓ Generated ${pieces.length} piece(s) (${processed.length} file(s)) → ${relative(REPO_ROOT, CATALOG_PATH)}`,
   );
   if (resized > 0) {
-    console.log(`  Resized ${resized} oversized file(s) to max ${MAX_SIZE}px`);
+    console.log(`  Resized ${resized} oversized file(s) to max ${MAX_PIECE_IMAGE_SIZE_PX}px`);
   }
   if (optimized > 0) {
     console.log(`  Optimized ${optimized} SVG(s) (kept as .svg — vector is best for tiles)`);

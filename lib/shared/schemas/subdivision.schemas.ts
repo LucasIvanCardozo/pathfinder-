@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SUBDIVISION_LIMITS } from '@/lib/shared/constants';
 
 /**
  * Schema for a subdivision config. Used by `lib/shared/types/subdivision.types.ts`
@@ -9,7 +10,7 @@ import { z } from 'zod';
  */
 export const SubdivisionConfigSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(100),
-  cellSizeRatio: z.number().int().min(1).max(64),
-  order: z.number().int().min(0).max(20),
+  name: z.string().min(1).max(SUBDIVISION_LIMITS.NAME_MAX),
+  cellSizeRatio: z.number().int().min(SUBDIVISION_LIMITS.CELL_SIZE_RATIO.MIN).max(SUBDIVISION_LIMITS.CELL_SIZE_RATIO.MAX),
+  order: z.number().int().min(SUBDIVISION_LIMITS.ORDER.MIN).max(SUBDIVISION_LIMITS.ORDER.MAX),
 });

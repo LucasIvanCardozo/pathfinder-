@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Layer, Line, Stage } from 'react-konva';
 import { type GridConfig, gridLines } from '../grid';
 
@@ -27,7 +28,7 @@ const DEFAULT_STROKE = '#2a2e36';
  * Always `listening={false}` — grid lines must never intercept pointer
  * events, otherwise they'd swallow paint strokes.
  */
-export function WorldGrid({
+function WorldGridImpl({
   mapDims,
   viewportSize,
   pan,
@@ -79,3 +80,11 @@ export function WorldGrid({
     </Stage>
   );
 }
+
+// React.memo: WorldGrid re-renders only when its props change. Without
+// this, every paint in the editor would re-render the grid because
+// `FloorStack` (its parent) re-renders on every stroke. The shallow
+// compare is enough because viewportSize, pan, mapDims, and zoom are
+// themselves referentially stable in the parent (state / useMemo), and
+// worldBounds is a useMemo.
+export const WorldGrid = memo(WorldGridImpl);

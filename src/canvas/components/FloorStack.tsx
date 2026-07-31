@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo,  useMemo } from 'react';
 import { useStageViewport } from '@/hooks/useStageViewport';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import type { BrushCell, BrushSize, ToolKind } from '../tools';
@@ -145,4 +145,16 @@ function FloorStackImpl({
   );
 }
 
-export const FloorStack = FloorStackImpl;
+
+
+/**
+ * React.memo: FloorStack re-renders only when its props change. Without
+ * this, every stroke in the editor would re-render FloorStack and the
+ * `useMemo` buckets it computes (`cellsForFloor`, `visibleFloors`, ...)
+ * — and on every render the buckets are fresh arrays (not the same
+ * references) so `FloorCanvas`'s content-equality comparator would still
+ * pass for the inactive floors. But we'd waste work on the re-render
+ * itself. With memo, the only thing that invalidates FloorStack is a
+ * prop change.
+ */
+export const FloorStack = memo(FloorStackImpl);

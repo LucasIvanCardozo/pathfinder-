@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   // default 1MB body limit. Watch Next release notes; re-verify on upgrade.
   experimental: {
     serverActions: {
-      bodySizeLimit: '100mb',
+      bodySizeLimit: '5mb',
     },
   },
 };

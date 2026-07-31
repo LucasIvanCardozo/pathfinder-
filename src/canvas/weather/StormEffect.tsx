@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { STORM_TIMING } from '@/lib/shared/constants';
 import overlayStyles from './weather-effect.module.css';
 
 type Props = {
@@ -89,7 +90,7 @@ export function StormEffect({ thunderAt }: Props) {
       const flashStart = flashStartRef.current;
       if (flashStart !== null) {
         const elapsed = performance.now() - flashStart;
-        if (elapsed >= 600) {
+        if (elapsed >= STORM_TIMING.flashDurationMs) {
           flashStartRef.current = null;
         } else {
           // Mimics a natural lightning strike: bright primary
@@ -98,19 +99,15 @@ export function StormEffect({ thunderAt }: Props) {
           // real lightning reads faintly violet-white, not pure
           // white.
           let alpha = 0;
-          if (elapsed < 50)
-            alpha = 0.95; // primary discharge
-          else if (elapsed < 110)
-            alpha = 0; // gap
-          else if (elapsed < 200)
-            alpha = 0.65; // secondary lobe
-          else if (elapsed < 260)
-            alpha = 0.05; // small gap
-          else if (elapsed < 380)
-            alpha = 0.35; // tertiary pulse
-          else alpha = 0.12; // afterglow tail
+          for (const phase of STORM_TIMING.phases) {
+            if (elapsed < phase.endMs) {
+              alpha = phase.alpha;
+              break;
+            }
+          }
           if (alpha > 0) {
-            ctx.fillStyle = `rgba(225, 232, 250, ${alpha})`;
+            const { r, g, b } = STORM_TIMING.flashColor;
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
             ctx.fillRect(0, 0, width, height);
           }
         }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PIECE_LIMITS } from '@/lib/shared/constants';
 import { TextureTraitSchema } from './texture-trait.schemas';
 
 /**
@@ -44,12 +45,12 @@ export const VisualStateSchema = z.object({
  */
 export const PieceSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(PIECE_LIMITS.NAME_MAX),
   category: PieceCategorySchema,
   visualStates: z.array(VisualStateSchema).min(1, 'Al menos un visualState requerido'),
-  width: z.number().int().min(1).max(2048),
-  height: z.number().int().min(1).max(2048),
-  tags: z.array(z.string().min(1).max(40)).default([]),
+  width: z.number().int().min(PIECE_LIMITS.DIMENSION.MIN).max(PIECE_LIMITS.DIMENSION.MAX),
+  height: z.number().int().min(PIECE_LIMITS.DIMENSION.MIN).max(PIECE_LIMITS.DIMENSION.MAX),
+  tags: z.array(z.string().min(1).max(PIECE_LIMITS.TAG_MAX_LEN)).default([]),
   traits: z.array(TextureTraitSchema).optional(),
 });
 

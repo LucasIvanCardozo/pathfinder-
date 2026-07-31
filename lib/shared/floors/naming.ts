@@ -1,10 +1,7 @@
+import { DEFAULT_FLOOR_NAMES } from '@/lib/shared/constants';
 import type { Floor } from '@/lib/shared/types';
 
-/**
- * Canonical Spanish display names for the default floors of a brand-new
- * scenario. Order matters: index 0 is the lowest floor.
- */
-export const DEFAULT_FLOOR_NAMES: readonly string[] = ['Subsuelo 1', 'Planta Baja', 'Piso 1'];
+export { DEFAULT_FLOOR_NAMES };
 
 /** Returns true if the given floor name (trimmed, lowercased) is "planta baja". */
 export function isPlantaBajaName(name: string): boolean {

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { type Control, FormProvider, useForm, useWatch } from 'react-hook-form';
+import { WEATHER_DEFAULT } from '@/lib/shared/constants';
 import { FormField, FormSelect, FormSlider } from '@/components/form';
 import { WEATHERS, type WeatherDef } from './registry';
 import styles from './weather-panel.module.css';
@@ -16,8 +17,7 @@ type Props = {
   initial?: WeatherState;
 };
 
-const DEFAULT: WeatherState = { weatherId: 'none', volume: 100 };
-export const WEATHER_DEFAULT: WeatherState = DEFAULT;
+export { WEATHER_DEFAULT };
 
 /**
  * Narrow-subscription watcher. Uses `useWatch({ control, name })` per field so
@@ -32,8 +32,8 @@ function WeatherWatcher({
   control: Control<WeatherState>;
   onChange: (state: WeatherState) => void;
 }) {
-  const weatherId = useWatch({ control, name: 'weatherId' }) ?? DEFAULT.weatherId;
-  const volume = useWatch({ control, name: 'volume' }) ?? DEFAULT.volume;
+  const weatherId = useWatch({ control, name: 'weatherId' }) ?? WEATHER_DEFAULT.weatherId;
+  const volume = useWatch({ control, name: 'volume' }) ?? WEATHER_DEFAULT.volume;
 
   useEffect(() => {
     onChange({ weatherId, volume });
@@ -45,7 +45,7 @@ function WeatherWatcher({
 export function WeatherPanel({ onChange, initial }: Props) {
   const methods = useForm<WeatherState>({
     mode: 'onChange',
-    defaultValues: { ...DEFAULT, ...initial },
+    defaultValues: { ...WEATHER_DEFAULT, ...initial },
   });
 
   const options = WEATHERS.map((w: WeatherDef) => ({

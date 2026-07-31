@@ -553,6 +553,57 @@ function FloorCanvasImpl({
      * that prop has changed.
      */
     function floorCanvasPropsAreEqual(prev: Props, next: Props): boolean {
+      if (process.env.NODE_ENV !== 'production') {
+        // Dev-only diagnostic: an inactive floor (one rendered below the
+        // active one) should never re-render unless its `cells` actually
+        // change or a few legitimately-global props change. If it does
+        // for any other reason, the comparator above will have caught it
+        // (via `cellsContentEqual` or any of the other shallow checks), and
+        // a `console.warn` below tells the developer exactly which prop
+        // was non-stable — usually a callback or object reference captured
+        // from a closure that was recreated by a `useCallback` deps list
+        // that doesn't match the parent's render cycle. This is the
+        // signal that "FloorCanvas memo is broken" — the cause of the
+        // original lag-with-many-floors regression.
+        //
+        // Skipped in production so the warn is dead-code-eliminated.
+        // We only fire for INACTIVE floors because the active floor
+        // legitimately re-renders on every prop change.
+        //
+        // Why we exclude some props from the warn:
+        //   - pan / zoom / viewportSize: viewport state is shared by every
+        //     floor. When the user zooms or pans, every Stage needs to
+        //     reposition its content — including inactive floors — so the
+        //     re-render is legitimate.
+        //   - depthFromActive / isActive: when the user switches which
+        //     floor is active, every other floor changes its relative
+        //     depth and the blur/depth styling has to update. Also
+        //     legitimate.
+        //   - floor / cells / mapDims: the comparator's whole job is to
+        //     re-render when these change, so re-rendering because of them
+        //     is the success case, not the bug case.
+        if (!prev.isActive) {
+          const changes: string[] = [];
+          if (prev.subdivisions !== next.subdivisions) changes.push('subdivisions');
+          if (prev.pieces !== next.pieces) changes.push('pieces');
+          if (prev.textureImages !== next.textureImages) changes.push('textureImages');
+          if (prev.activeSubdivisionId !== next.activeSubdivisionId) changes.push('activeSubdivisionId');
+          if (prev.activePieceId !== next.activePieceId) changes.push('activePieceId');
+          if (prev.tool !== next.tool) changes.push('tool');
+          if (prev.brushSize !== next.brushSize) changes.push('brushSize');
+          if (prev.beginPan !== next.beginPan) changes.push('beginPan');
+          if (prev.isSpaceDown !== next.isSpaceDown) changes.push('isSpaceDown');
+          if (prev.isPanning !== next.isPanning) changes.push('isPanning');
+          if (prev.onPaint !== next.onPaint) changes.push('onPaint');
+          if (prev.onOpenTraitMenu !== next.onOpenTraitMenu) changes.push('onOpenTraitMenu');
+          if (changes.length > 0) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[FloorCanvas INACTIVE "${prev.floor.name}"] re-rendering due to: ${changes.join(', ')}`,
+            );
+          }
+        }
+      }
       return (
         prev.floor === next.floor &&
         cellsContentEqual(prev.cells, next.cells) &&

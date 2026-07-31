@@ -133,6 +133,11 @@
   border-color: #2a4a6b;
 }
 
+.autosaveStatus[data-status='timeout'] {
+  color: #e0c87a;
+  border-color: #6b5a2a;
+}
+
 .autosaveStatus[data-status='saved'] {
   color: #7adc7a;
   border-color: #2a5a2a;

@@ -109,14 +109,20 @@ if (typeof window !== 'undefined' && !listenersInstalled) {
       ...args: Parameters<typeof origPushState>
     ): void {
       origPushState.apply(this, args);
-      window.dispatchEvent(new Event(NAV_EVENT));
+      // Defer the event dispatch to the next macrotask. Next.js calls
+      // pushState / replaceState during its render commit, which lands
+      // inside React's insertion phase. Dispatching synchronously here
+      // would fire the useEffect-installed listener while React is still
+      // in insertion, causing the "useInsertionEffect must not schedule
+      // updates" warning when the listener eventually calls `emit()`.
+      setTimeout(() => window.dispatchEvent(new Event(NAV_EVENT)), 0);
     };
     const origReplaceState = window.history.replaceState;
     window.history.replaceState = function patched(
       ...args: Parameters<typeof origReplaceState>
     ): void {
       origReplaceState.apply(this, args);
-      window.dispatchEvent(new Event(NAV_EVENT));
+      setTimeout(() => window.dispatchEvent(new Event(NAV_EVENT)), 0);
     };
   }
 }

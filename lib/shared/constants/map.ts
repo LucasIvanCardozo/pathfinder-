@@ -11,7 +11,7 @@
 export const MAP_WORLD_WIDTH = 60;
 
 /** World size in cells, vertical axis. */
-export const MAP_WORLD_HEIGHT = 25;
+export const MAP_WORLD_HEIGHT = 30;
 
 /** Default world cell size in pixels. Persisted on each scenario as
  *  `baseCellSize`; the editor can change it per-scenario later. */
@@ -28,7 +28,7 @@ export const MAX_ZOOM = 1.5;
 /** Linear zoom step applied by each `−` / `+` button click in the header.
  *  0.1 means each click moves the displayed size by 10% of full scale
  *  (100% → 90% → 80% … on `−`, 100% → 110% → 120% … on `+`). */
-export const ZOOM_STEP = 0.1;
+export const ZOOM_STEP = 0.05;
 
 /** Convenience shape passed to `scenarioUseCases.createBlank` and to
  *  `FloorStack` as the `mapDims` prop. */
