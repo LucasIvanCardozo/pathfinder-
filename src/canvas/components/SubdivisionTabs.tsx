@@ -20,22 +20,24 @@ type Props = {
 export function SubdivisionTabs({ subdivisions, activeId, onChange }: Props) {
   return (
     <div className={styles.tabs} role="tablist">
-      {subdivisions.map((sub) => {
-        const tabClass = `${styles.tab} ${sub.id === activeId ? styles.active : ''}`;
-        return (
-          <div key={sub.id} className={styles.tabWrapper}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sub.id === activeId}
-              className={tabClass}
-              onClick={() => onChange(sub.id)}
-            >
-              {sub.name}
-            </button>
-          </div>
-        );
-      })}
+      {subdivisions
+        .filter((sub) => sub.paintable !== false)
+        .map((sub) => {
+          const tabClass = `${styles.tab} ${sub.id === activeId ? styles.active : ''}`;
+          return (
+            <div key={sub.id} className={styles.tabWrapper}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sub.id === activeId}
+                className={tabClass}
+                onClick={() => onChange(sub.id)}
+              >
+                {sub.name}
+              </button>
+            </div>
+          );
+        })}
     </div>
   );
 }

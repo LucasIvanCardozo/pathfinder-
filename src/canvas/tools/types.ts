@@ -3,8 +3,10 @@
 import type { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { PaintedCell, Piece } from '@/lib/shared/types';
 
-/** Which tool is currently active. `paint` writes a piece; `erase` clears. */
-export type ToolKind = 'paint' | 'erase';
+/** Which tool is currently active. `paint` writes a piece; `erase` clears;
+ *  `darkness` toggles the special `obscured` subdivision (left-click = paint,
+ *  right-click = erase). */
+export type ToolKind = 'paint' | 'erase' | 'darkness';
 
 /**
  * Brush footprint size measured in subdivision cells along one edge. Always a

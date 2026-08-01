@@ -1,7 +1,7 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEraser, faPaintbrush } from '@fortawesome/free-solid-svg-icons';
+import { faEraser, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape } from '../tools';
@@ -14,10 +14,11 @@ import {
 } from '../tools';
 import styles from './paint-toolbar.module.css';
 
-export type PaintTool = 'paint' | 'erase';
+export type PaintTool = 'paint' | 'erase' | 'darkness';
 
 type Props = {
   tool: PaintTool;
+  darknessMode: 'apply' | 'erase';
   onChange: (tool: PaintTool) => void;
   /**
    * Brush footprint size in active-subdivision cells. Must be odd. The parent
@@ -55,6 +56,7 @@ const SHAPE_LABELS: Record<BrushShape, string> = {
  */
 export function PaintToolbar({
   tool,
+  darknessMode,
   onChange,
   brushSize,
   onBrushSizeChange,
@@ -85,6 +87,31 @@ export function PaintToolbar({
           aria-pressed={tool === 'erase'}
         >
           <FontAwesomeIcon icon={faEraser} />
+        </button>
+        <button
+          type="button"
+          className={`${styles.tool} ${tool === 'darkness' ? styles.active : ''}`}
+          onClick={() => onChange('darkness')}
+          title={
+            tool === 'darkness'
+              ? darknessMode === 'apply'
+                ? 'Oscuridad: aplicar (click = pintar, click de nuevo = borrar)'
+                : 'Oscuridad: borrar (click = quitar, click de nuevo = aplicar)'
+              : 'Oscuridad (click = aplicar, click de nuevo = borrar)'
+          }
+          aria-label={
+            tool === 'darkness'
+              ? darknessMode === 'apply'
+                ? 'Oscuridad aplicar'
+                : 'Oscuridad borrar'
+              : 'Oscuridad'
+          }
+          aria-pressed={tool === 'darkness'}
+          data-mode={tool === 'darkness' ? darknessMode : undefined}
+        >
+          <FontAwesomeIcon
+            icon={tool === 'darkness' && darknessMode === 'erase' ? faSun : faMoon}
+          />
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
+import { DARKNESS_PIECE_ID } from '@/lib/shared/constants';
 import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../../tools';
 import { computeStrokeCells } from '../../tools';
 
@@ -19,8 +20,14 @@ type ApplyArgs = {
     cells: BrushCell[],
     pieceId: string | null,
   ) => void;
+  /**
+   * Called when the darkness tool is in erase mode. Receives the brush
+   * footprint cells (coordinates only — the owner looks up matching ids).
+   */
+  onDarknessErase: (floorId: string, cells: BrushCell[]) => void;
   pointerToCell: (pointer: { x: number; y: number }) => BrushCell | null;
   tool: ToolKind;
+  darknessMode: 'apply' | 'erase';
 };
 
 export type UsePaintStrokeResult = {
@@ -52,8 +59,10 @@ export function usePaintStroke(): UsePaintStrokeResult {
       brushShape,
       bounds,
       onPaint,
+      onDarknessErase,
       pointerToCell,
       tool,
+      darknessMode,
     } = args;
 
     const target = pointerToCell(pointer);
@@ -67,7 +76,14 @@ export function usePaintStroke(): UsePaintStrokeResult {
     const cells = computeStrokeCells(start, target, brushSize, bounds, brushShape);
     lastStrokeCellRef.current = target;
 
-    if (tool === 'paint') {
+    if (tool === 'darkness') {
+      if (darknessMode === 'erase') {
+        onDarknessErase(floorId, cells);
+      } else {
+        // Apply mode uses the fixed subdivision and sentinel pieceId.
+        onPaint(floorId, 'obscured', cells, DARKNESS_PIECE_ID);
+      }
+    } else if (tool === 'paint') {
       if (!activePieceId) return;
       onPaint(floorId, activeSubdivisionId, cells, activePieceId);
     } else {

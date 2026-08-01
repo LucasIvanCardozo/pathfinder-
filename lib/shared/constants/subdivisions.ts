@@ -15,4 +15,8 @@ export const SUBDIVISIONS: readonly SubdivisionConfig[] = Object.freeze([
   { id: 'objetos-grandes', name: 'Objetos grandes', cellSizeRatio: 2, order: 1 },
   { id: 'objetos-pequenos', name: 'Objetos pequeños', cellSizeRatio: 4, order: 2 },
   { id: 'estructuras', name: 'Estructuras', cellSizeRatio: 1, order: 3 },
+  // Darkness overlay. Renders on top of all other subdivisions; not exposed
+  // as a paintable tab. Order 4 places it last in the DOM so its canvas is
+  // `:nth-child(5)` (see floor-canvas.module.css).
+  { id: 'obscured', name: 'Oscuro', cellSizeRatio: 1, order: 4, paintable: false },
 ]);

@@ -34,6 +34,7 @@ export type Props = {
   activeSubdivisionId: string;
   activePieceId: string | null;
   tool: ToolKind;
+  darknessMode: 'apply' | 'erase';
   /** Brush footprint in active-subdivision cells. Always odd; size 1 = single cell. */
   brushSize: BrushSize;
   /** Geometric shape of the brush footprint (circle vs. square). Propagated
@@ -67,6 +68,11 @@ export type Props = {
     cells: BrushCell[],
     pieceId: string | null,
   ) => void;
+  /**
+   * Called when the darkness tool is in erase mode. Receives the brush footprint
+   * coordinates so the owner can look up matching darkness cell ids.
+   */
+  onDarknessErase?: (floorId: string, cells: BrushCell[]) => void;
   /** ONLY attached when `isActive`. Opens an interactive trait menu (e.g.
    *  door-states right-click). */
   onOpenTraitMenu?: (
@@ -87,6 +93,7 @@ function FloorCanvasImpl({
   activeSubdivisionId,
   activePieceId,
   tool,
+  darknessMode,
   brushSize,
   brushShape,
   showBrushPreview = true,
@@ -98,6 +105,7 @@ function FloorCanvasImpl({
   isPanDown,
   isPanning,
   onPaint,
+  onDarknessErase,
   onOpenTraitMenu,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
@@ -184,8 +192,10 @@ function FloorCanvasImpl({
         brushShape,
         bounds: { maxX: activeMaxX, maxY: activeMaxY },
         onPaint: onPaint ?? (() => {}),
+        onDarknessErase: onDarknessErase ?? (() => {}),
         pointerToCell: pointerToCellLocal,
         tool,
+        darknessMode,
       });
     },
     [
@@ -198,8 +208,10 @@ function FloorCanvasImpl({
       activeMaxX,
       activeMaxY,
       onPaint,
+      onDarknessErase,
       pointerToCellLocal,
       tool,
+      darknessMode,
     ],
   );
 
@@ -290,30 +302,54 @@ function FloorCanvasImpl({
         onTouchMove={events.onTouchMove}
         onTouchEnd={events.onTouchEnd}
       >
-        {cellsBySub.map(({ sub, cells: subCells }) => (
-          <Layer key={sub.id} listening={false}>
-            {subCells.map((cell) => {
-              const cellSize = cellSizeFor(sub);
-              const piece = pieceById.get(cell.pieceId);
-              const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
-              const fallbackPath = def?.imagePath ?? '';
-              const imagePath = resolveRenderImagePath(cell, fallbackPath, pieceById);
-              const img = textureImages.get(imagePath);
-              if (!img) return null;
-              return (
-                <KonvaImage
-                  key={cell.id}
-                  image={img}
-                  x={cell.gridX * cellSize}
-                  y={cell.gridY * cellSize}
-                  width={cellSize}
-                  height={cellSize}
-                  perfectDrawEnabled={false}
-                />
-              );
-            })}
-          </Layer>
-        ))}
+        {cellsBySub.map(({ sub, cells: subCells }) => {
+          const cellSize = cellSizeFor(sub);
+          if (sub.id === 'obscured') {
+            // Darkness overlay: solid black rects. No texture, no piece
+            // lookup — the renderer dispatches on subdivisionId and
+            // ignores `pieceId` (which holds the sentinel `DARKNESS_PIECE_ID`
+            // string). `listening={false}` so darkness cells never block
+            // hit tests for the pieces underneath.
+            return (
+              <Layer key={sub.id} listening={false}>
+                {subCells.map((cell) => (
+                  <Rect
+                    key={cell.id}
+                    x={cell.gridX * cellSize}
+                    y={cell.gridY * cellSize}
+                    width={cellSize}
+                    height={cellSize}
+                    fill="black"
+                    perfectDrawEnabled={false}
+                  />
+                ))}
+              </Layer>
+            );
+          }
+          return (
+            <Layer key={sub.id} listening={false}>
+              {subCells.map((cell) => {
+                const piece = pieceById.get(cell.pieceId);
+                const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
+                const fallbackPath = def?.imagePath ?? '';
+                const imagePath = resolveRenderImagePath(cell, fallbackPath, pieceById);
+                const img = textureImages.get(imagePath);
+                if (!img) return null;
+                return (
+                  <KonvaImage
+                    key={cell.id}
+                    image={img}
+                    x={cell.gridX * cellSize}
+                    y={cell.gridY * cellSize}
+                    width={cellSize}
+                    height={cellSize}
+                    perfectDrawEnabled={false}
+                  />
+                );
+              })}
+            </Layer>
+          );
+        })}
         {showBrushPreview && (
           <Layer listening={false}>
             {previewCells.map((cell) => (

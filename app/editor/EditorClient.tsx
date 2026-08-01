@@ -26,7 +26,7 @@ import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
 import { telemetry } from '@/dev/perf/telemetry';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import { DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
+import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { normalizeBrushSize } from '@/canvas/tools';
 import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
@@ -82,6 +82,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(SUBDIVISIONS[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>('paint');
+  const [darknessMode, setDarknessMode] = useState<'apply' | 'erase'>('apply');
   const [brushSize, setBrushSize] = useState<number>(1);
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
   const [chromeVisible, setChromeVisible] = useState(true);
@@ -173,6 +174,30 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       const stroke = { floorId, subdivisionId, cells };
       const currentPaintedCells = paintedCellsRef.current;
 
+      // Darkness paint path. Bypasses the normal paint/erase reducers and
+      // diff machinery — darkness cells never replace an existing cell
+      // (the sentinel pieceId is unique to the obscured subdivision) and
+      // they have no entityState. The append-only shape means we don't
+      // need `computeStrokeDiff` here.
+      if (
+        tool === 'darkness' &&
+        subdivisionId === 'obscured' &&
+        pieceId === DARKNESS_PIECE_ID
+      ) {
+        telemetry.recordEvent('paint');
+        const newCells = cells.map((c) => ({
+          id: newId('cell'),
+          floorId,
+          subdivisionId: 'obscured',
+          gridX: c.gridX,
+          gridY: c.gridY,
+          pieceId: DARKNESS_PIECE_ID,
+        }));
+        pushPaint(floorId, 'obscured', newCells);
+        setPaintedCells((prev) => [...prev, ...newCells]);
+        return;
+      }
+
       if (tool === 'erase') {
         telemetry.recordEvent('erase');
         const next = applyEraseStroke({ stroke, paintedCells: currentPaintedCells });
@@ -225,8 +250,48 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     [tool, markDirty, pieceById, pushPaint, pushErase, computeStrokeDiff],
   );
 
-  const handleToolChange = (newTool: PaintTool) => setTool(newTool);
+  const handleToolChange = (newTool: PaintTool) => {
+    if (newTool === 'darkness') {
+      if (tool === 'darkness') {
+        // Already active: toggle the internal mode.
+        setDarknessMode((mode) => (mode === 'apply' ? 'erase' : 'apply'));
+        return;
+      }
+      // Coming from a different tool: enter darkness in apply mode.
+      setTool('darkness');
+      setDarknessMode('apply');
+      return;
+    }
+    // Any non-darkness tool resets the mode before darkness is selected again.
+    setTool(newTool);
+    setDarknessMode('apply');
+  };
   const handleBrushSizeChange = (size: number) => setBrushSize(normalizeBrushSize(size));
+
+  const handleDarknessErase = useCallback(
+    (floorId: string, cells: { gridX: number; gridY: number }[]) => {
+      if (cells.length === 0) return;
+      const current = paintedCellsRef.current;
+      const byKey = new Map(
+        current.map((c) => [
+          `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`,
+          c,
+        ]),
+      );
+      const removedIds: string[] = [];
+      for (const cell of cells) {
+        const key = `${floorId}|obscured|${cell.gridX}|${cell.gridY}`;
+        const found = byKey.get(key);
+        if (found) removedIds.push(found.id);
+      }
+      if (removedIds.length === 0) return;
+      markDirty();
+      telemetry.recordEvent('erase');
+      pushErase(removedIds);
+      setPaintedCells((prev) => prev.filter((c) => !removedIds.includes(c.id)));
+    },
+    [markDirty, pushErase],
+  );
 
   const { handleClearAll, handleClearFloor, handleClearSubdivision } = useClearHandlers({
     opsBuffer,
@@ -239,7 +304,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
   useKeyboardShortcuts(
     buildEditorShortcuts({
-      setTool,
+      setTool: handleToolChange,
       setBrushSize,
       setBrushShape,
       setShowBrushPreview,
@@ -274,6 +339,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         </Link>
         <PaintToolbar
           tool={tool}
+          darknessMode={darknessMode}
           onChange={handleToolChange}
           brushSize={brushSize}
           onBrushSizeChange={handleBrushSizeChange}
@@ -496,10 +562,12 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
           tool={tool}
+          darknessMode={darknessMode}
           brushSize={brushSize}
           brushShape={brushShape}
           showBrushPreview={showBrushPreview}
           onPaint={handlePaint}
+          onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />

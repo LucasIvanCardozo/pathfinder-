@@ -73,12 +73,16 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     }),
     // Subdivision switches generated dynamically (one per subdivision, bound
     // to keys '1'..'9'). Spread the template entry and override key per item;
-    // everything else (label, category) is shared.
-    ...args.subdivisions.map<SubdivisionEntry>((sub, i) => ({
-      ...SHORTCUTS.subdivisionTemplate,
-      code: KEYS_BY_CODE[`digit${i + 1}` as keyof typeof KEYS_BY_CODE],
-      handler: () => args.handleSubdivisionChange(sub.id),
-    })),
+    // everything else (label, category) is shared. Non-paintable subdivisions
+    // (e.g. darkness) are excluded so the user can't bind a digit to a layer
+    // that isn't exposed in the tabs.
+    ...args.subdivisions
+      .filter((sub) => sub.paintable !== false)
+      .map<SubdivisionEntry>((sub, i) => ({
+        ...SHORTCUTS.subdivisionTemplate,
+        code: KEYS_BY_CODE[`digit${i + 1}` as keyof typeof KEYS_BY_CODE],
+        handler: () => args.handleSubdivisionChange(sub.id),
+      })),
     bindShortcut('floorUp', args.handleFloorUp),
     bindShortcut('floorDown', args.handleFloorDown),
     bindShortcut('zoomIn', args.zoomIn),

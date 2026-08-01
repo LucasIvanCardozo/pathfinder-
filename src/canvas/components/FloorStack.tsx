@@ -25,6 +25,7 @@ type Props = {
   activeSubdivisionId: string;
   activePieceId: string | null;
   tool: ToolKind;
+  darknessMode: 'apply' | 'erase';
   brushSize: BrushSize;
   /** Geometric shape of the brush footprint (circle vs. square). Propagated
    *  to each FloorCanvas so the painter and the hover preview agree on
@@ -39,6 +40,8 @@ type Props = {
     cells: BrushCell[],
     pieceId: string | null,
   ) => void;
+  /** Darkness erase handler forwarded from EditorClient. */
+  onDarknessErase?: (floorId: string, cells: BrushCell[]) => void;
   onOpenTraitMenu?: (
     cellId: string,
     traitKind: string,
@@ -64,10 +67,12 @@ function FloorStackImpl({
   activeSubdivisionId,
   activePieceId,
   tool,
+  darknessMode,
   brushSize,
   brushShape,
   showBrushPreview = true,
   onPaint,
+  onDarknessErase,
   onOpenTraitMenu,
   overlay,
 }: Props) {
@@ -108,6 +113,7 @@ function FloorStackImpl({
               activeSubdivisionId={activeSubdivisionId}
               activePieceId={activePieceId}
               tool={tool}
+              darknessMode={darknessMode}
               brushSize={brushSize}
               brushShape={brushShape}
               showBrushPreview={showBrushPreview}
@@ -118,6 +124,7 @@ function FloorStackImpl({
               isPanDown={isPanDown}
               isPanning={isPanning}
               onPaint={onPaint}
+              onDarknessErase={onDarknessErase}
               onOpenTraitMenu={onOpenTraitMenu}
           />
         );

@@ -68,6 +68,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
         changes.push('activeSubdivisionId');
       if (prev.activePieceId !== next.activePieceId) changes.push('activePieceId');
       if (prev.tool !== next.tool) changes.push('tool');
+      if (prev.darknessMode !== next.darknessMode) changes.push('darknessMode');
       if (prev.brushSize !== next.brushSize) changes.push('brushSize');
       if (prev.brushShape !== next.brushShape) changes.push('brushShape');
       if (prev.showBrushPreview !== next.showBrushPreview) changes.push('showBrushPreview');
@@ -75,6 +76,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
       if (prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
       if (prev.isPanning !== next.isPanning) changes.push('isPanning');
       if (prev.onPaint !== next.onPaint) changes.push('onPaint');
+      if (prev.onDarknessErase !== next.onDarknessErase) changes.push('onDarknessErase');
       if (prev.onOpenTraitMenu !== next.onOpenTraitMenu) changes.push('onOpenTraitMenu');
       if (changes.length > 0) {
         // eslint-disable-next-line no-console
@@ -95,6 +97,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     prev.activeSubdivisionId === next.activeSubdivisionId &&
     prev.activePieceId === next.activePieceId &&
     prev.tool === next.tool &&
+    prev.darknessMode === next.darknessMode &&
     prev.brushSize === next.brushSize &&
     prev.brushShape === next.brushShape &&
     prev.showBrushPreview === next.showBrushPreview &&
@@ -106,6 +109,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     prev.isPanDown === next.isPanDown &&
     prev.isPanning === next.isPanning &&
     prev.onPaint === next.onPaint &&
+    prev.onDarknessErase === next.onDarknessErase &&
     prev.onOpenTraitMenu === next.onOpenTraitMenu
   );
 }

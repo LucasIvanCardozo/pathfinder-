@@ -17,6 +17,7 @@
  * through the codebase.
  */
 export * from './brush';
+export * from './darkness';
 export * from './floors';
 export * from './image-pipeline';
 export * from './keyboard';

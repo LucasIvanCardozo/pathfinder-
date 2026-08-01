@@ -29,13 +29,14 @@
    <Stage>; the Stage's container (`.konvajs-content`) lists them in DOM
    order matching `subdivision.order` because FloorCanvas iterates the
    subdivisions in that order (see FloorCanvas.tsx). The brush preview is
-   the last Layer so it gets `canvas:nth-child(5)` and is excluded here.
+   the last Layer so it gets `canvas:nth-child(6)` and is excluded here.
 
    Subdivision order (lib/shared/constants/subdivisions.ts):
      0 suelo            -> nth-child(1)
      1 objetos-grandes  -> nth-child(2)
      2 objetos-pequenos -> nth-child(3)
      3 estructuras      -> nth-child(4)
+     4 obscured         -> nth-child(5)  [NEW]
 
    Direction: light from top-left, so shadow offset is down + right.
    Intensity scales with `order` to simulate elevation. */
@@ -55,8 +56,13 @@
   filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, 1));
 }
 
-/* Brush preview Layer is the 5th canvas in the Stage. No shadow (it's
-   not a painted piece, it's a UI affordance). */
+/* Obscured subdivision: no drop-shadow (the dark fill is the shadow). */
 .floor canvas:nth-child(5) {
+  filter: none;
+}
+
+/* Brush preview Layer is the 6th canvas in the Stage. No shadow (it's
+   not a painted piece, it's a UI affordance). */
+.floor canvas:nth-child(6) {
   filter: none;
 }
