@@ -31,9 +31,12 @@ async function HomeContent() {
       <header className={styles.homeHeader}>
         <h1>Pathfinder</h1>
         <p>Battle Map — editor de escenarios</p>
+        <p className={styles.homeDedication}>
+          Para el Sr Kisa, el gran maestro épico de Pathfinder.
+        </p>
         <nav className={styles.homeNav}>
-          <Link href="/admin/pieces" className={styles.homeNavLink}>
-            🎨 Galería de texturas
+          <Link href="/ayuda" className={styles.homeNavLink}>
+            📖 Ayuda del editor
           </Link>
         </nav>
       </header>
