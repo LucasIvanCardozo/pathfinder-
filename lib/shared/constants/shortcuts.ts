@@ -71,7 +71,7 @@ export type ShortcutBinding = {
 };
 
 /** Top-level grouping for shortcuts. Useful when surfacing a help overlay. */
-export type ShortcutCategory = 'tool' | 'brush' | 'save' | 'navigation' | 'overlay';
+export type ShortcutCategory = 'tool' | 'brush' | 'save' | 'navigation' | 'overlay' | 'edit';
 
 /** A fully-bound shortcut: its binding plus human-facing metadata. */
 export type ShortcutDef = ShortcutBinding & {
@@ -150,6 +150,21 @@ export const SHORTCUTS = {
     ctrl: true,
     label: 'Guardar manualmente',
     category: 'save',
+  },
+  undo: {
+    id: 'undo',
+    code: KEYS_BY_CODE.keyZ,
+    ctrl: true,
+    label: 'Deshacer',
+    category: 'edit',
+  },
+  redo: {
+    id: 'redo',
+    code: KEYS_BY_CODE.keyZ,
+    ctrl: true,
+    shift: true,
+    label: 'Rehacer',
+    category: 'edit',
   },
   closeOverlay: {
     id: 'closeOverlay',

@@ -72,7 +72,39 @@ export function usePaintStrokeDiff() {
     [],
   );
 
-  return { computeStrokeDiff };
+  /**
+   * Returns the ids of cells that exist in `currentPaintedCells` at the same
+   * (floor, subdivision, gridX, gridY) as any cell in the stroke. Used by the
+   * erase path to compute the server's `eraseCells` op without rebuilding the
+   * same composite-key map inline.
+   */
+  const computeRemovedIds = useCallback(
+    (
+      currentPaintedCells: PaintedCell[],
+      stroke: { floorId: string; subdivisionId: string; cells: { gridX: number; gridY: number }[] },
+    ): string[] => {
+      const existingKey = (c: {
+        floorId: string;
+        subdivisionId: string;
+        gridX: number;
+        gridY: number;
+      }) => `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`;
+      const strokeKey = (gx: number, gy: number) =>
+        `${stroke.floorId}|${stroke.subdivisionId}|${gx}|${gy}`;
+      const prevByKey = new Map(
+        currentPaintedCells.map((c) => [existingKey(c), c]),
+      );
+      const removedIds: string[] = [];
+      for (const cell of stroke.cells) {
+        const existing = prevByKey.get(strokeKey(cell.gridX, cell.gridY));
+        if (existing) removedIds.push(existing.id);
+      }
+      return removedIds;
+    },
+    [],
+  );
+
+  return { computeStrokeDiff, computeRemovedIds };
 }
 
 // Reference Piece to silence the unused-import linter when consumers add

@@ -2,6 +2,7 @@
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faArrowRotateBackward,
   faCompass,
   faFloppyDisk,
   faPaintbrush,
@@ -19,9 +20,17 @@ const CATEGORY_META: Record<ShortcutCategory, { label: string; icon: IconDefinit
   save: { label: 'Guardar', icon: faFloppyDisk },
   navigation: { label: 'Navegación', icon: faCompass },
   overlay: { label: 'Overlay', icon: faWindowMaximize },
+  edit: { label: 'Edición', icon: faArrowRotateBackward },
 };
 
-const CATEGORY_ORDER: ShortcutCategory[] = ['tool', 'brush', 'save', 'navigation', 'overlay'];
+const CATEGORY_ORDER: ShortcutCategory[] = [
+  'tool',
+  'brush',
+  'save',
+  'edit',
+  'navigation',
+  'overlay',
+];
 
 /**
  * Map of `KeyboardEvent.code` values to friendly labels for the modal. Codes

@@ -15,6 +15,12 @@ export function useOpsBuffer() {
   // `setOps` updates aren't visible yet). Lets pushers batch in a single
   // handler without losing ops.
   const opsRef = useRef<ScenarioOp[]>([]);
+  // When `markDirtyForRebase` is set, the next `drain()` returns [] and
+  // resets the flag. Buffer state is stale relative to the editor after an
+  // undo (the buffer still holds the op we just reverted), so the next
+  // autosave must skip them — otherwise the server would re-apply them
+  // and diverge from the local state.
+  const needsRebaseRef = useRef(false);
 
   const syncPush = useCallback((op: ScenarioOp) => {
     opsRef.current = [...opsRef.current, op];
@@ -111,6 +117,17 @@ export function useOpsBuffer() {
    * place for the next attempt via `restore`.
    */
   const drain = useCallback((): ScenarioOp[] => {
+    if (needsRebaseRef.current) {
+      // The buffer is stale (the editor just undid one or more pending
+      // mutations). Drop everything so the server doesn't re-apply ops the
+      // user already reverted. v1.1: implement a real rebase that maps the
+      // stale ops against the undone state instead of dropping them — for
+      // now, the next user mutation seeds a fresh diff from the server.
+      needsRebaseRef.current = false;
+      opsRef.current = [];
+      setOps([]);
+      return [];
+    }
     const drained = opsRef.current;
     opsRef.current = [];
     setOps([]);
@@ -126,6 +143,15 @@ export function useOpsBuffer() {
     setOps(opsRef.current);
   }, []);
 
+  /**
+   * Mark the buffer as stale (called after an undo). The next `drain()`
+   * returns [] and clears the flag — pending ops are dropped because they
+   * no longer match the editor's state.
+   */
+  const markDirtyForRebase = useCallback(() => {
+    needsRebaseRef.current = true;
+  }, []);
+
   return {
     ops,
     pushPaint,
@@ -138,5 +164,6 @@ export function useOpsBuffer() {
     pushScenarioName,
     drain,
     restore,
+    markDirtyForRebase,
   };
 }

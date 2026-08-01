@@ -34,6 +34,7 @@ import styles from './editor.module.css';
 import { buildEditorShortcuts } from './shortcuts';
 import { useClearHandlers } from './hooks/use-clear-handlers';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
+import { useHistory } from './hooks/use-history';
 import { useOpsBuffer } from './hooks/use-ops-buffer';
 import { usePaintStrokeDiff } from './hooks/use-paint-stroke-diff';
 import { useScenarioAutosave } from './hooks/use-scenario-autosave';
@@ -90,6 +91,26 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  /**
+   * Snapshot of the user-visible state needed to roll back a mutation. The
+   * editor has more `useState` slots (brush size, tool, chrome visibility…),
+   * but they are *settings* the user re-applies on top of the scenario — the
+   * undo stack only tracks the scenario's persistent state.
+   *
+   * `buildSnapshot` reads from refs (not from React state) so it stays
+   * referentially stable across renders — `handlePaint`'s deps don't need
+   * to include it, and the `FloorCanvas` memo comparator keeps its current
+   * shape (recreating `handlePaint` on every state change would force a
+   * full canvas re-render on every paint stroke).
+   */
+  type EditorSnapshot = {
+    paintedCells: readonly PaintedCell[];
+    floors: readonly Floor[];
+    activeFloorId: string;
+    scenarioName: string;
+  };
+  const history = useHistory<EditorSnapshot>({ max: 100 });
+
   // Memoized so the FloorCanvas memo comparator sees a stable reference.
   const mapDims = useMemo(
     () => ({
@@ -103,16 +124,32 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
   const activePieces = allPieces;
   const pieceById = usePieceMap(allPieces);
-  const { computeStrokeDiff } = usePaintStrokeDiff();
+  const { computeStrokeDiff, computeRemovedIds } = usePaintStrokeDiff();
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const opsBuffer = useOpsBuffer();
 
   // Mirror `paintedCells` in a ref so `handlePaint` can read the current
   // cells without listing them in its useCallback deps (see `use-ops-buffer`
-  // for the rationale on stability).
+  // for the rationale on stability). The same refs back `buildSnapshot` so it
+  // can read fresh state without forcing `handlePaint` to list it.
   const paintedCellsRef = useRef(paintedCells);
   paintedCellsRef.current = paintedCells;
+  const floorsRef = useRef(floors);
+  floorsRef.current = floors;
+  const activeFloorIdRef = useRef(activeFloorId);
+  activeFloorIdRef.current = activeFloorId;
+  const scenarioNameRef = useRef(scenarioName);
+  scenarioNameRef.current = scenarioName;
+  const buildSnapshot = useCallback(
+    (): EditorSnapshot => ({
+      paintedCells: paintedCellsRef.current,
+      floors: floorsRef.current,
+      activeFloorId: activeFloorIdRef.current,
+      scenarioName: scenarioNameRef.current,
+    }),
+    [],
+  );
   const { pushPaint, pushErase } = opsBuffer;
 
   const { isSaving, autosaveStatus, savedAt, save } = useScenarioAutosave({
@@ -169,66 +206,80 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       pieceId: string | null,
     ) => {
       if (cells.length === 0) return;
-      markDirty();
 
-      const stroke = { floorId, subdivisionId, cells };
+      // Dedupe intra-batch: the brush emits cells that overlap across
+      // onMouseMove ticks, so the same (gridX, gridY) can appear multiple
+      // times in `cells`. Filtering here keeps every downstream reducer
+      // and the diff machinery from processing duplicates.
+      const seen = new Set<string>();
+      const uniqueCells = cells.filter((c) => {
+        const key = `${c.gridX}|${c.gridY}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if (uniqueCells.length === 0) return;
+
+      const stroke = { floorId, subdivisionId, cells: uniqueCells };
       const currentPaintedCells = paintedCellsRef.current;
 
-      // Darkness paint path. Bypasses the normal paint/erase reducers and
-      // diff machinery — darkness cells never replace an existing cell
-      // (the sentinel pieceId is unique to the obscured subdivision) and
-      // they have no entityState. The append-only shape means we don't
-      // need `computeStrokeDiff` here.
+      // Path 1: darkness apply. Bypasses the normal paint/erase reducers.
+      // Filters out cells that already carry darkness so painting the same
+      // patch twice doesn't duplicate the underlying rows. Without this,
+      // every drag over an already-darkened area appends new cells with
+      // fresh ids.
       if (
         tool === 'darkness' &&
         subdivisionId === 'obscured' &&
         pieceId === DARKNESS_PIECE_ID
       ) {
+        const darknessKey = (gx: number, gy: number) =>
+          `${floorId}|obscured|${gx}|${gy}`;
+        const existing = new Set(
+          currentPaintedCells
+            .filter((c) => c.pieceId === DARKNESS_PIECE_ID)
+            .map((c) => darknessKey(c.gridX, c.gridY)),
+        );
+        const newCells = uniqueCells
+          .filter((c) => !existing.has(darknessKey(c.gridX, c.gridY)))
+          .map((c) => ({
+            id: newId('cell'),
+            floorId,
+            subdivisionId: 'obscured',
+            gridX: c.gridX,
+            gridY: c.gridY,
+            pieceId: DARKNESS_PIECE_ID,
+          }));
+        if (newCells.length === 0) return; // stroke was entirely over darkness
         telemetry.recordEvent('paint');
-        const newCells = cells.map((c) => ({
-          id: newId('cell'),
-          floorId,
-          subdivisionId: 'obscured',
-          gridX: c.gridX,
-          gridY: c.gridY,
-          pieceId: DARKNESS_PIECE_ID,
-        }));
+        history.record(buildSnapshot());
         pushPaint(floorId, 'obscured', newCells);
         setPaintedCells((prev) => [...prev, ...newCells]);
+        markDirty();
         return;
       }
 
+      // Path 2: erase. Short-circuits if the stroke is over an empty
+      // patch — the reducer would still run and trigger a re-render.
       if (tool === 'erase') {
+        const removedIds = computeRemovedIds(currentPaintedCells, stroke);
+        if (removedIds.length === 0) return;
+        const next = applyEraseStroke({
+          stroke,
+          paintedCells: currentPaintedCells,
+        });
         telemetry.recordEvent('erase');
-        const next = applyEraseStroke({ stroke, paintedCells: currentPaintedCells });
-        // Find which prev cells landed in the stroke but were removed —
-        // these are the ids the server must delete. The two-key lookup is
-        // necessary so cells from other floors sharing the same (gridX,
-        // gridY) don't collide (see `use-paint-stroke-diff` for context).
-        const existingKey = (c: {
-          floorId: string;
-          subdivisionId: string;
-          gridX: number;
-          gridY: number;
-        }) => `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`;
-        const strokeKey = (gx: number, gy: number) =>
-          `${floorId}|${subdivisionId}|${gx}|${gy}`;
-        const prevByKey = new Map(
-          currentPaintedCells.map((c) => [existingKey(c), c]),
-        );
-        const removedIds: string[] = [];
-        for (const cell of cells) {
-          const existing = prevByKey.get(strokeKey(cell.gridX, cell.gridY));
-          if (existing) removedIds.push(existing.id);
-        }
-        if (removedIds.length > 0) pushErase(removedIds);
+        history.record(buildSnapshot());
+        pushErase(removedIds);
         setPaintedCells(next);
+        markDirty();
         return;
       }
 
+      // Path 3: normal paint. Short-circuits when the stroke lands entirely
+      // on cells that already carry the same piece — `computeStrokeDiff`
+      // already excludes those, so the diff result is the ground truth.
       if (!pieceId) return;
-
-      telemetry.recordEvent('paint');
       const next = applyPaintStroke({
         stroke,
         pieceId,
@@ -236,18 +287,20 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         paintedCells: currentPaintedCells,
         generateId: () => newId('cell'),
       });
-
       const { eraseIds, paintCells } = computeStrokeDiff(
         currentPaintedCells,
         next,
         stroke,
       );
+      if (eraseIds.length === 0 && paintCells.length === 0) return;
+      telemetry.recordEvent('paint');
+      history.record(buildSnapshot());
       if (eraseIds.length > 0) pushErase(eraseIds);
       if (paintCells.length > 0) pushPaint(floorId, subdivisionId, paintCells);
-
       setPaintedCells(next);
+      markDirty();
     },
-    [tool, markDirty, pieceById, pushPaint, pushErase, computeStrokeDiff],
+    [tool, markDirty, pieceById, pushPaint, pushErase, computeStrokeDiff, computeRemovedIds, history, buildSnapshot],
   );
 
   const handleToolChange = (newTool: PaintTool) => {
@@ -271,6 +324,11 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const handleDarknessErase = useCallback(
     (floorId: string, cells: { gridX: number; gridY: number }[]) => {
       if (cells.length === 0) return;
+      // Record the pre-erase state so undo can restore the darkness cells.
+      // Done before the `removedIds.length === 0` guard because the record
+      // is harmless even if the erase ends up a no-op (one redundant step
+      // in the history).
+      history.record(buildSnapshot());
       const current = paintedCellsRef.current;
       const byKey = new Map(
         current.map((c) => [
@@ -290,7 +348,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       pushErase(removedIds);
       setPaintedCells((prev) => prev.filter((c) => !removedIds.includes(c.id)));
     },
-    [markDirty, pushErase],
+    [markDirty, pushErase, history, buildSnapshot],
   );
 
   const { handleClearAll, handleClearFloor, handleClearSubdivision } = useClearHandlers({
@@ -300,7 +358,32 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     activeSubdivisionName: activeSubdivision?.name,
     markDirty,
     setPaintedCells,
+    paintedCellsRef,
+    recordHistory: () => history.record(buildSnapshot()),
   });
+
+  const handleUndo = useCallback(() => {
+    const previous = history.undo(buildSnapshot());
+    if (!previous) return;
+    setPaintedCells([...previous.paintedCells]);
+    setFloors([...previous.floors]);
+    setActiveFloorId(previous.activeFloorId);
+    setScenarioName(previous.scenarioName);
+    // The pending ops in the buffer were generated against the post-mutation
+    // state we just rolled back. Mark the buffer dirty so the next drain
+    // returns [] and the server stays in sync with the undone state.
+    opsBuffer.markDirtyForRebase();
+  }, [history, buildSnapshot, opsBuffer.markDirtyForRebase]);
+
+  const handleRedo = useCallback(() => {
+    const next = history.redo(buildSnapshot());
+    if (!next) return;
+    setPaintedCells([...next.paintedCells]);
+    setFloors([...next.floors]);
+    setActiveFloorId(next.activeFloorId);
+    setScenarioName(next.scenarioName);
+    opsBuffer.markDirtyForRebase();
+  }, [history, buildSnapshot, opsBuffer.markDirtyForRebase]);
 
   useKeyboardShortcuts(
     buildEditorShortcuts({
@@ -321,6 +404,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       handleFloorDown,
       zoomIn,
       zoomOut,
+      handleUndo,
+      handleRedo,
     }),
   );
 
