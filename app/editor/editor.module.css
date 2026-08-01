@@ -1,96 +1,87 @@
 .editor {
-  display: grid;
-  grid-template-columns: 280px 1fr;
+  position: relative;
+  width: 100vw;
   height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--fg);
 }
 
-/* Expanded mode: hide the sidebar and let the canvas area take the full
-   viewport. The transition makes the change feel intentional rather than
-   abrupt. `padding: 0` removes the 1rem gutter so the canvas truly fills
-   the available space. */
-.editor.expanded {
-  /* Without an explicit row template the grid auto-sizes the single row to
-     the content height — which would shrink the canvas area to its header
-     + tabs and leave the FloorStack (flex: 1) collapsed to 0, exposing the
-     near-black bg of `.editor`. Forcing the row to 100vh makes the canvas
-     area span the viewport so its inner flex layout can distribute the
-     space correctly.
-
-     `grid-template-columns: 1fr` (a single column instead of `0 1fr`) is
-     intentional: the sidebar is `display: none` in this state, so a
-     `0 1fr` template combined with grid auto-placement would put the
-     remaining visible `<main>` in column 1 (0 wide) instead of column 2
-     (1fr), collapsing the canvas to 0 width and showing the bg. Using a
-     single full-width column lets grid auto-placement land the canvas
-     correctly. */
-  grid-template-columns: 1fr;
-  grid-template-rows: 100vh;
+.canvasStage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.editor.expanded .paintSidebar {
-  display: none;
-}
-
-.canvasArea.expanded {
-  padding: 0;
-  height: 100vh;
-  gap: 0.5rem;
-}
-
-/* In expanded mode the user wants to see ONLY the map — no header, no
-   subdivision tabs. We hide them here so the FloorStack fills the entire
-   canvas area. The "Comprimir" button lives outside this hierarchy as a
-   floating overlay (see `.exitExpandedButton` below). */
-.editor.expanded .canvasHeader {
-  display: none;
-}
-
-/* Floating "exit expanded mode" button. Positioned in the top-right corner
-   of the viewport with `position: fixed` so it stays visible regardless
-   of where the user pans the map. Slightly transparent at rest so it
-   doesn't distract from the canvas, full opacity on hover for a clear
-   affordance. */
-.exitExpandedButton {
+.floatingHeader {
   position: fixed;
   top: 1rem;
+  left: calc(var(--aside-width) + 1.5rem);
   right: 1rem;
-  z-index: 100;
-  display: inline-flex;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.floatingAside {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  bottom: 1rem;
+  width: var(--aside-width);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Inner-panel layout for the floating chrome. The visual chrome (background,
+   border, border-radius, box-shadow) is provided by `components/FloatingPanel`;
+   the panel here is its only direct child <div>, so the structural selector
+   targets the panel without leaking the FloatingPanel hash to this module. */
+.floatingHeader > div {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--fg);
-  font-family: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  opacity: 0.7;
-  transition:
-    opacity 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  flex-wrap: wrap;
 }
 
-.exitExpandedButton:hover,
-.exitExpandedButton:focus-visible {
-  opacity: 1;
-  border-color: var(--accent);
-  color: var(--accent);
-  outline: none;
-}
-
-.paintSidebar {
-  background: var(--bg-elevated);
-  border-right: 1px solid var(--border);
-  padding: 1rem;
+.floatingAside > div {
+  height: 100%;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.secondaryActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.editor[data-chrome-visible='false'] .floatingHeader,
+.editor[data-chrome-visible='false'] .floatingAside {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor[data-chrome-visible='false'] .floatingHeader,
+  .editor[data-chrome-visible='false'] .floatingAside {
+    transform: none;
+    transition: opacity 80ms linear;
+  }
 }
 
 .backLink {
@@ -109,28 +100,6 @@
 .backLink:hover {
   color: var(--accent);
   background: var(--bg);
-}
-
-.canvasArea {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.canvasHeader {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: var(--fg-muted);
-  flex-wrap: wrap;
 }
 
 .scenarioNameInput {
@@ -225,10 +194,41 @@
   border-color: #5a2a2a;
 }
 
-.dangerZone {
+/* Danger menu opened from the Popover. Mirrors the toolbar row look so the
+   layout inside the popover feels native to the floating aside. */
+.dangerMenu {
   display: flex;
-  gap: 0.4rem;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 180px;
+}
+
+.dangerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.dangerItem:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.dangerItem:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .canvasLoading {

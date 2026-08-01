@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useId } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEraser, faPaintbrush } from '@fortawesome/free-solid-svg-icons';
+import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape } from '../tools';
 import {
@@ -46,11 +48,10 @@ const SHAPE_LABELS: Record<BrushShape, string> = {
 };
 
 /**
- * Tool selector + brush size controls. Brush size is shown as both a numeric
- * value (the slider) and a live "NxN" footprint hint, so the user can see the
- * exact circle diameter they will paint with. The preview indicator itself
- * lives on the canvas (FloorCanvas); this component only exposes the
- * controls.
+ * Tool selector + brush size controls. The brush size is shown as a live
+ * "NxN" footprint hint so the user sees the exact circle diameter they will
+ * paint with. The preview indicator itself lives on the canvas (FloorCanvas);
+ * this component only exposes the controls.
  */
 export function PaintToolbar({
   tool,
@@ -61,12 +62,6 @@ export function PaintToolbar({
   onBrushShapeChange,
 }: Props) {
   const size = normalizeBrushSize(brushSize);
-  const sliderId = useId();
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = Number.parseInt(e.target.value, 10);
-    if (Number.isFinite(next)) onBrushSizeChange(normalizeBrushSize(next));
-  };
 
   return (
     <div className={styles.toolbar}>
@@ -76,30 +71,24 @@ export function PaintToolbar({
           className={`${styles.tool} ${tool === 'paint' ? styles.active : ''}`}
           onClick={() => onChange('paint')}
           title="Pintar (click + drag)"
+          aria-label="Pintar"
           aria-pressed={tool === 'paint'}
         >
-          Pintar
+          <FontAwesomeIcon icon={faPaintbrush} />
         </button>
         <button
           type="button"
           className={`${styles.tool} ${tool === 'erase' ? styles.active : ''}`}
           onClick={() => onChange('erase')}
           title="Borrar (click + drag)"
+          aria-label="Borrar"
           aria-pressed={tool === 'erase'}
         >
-          Borrar
+          <FontAwesomeIcon icon={faEraser} />
         </button>
       </div>
 
       <div className={styles.brushSection}>
-        <div className={styles.brushHeader}>
-          <label htmlFor={sliderId} className={styles.brushLabel}>
-            Pincel
-          </label>
-          <span className={styles.brushValue} title="Tamaño en celdas de la subcapa activa">
-            {size}×{size}
-          </span>
-        </div>
         <div className={styles.brushControls}>
           <button
             type="button"
@@ -111,18 +100,9 @@ export function PaintToolbar({
           >
             −
           </button>
-          <input
-            id={sliderId}
-            type="range"
-            min={MIN_BRUSH_SIZE}
-            max={MAX_BRUSH_SIZE}
-            step={2}
-            value={size}
-            onChange={handleSliderChange}
-            className={styles.brushSlider}
-            title={`Tamaño del pincel: ${size}×${size} celdas`}
-            aria-label="Tamaño del pincel"
-          />
+          <span className={styles.brushValue} title="Tamaño en celdas de la subcapa activa">
+            {size}×{size}
+          </span>
           <button
             type="button"
             className={styles.brushStep}
@@ -161,11 +141,11 @@ export function PaintToolbar({
                   htmlFor={inputId}
                   className={`${styles.shape} ${brushShape === shape ? styles.shapeActive : ''}`}
                   title={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
+                  aria-label={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
                 >
                   <span aria-hidden="true" className={styles.shapeGlyph}>
                     {SHAPE_GLYPHS[shape]}
                   </span>
-                  <span className={styles.shapeLabel}>{SHAPE_LABELS[shape]}</span>
                 </label>
               </React.Fragment>
             );

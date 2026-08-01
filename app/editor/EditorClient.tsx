@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faKeyboard } from '@fortawesome/free-solid-svg-icons';
+import { faCloud, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   applyEraseStroke,
@@ -19,6 +19,8 @@ import {
   type PaintTool,
 } from '@/canvas';
 import { Button } from '@/components/Button';
+import { FloatingPanel } from '@/components/FloatingPanel';
+import { Popover } from '@/components/Popover';
 import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { Spinner } from '@/components/Spinner';
 import { usePieceMap } from '@/hooks';
@@ -82,7 +84,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [tool, setTool] = useState<PaintTool>('paint');
   const [brushSize, setBrushSize] = useState<number>(1);
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
-  const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -247,7 +249,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         save(false);
       },
       traitMenu,
-      setIsCanvasExpanded,
+      setChromeVisible,
       handleSubdivisionChange,
       subdivisions,
       handleFloorUp,
@@ -260,8 +262,13 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const paintedInFloor = paintedCells.filter((c) => c.floorId === activeFloorId).length;
 
   return (
-    <div className={`${styles.editor} ${isCanvasExpanded ? styles.expanded : ''}`}>
-      <aside className={styles.paintSidebar}>
+    <div className={styles.editor} data-chrome-visible={chromeVisible}>
+      <FloatingPanel
+        as="aside"
+        className={styles.floatingAside}
+        ariaLabel="Herramientas del editor"
+        inert={!chromeVisible}
+      >
         <Link href="/" className={styles.backLink}>
           ← Escenarios
         </Link>
@@ -273,47 +280,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           brushShape={brushShape}
           onBrushShapeChange={setBrushShape}
         />
-        <div className={styles.dangerZone}>
-          <Button
-            type="button"
-            size="mini"
-            variant="danger"
-            onClick={handleClearAll}
-            disabled={paintedCells.length === 0}
-            title="Borrar TODO el scenario"
-          >
-            🗑 Todo
-          </Button>
-          <Button
-            type="button"
-            size="mini"
-            variant="danger"
-            onClick={handleClearFloor}
-            disabled={paintedInFloor === 0}
-            title={`Borrar todo "${activeFloor.name}"`}
-          >
-            🗑 Piso
-          </Button>
-          <Button
-            type="button"
-            size="mini"
-            variant="danger"
-            onClick={handleClearSubdivision}
-            disabled={
-              !activeSubdivision ||
-              paintedCells.filter(
-                (c) => c.floorId === activeFloorId && c.subdivisionId === activeSubdivisionId,
-              ).length === 0
-            }
-            title={
-              activeSubdivision
-                ? `Borrar "${activeSubdivision.name}" de "${activeFloor.name}"`
-                : 'Sin subcapa activa'
-            }
-          >
-            🗑 Subcapa
-          </Button>
-        </div>
         {activeSubdivision ? (
           <PiecePalette
             pieces={activePieces}
@@ -321,108 +287,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             onSelect={setActivePieceId}
           />
         ) : null}
-        <WeatherPanel onChange={setWeatherState} initial={weatherState} />
-      </aside>
-
-      <main className={`${styles.canvasArea} ${isCanvasExpanded ? styles.expanded : ''}`}>
-        <header className={styles.canvasHeader}>
-          <input
-            type="text"
-            value={scenarioName}
-            onChange={(e) => {
-              const next = e.target.value;
-              setScenarioName(next);
-              opsBuffer.pushScenarioName(next);
-            }}
-            className={styles.scenarioNameInput}
-            placeholder="Nombre del escenario"
-          />
-          <div className={styles.floorSwitcher}>
-            <Button
-              type="button"
-              size="mini"
-              onClick={handleAddFloorBelow}
-              title="Agregar subsuelo (debajo del actual)"
-            >
-              ↓+
-            </Button>
-            <Button
-              type="button"
-              size="mini"
-              onClick={handleFloorDown}
-              disabled={activeFloorIndex <= 0}
-              title="Bajar de piso"
-            >
-              ↓
-            </Button>
-            <span className={styles.floorCurrent} title={activeFloor.name}>
-              {activeFloor.name}
-            </span>
-            <Button
-              type="button"
-              size="mini"
-              onClick={handleFloorUp}
-              disabled={activeFloorIndex < 0 || activeFloorIndex >= floors.length - 1}
-              title="Subir de piso"
-            >
-              ↑
-            </Button>
-            <Button
-              type="button"
-              size="mini"
-              onClick={handleAddFloorAbove}
-              title="Agregar piso arriba del actual"
-            >
-              +↑
-            </Button>
-            <span className={styles.floorSwitcherDivider} aria-hidden="true" />
-          </div>
-
-          <div className={styles.zoomControls}>
-            <Button
-              type="button"
-              size="mini"
-              onClick={zoomOut}
-              disabled={zoom <= MIN_ZOOM}
-              title="Reducir zoom"
-            >
-              −
-            </Button>
-            <span className={styles.zoomDisplay} aria-live="polite">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button
-              type="button"
-              size="mini"
-              onClick={zoomIn}
-              disabled={zoom >= MAX_ZOOM}
-              title="Aumentar zoom"
-            >
-              +
-            </Button>
-          </div>
-
-          <span
-            className={styles.autosaveStatus}
-            data-status={autosaveStatus}
-            title="Autoguardado cada 1 min"
-          >
-            {autosaveStatus === 'saving' && (
-              <>
-                <Spinner size={12} label="Guardando" />
-                Guardando…
-              </>
-            )}
-            {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
-            {autosaveStatus === 'timeout' && (
-              <>
-                <Spinner size={12} label="Timeout" />
-                Timeout — reintentá
-              </>
-            )}
-            {autosaveStatus === 'error' && '✗ Error al guardar'}
-            {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
-          </span>
+        <div className={styles.secondaryActions}>
           <Button
             type="button"
             variant="default"
@@ -433,40 +298,193 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           >
             <FontAwesomeIcon icon={faKeyboard} />
           </Button>
+          <Popover
+            side="right"
+            ariaLabel="Configuración de clima"
+            trigger={
+              <Button type="button" size="mini" aria-label="Clima" title="Clima y ambiente">
+                <FontAwesomeIcon icon={faCloud} />
+              </Button>
+            }
+          >
+            <WeatherPanel onChange={setWeatherState} initial={weatherState} />
+          </Popover>
+          <Popover
+            side="right"
+            ariaLabel="Acciones de limpieza"
+            trigger={
+              <Button
+                type="button"
+                size="mini"
+                variant="danger"
+                aria-label="Limpiar"
+                title="Limpiar (menú)"
+              >
+                <FontAwesomeIcon icon={faTrash} />
+              </Button>
+            }
+          >
+            {() => (
+              <div className={styles.dangerMenu}>
+                <button
+                  type="button"
+                  className={styles.dangerItem}
+                  onClick={handleClearAll}
+                  disabled={paintedCells.length === 0}
+                >
+                  🗑 Todo el scenario
+                </button>
+                <button
+                  type="button"
+                  className={styles.dangerItem}
+                  onClick={handleClearFloor}
+                  disabled={paintedInFloor === 0}
+                >
+                  🗑 {activeFloor.name}
+                </button>
+                <button
+                  type="button"
+                  className={styles.dangerItem}
+                  onClick={handleClearSubdivision}
+                  disabled={
+                    !activeSubdivision ||
+                    paintedCells.filter(
+                      (c) =>
+                        c.floorId === activeFloorId &&
+                        c.subdivisionId === activeSubdivisionId,
+                    ).length === 0
+                  }
+                >
+                  🗑 {activeSubdivision?.name ?? 'Subcapa'}
+                </button>
+              </div>
+            )}
+          </Popover>
+        </div>
+      </FloatingPanel>
+
+      <FloatingPanel
+        as="header"
+        className={styles.floatingHeader}
+        ariaLabel="Controles del editor"
+        inert={!chromeVisible}
+      >
+        <input
+          type="text"
+          value={scenarioName}
+          onChange={(e) => {
+            const next = e.target.value;
+            setScenarioName(next);
+            opsBuffer.pushScenarioName(next);
+          }}
+          className={styles.scenarioNameInput}
+          placeholder="Nombre del escenario"
+        />
+        <div className={styles.floorSwitcher}>
           <Button
             type="button"
-            variant="default"
             size="mini"
-            onClick={() => setIsCanvasExpanded((expanded) => !expanded)}
-            title={
-              isCanvasExpanded
-                ? 'Salir del modo expandido (Esc)'
-                : 'Expandir canvas a pantalla completa (F11)'
-            }
-            aria-pressed={isCanvasExpanded}
+            onClick={handleAddFloorBelow}
+            title="Agregar subsuelo (debajo del actual)"
           >
-            {isCanvasExpanded ? '⤢ Comprimir' : '⤡ Expandir'}
+            ↓+
           </Button>
-          <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <Spinner size={14} label="Guardando" />
-                Guardando…
-              </>
-            ) : (
-              scenarioId ? 'Guardar' : 'Crear'
-            )}
+          <Button
+            type="button"
+            size="mini"
+            onClick={handleFloorDown}
+            disabled={activeFloorIndex <= 0}
+            title="Bajar de piso"
+          >
+            ↓
           </Button>
-        </header>
+          <span className={styles.floorCurrent} title={activeFloor.name}>
+            {activeFloor.name}
+          </span>
+          <Button
+            type="button"
+            size="mini"
+            onClick={handleFloorUp}
+            disabled={activeFloorIndex < 0 || activeFloorIndex >= floors.length - 1}
+            title="Subir de piso"
+          >
+            ↑
+          </Button>
+          <Button
+            type="button"
+            size="mini"
+            onClick={handleAddFloorAbove}
+            title="Agregar piso arriba del actual"
+          >
+            +↑
+          </Button>
+          <span className={styles.floorSwitcherDivider} aria-hidden="true" />
+        </div>
 
-        {!isCanvasExpanded && (
-          <SubdivisionTabs
-            subdivisions={subdivisions}
-            activeId={activeSubdivisionId}
-            onChange={handleSubdivisionChange}
-          />
-        )}
+        <div className={styles.zoomControls}>
+          <Button
+            type="button"
+            size="mini"
+            onClick={zoomOut}
+            disabled={zoom <= MIN_ZOOM}
+            title="Reducir zoom"
+          >
+            −
+          </Button>
+          <span className={styles.zoomDisplay} aria-live="polite">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button
+            type="button"
+            size="mini"
+            onClick={zoomIn}
+            disabled={zoom >= MAX_ZOOM}
+            title="Aumentar zoom"
+          >
+            +
+          </Button>
+        </div>
 
+        <SubdivisionTabs
+          subdivisions={subdivisions}
+          activeId={activeSubdivisionId}
+          onChange={handleSubdivisionChange}
+        />
+
+        <span
+          className={styles.autosaveStatus}
+          data-status={autosaveStatus}
+          title="Autoguardado cada 1 min"
+        >
+          {autosaveStatus === 'saving' && (
+            <>
+              <Spinner size={12} label="Guardando" />
+              Guardando…
+            </>
+          )}
+          {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
+          {autosaveStatus === 'timeout' && (
+            <>
+              <Spinner size={12} label="Timeout" />
+              Timeout — reintentá
+            </>
+          )}
+          {autosaveStatus === 'error' && '✗ Error al guardar'}
+          {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
+        </span>
+        <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Spinner size={14} label="Guardando" />
+              Guardando…
+            </>
+          ) : (
+            scenarioId ? 'Guardar' : 'Crear'
+          )}
+        </Button>
+      </FloatingPanel>
+
+      <div className={styles.canvasStage}>
         <FloorStack
           floors={floors}
           activeFloorId={activeFloorId}
@@ -485,18 +503,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onOpenTraitMenu={traitMenu.open}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
-      </main>
-
-      {isCanvasExpanded && (
-        <button
-          type="button"
-          className={styles.exitExpandedButton}
-          onClick={() => setIsCanvasExpanded(false)}
-          title="Salir del modo expandido (Esc)"
-        >
-          ⤢ Comprimir
-        </button>
-      )}
+      </div>
 
       {traitMenu.render}
 

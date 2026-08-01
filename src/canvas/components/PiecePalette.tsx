@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import traitBadgeStyles from '@/components/trait-badge.module.css';
 import type { Piece } from '@/lib/shared/types';
 import styles from './piece-palette.module.css';
 
@@ -13,10 +12,10 @@ type Props = {
 
 /**
  * Vertical palette of pieces for the active subdivision. Click a card to
- * select the piece to paint with.
- *
- * Each card shows the piece's default visual state (or a small preview grid
- * if the piece has multiple states). Trait badges are rendered as tooltips.
+ * select the piece to paint with. Each card shows the piece's default visual
+ * state (or a small preview grid if the piece has multiple states). Names
+ * are surfaced via the `title` attribute so the 168px-wide aside can stay
+ * image-only.
  */
 export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
   return (
@@ -42,19 +41,9 @@ export function PiecePalette({ pieces, activePieceId, onSelect }: Props) {
                 alt={piece.name}
                 width={piece.width}
                 height={piece.height}
-                sizes="128px"
+                sizes="80px"
                 draggable={false}
               />
-              <span>{piece.name}</span>
-              {piece.traits && piece.traits.length > 0 ? (
-                <div>
-                  {piece.traits.map((t) => (
-                    <span key={t.kind} className={traitBadgeStyles.traitBadge} title={t.kind}>
-                      {t.kind}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </button>
           );
         })}

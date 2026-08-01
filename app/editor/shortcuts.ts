@@ -25,7 +25,7 @@ type Args = {
    *  in progress and short-circuits if so. */
   save: () => void;
   traitMenu: { close: () => void };
-  setIsCanvasExpanded: Dispatch<SetStateAction<boolean>>;
+  setChromeVisible: Dispatch<SetStateAction<boolean>>;
   handleSubdivisionChange: (id: string) => void;
   subdivisions: readonly SubdivisionConfig[];
   handleFloorUp: () => void;
@@ -46,8 +46,9 @@ type SubdivisionEntry = ShortcutTemplate & {
  * component so the per-subdivision dynamic entries and the binding map stay
  * in one place. Consumers wrap the result with `useKeyboardShortcuts`.
  *
- * Trait-menu `close` runs before the canvas-collapse toggle on Escape so the
- * menu is the first thing the user backs out of when it's open.
+ * On Escape, the trait menu closes first (the menu is the first thing the
+ * user backs out of when it's open) and then the shortcuts modal is also
+ * closed, if open.
  */
 export function buildEditorShortcuts(args: Args): Shortcut[] {
   return [
@@ -64,10 +65,11 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     ),
     bindShortcut('toggleBrushPreview', () => args.setShowBrushPreview((v) => !v)),
     bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
+    bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
     bindShortcut('save', () => args.save()),
     bindShortcut('closeOverlay', () => {
       args.traitMenu.close();
-      args.setIsCanvasExpanded(false);
+      args.setShowShortcuts(false);
     }),
     // Subdivision switches generated dynamically (one per subdivision, bound
     // to keys '1'..'9'). Spread the template entry and override key per item;

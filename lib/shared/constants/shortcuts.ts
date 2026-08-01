@@ -154,7 +154,13 @@ export const SHORTCUTS = {
   closeOverlay: {
     id: 'closeOverlay',
     code: KEYS_BY_CODE.escape,
-    label: 'Cerrar menú o colapsar vista expandida',
+    label: 'Cerrar menú o modal de atajos',
+    category: 'overlay',
+  },
+  toggleChrome: {
+    id: 'toggleChrome',
+    code: KEYS_BY_CODE.keyH,
+    label: 'Mostrar / ocultar paneles del editor',
     category: 'overlay',
   },
   /**
