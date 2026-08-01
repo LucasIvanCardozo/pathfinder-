@@ -58,7 +58,7 @@
 
 /* Obscured subdivision: no drop-shadow (the dark fill is the shadow). */
 .floor canvas:nth-child(5) {
-  filter: none;
+    filter: blur(10px);
 }
 
 /* Brush preview Layer is the 6th canvas in the Stage. No shadow (it's

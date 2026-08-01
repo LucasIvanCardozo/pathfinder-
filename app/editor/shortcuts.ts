@@ -32,6 +32,8 @@ type Args = {
   handleFloorDown: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  handleUndo: () => void;
+  handleRedo: () => void;
 };
 
 /** Subdivision entries are generated dynamically; this alias keeps the cast
@@ -87,5 +89,7 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('floorDown', args.handleFloorDown),
     bindShortcut('zoomIn', args.zoomIn),
     bindShortcut('zoomOut', args.zoomOut),
+    bindShortcut('undo', args.handleUndo),
+    bindShortcut('redo', args.handleRedo),
   ];
 }
