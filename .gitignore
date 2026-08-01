@@ -1,6 +1,7 @@
 # Local Pi runtime state
 .atl/
 
+.agents/
 # Node
 node_modules/
 .pnpm-store/

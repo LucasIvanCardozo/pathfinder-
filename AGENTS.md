@@ -1,4 +1,4 @@
-# AGENTS.md — Pathfinder
+# AGENTS.md — pathfinder-
 
 Operating contract for agent work. Detailed rules live in `docs/`; this file is a TOC and the priority resolver. Keep it under 150 lines.
 
@@ -72,9 +72,7 @@ Do not pass Prisma model instances across this boundary or keep mutable request 
 The canonical envelope (Carta QR target) is exactly:
 
 ```ts
-type ActionResult<T> =
-  | { success: true; data: T; error: null }
-  | { success: false; data: null; error: { message: string; cause?: string } };
+type ActionResult<T> = { success: true; data: T; error: null } | { success: false; data: null; error: { message: string; cause?: string } }
 ```
 
 `createAction` is the only place that produces this envelope: it parses the Zod schema, formats every Zod issue as `path 🡆 message` joined by newlines into `error.message`, wraps the callback's returned value as `data`, and catches thrown errors. Handlers return the **domain value** on success (the wrapper wraps it) and **throw a safe error** for known domain/action failures (the wrapper normalises it). Do not construct the envelope by hand inside the handler. The canonical envelope has **no `fieldErrors`**; UI parses the `path 🡆 message` lines from `error.message` to map per-field errors. `redirect()` and `notFound()` are unwrapped Next.js framework control flow — redirecting actions stay outside `createAction` and return `Promise<never>`. Carta QR's future `createProtectedAction` defines its own custom `unauthorized` / `forbidden` auth errors that are **not** framework control flow: they are normalised by the inner `createAction` wrapper into the canonical `{success: false, data: null, error: ...}` envelope. See [error-handling.md](./docs/architecture/error-handling.md).
@@ -95,6 +93,7 @@ The full tag inventory and the prefix rules live in [cache-tag-convention.md](./
 Biome 2.5.5 is configured for single quotes (target style), semicolons, trailing commas, 100-character lines, 2-space indentation, organized imports. `pnpm lint` and `pnpm typecheck` are read-only; `pnpm format` and `pnpm check` write files. Use PascalCase for components, kebab-case for non-component files/styles, `@/*` imports. English for code, identifiers, schemas, and technical comments; preserve Spanish user-facing copy. Conventional commits: `feat | fix | refactor | test | docs | chore:` with a scope. See [code-style.md](./docs/patterns/code-style.md).
 
 ### Comment budget
+
 - JSDoc on public functions: 3-5 lines max (header + why + at most one edge case).
 - Inline comments: 2-3 lines max, ideally 1-2.
 - Post-mortems for past bugs: up to 10 lines OK; regression knowledge is worth it.
@@ -102,6 +101,7 @@ Biome 2.5.5 is configured for single quotes (target style), semicolons, trailing
 - If the "why" needs more than 5 lines, refactor the code so the "why" is self-evident.
 
 ### Floor rendering rule
+
 Only floors from the start of the `floors` array up to and including the active floor render — i.e. `floors.slice(0, activeIndex + 1)`. Floors above the active one (indices `> activeIndex`) are **not** rendered and would otherwise visually sit on top of the active floor and hide it. The default floor order is bottom→top (`Subsuelo 1`, `Planta Baja`, `Piso 1`), so the slice keeps floors at or below the active one. The `useVisibleFloors` hook is the single source of truth for this slice.
 
 ## 11. Explicit scope boundaries
