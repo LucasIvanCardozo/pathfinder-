@@ -128,10 +128,11 @@ function FloorCanvasImpl({
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
 
-  // Bucket cells by subdivision (defensive against stale ids by dropping
-  // misses), then sort by `subdivision.order`. Konva draws in DOM order,
-  // so Layer order mirrors the z-stack (Suelo=0 ... Estructuras=3) and
-  // each layer paints over the previous one.
+  // Bucket cells by subdivision, then always emit one entry per subdivision
+  // sorted by `order`. Empty cell arrays for subdivisions with no painted
+  // cells — the Layer still renders (Konva creates its <canvas>) so the
+  // DOM structure is predictable and the per-subdivision `:nth-child`
+  // selectors in floor-canvas.module.css stay stable.
   const cellsBySub = useMemo(() => {
     const buckets = new Map<string, PaintedCell[]>();
     for (const c of cells) {
@@ -142,15 +143,12 @@ function FloorCanvasImpl({
         buckets.set(c.subdivisionId, [c]);
       }
     }
-    const out: Array<{ sub: SubdivisionConfig; cells: PaintedCell[] }> = [];
-    for (const [subId, subCells] of buckets) {
-      const sub = subById.get(subId);
-      if (!sub) continue;
-      out.push({ sub, cells: subCells });
-    }
-    out.sort((a, b) => a.sub.order - b.sub.order);
-    return out;
-  }, [cells, subById]);
+    const ordered = subdivisions.slice().sort((a, b) => a.order - b.order);
+    return ordered.map((sub) => ({
+      sub,
+      cells: buckets.get(sub.id) ?? [],
+    }));
+  }, [cells, subdivisions]);
 
   // Render-time cellSize helper (world coords; the Stage scales on output).
   const cellSizeFor = (sub: SubdivisionConfig): number => mapDims.baseCellSize / sub.cellSizeRatio;

@@ -10,17 +10,53 @@
 }
 
 .tier0 {
-  filter: drop-shadow(2px 2px 5px #000);
+  filter: brightness(1);
 }
 
 .tier1 {
-  filter: brightness(0.7) drop-shadow(2px 2px 5px #000);
+  filter: blur(1px) brightness(0.8);
 }
 
 .tier2 {
-  filter: brightness(0.5) drop-shadow(2px 2px 5px #000);
+  filter: blur(2px) brightness(0.7);
 }
 
 .tier3 {
-  filter: brightness(0.3) drop-shadow(2px 2px 5px #000);
+  filter: blur(3px) brightness(0.6);
+}
+
+/* Per-subdivision drop-shadow. Konva renders one <canvas> per Layer inside
+   <Stage>; the Stage's container (`.konvajs-content`) lists them in DOM
+   order matching `subdivision.order` because FloorCanvas iterates the
+   subdivisions in that order (see FloorCanvas.tsx). The brush preview is
+   the last Layer so it gets `canvas:nth-child(5)` and is excluded here.
+
+   Subdivision order (lib/shared/constants/subdivisions.ts):
+     0 suelo            -> nth-child(1)
+     1 objetos-grandes  -> nth-child(2)
+     2 objetos-pequenos -> nth-child(3)
+     3 estructuras      -> nth-child(4)
+
+   Direction: light from top-left, so shadow offset is down + right.
+   Intensity scales with `order` to simulate elevation. */
+.floor canvas:nth-child(1) {
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 1));
+}
+
+.floor canvas:nth-child(2) {
+  filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 1));
+}
+
+.floor canvas:nth-child(3) {
+  filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 1));
+}
+
+.floor canvas:nth-child(4) {
+  filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, 1));
+}
+
+/* Brush preview Layer is the 5th canvas in the Stage. No shadow (it's
+   not a painted piece, it's a UI affordance). */
+.floor canvas:nth-child(5) {
+  filter: none;
 }
