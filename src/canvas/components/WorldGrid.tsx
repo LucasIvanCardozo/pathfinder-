@@ -18,7 +18,7 @@ type Props = {
   strokeWidth?: number;
 };
 
-const DEFAULT_STROKE = '#2a2e36';
+const DEFAULT_STROKE = '#3d4350';
 
 /**
  * Single-instanced grid overlay for the entire floor stack. Renders the
@@ -35,7 +35,7 @@ function WorldGridImpl({
   zoom,
   worldBounds,
   stroke = DEFAULT_STROKE,
-  strokeWidth = 1,
+  strokeWidth = 2,
 }: Props) {
   const config: GridConfig = {
     worldBaseCellSize: mapDims.baseCellSize,
@@ -64,6 +64,7 @@ function WorldGridImpl({
             points={[x, 0, x, totalHeight]}
             stroke={stroke}
             strokeWidth={strokeWidth}
+            strokeScaleEnabled={false}
             perfectDrawEnabled={false}
           />
         ))}
@@ -73,6 +74,7 @@ function WorldGridImpl({
             points={[0, y, totalWidth, y]}
             stroke={stroke}
             strokeWidth={strokeWidth}
+            strokeScaleEnabled={false}
             perfectDrawEnabled={false}
           />
         ))}
