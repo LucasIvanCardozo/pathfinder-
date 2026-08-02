@@ -265,8 +265,9 @@ function FloorCanvasImpl({
           : styles.tier3;
   const className = `${styles.floor} ${tierClass}${isActive ? ` ${styles.interactive}` : ''}`;
 
-  // Always-visible, non-interactive brush preview. Renders one outlined
-  // rect per cell in the brush footprint at the current hover position.
+  // Always-visible, non-interactive brush preview. Renders one filled
+  // rect per cell in the brush footprint at the current hover position,
+  // with no stroke so adjacent cells don't draw an interior grid line.
   // Empty when the cursor is outside the canvas or no subdivision is
   // active. The `Layer` is `listening={false}` so it never intercepts
   // pointer events — paint strokes still flow through to the active
@@ -361,8 +362,6 @@ function FloorCanvasImpl({
                 y={cell.gridY * previewCellSize}
                 width={previewCellSize}
                 height={previewCellSize}
-                stroke={previewStyle.stroke}
-                strokeWidth={1.5}
                 fill={previewStyle.fill}
                 perfectDrawEnabled={false}
                 listening={false}
