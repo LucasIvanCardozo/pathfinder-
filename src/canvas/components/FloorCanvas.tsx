@@ -6,7 +6,7 @@ import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
 import { usePieceMap, useSubdivisionMap } from '@/hooks';
 import { telemetry } from '@/dev/perf/telemetry';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
-import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../tools';
+import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
@@ -69,10 +69,12 @@ export type Props = {
     pieceId: string | null,
   ) => void;
   /**
-   * Called when the darkness tool is in erase mode. Receives the brush footprint
-   * coordinates so the owner can look up matching darkness cell ids.
+   * Called when the darkness tool is in erase mode. Receives one stamp per
+   * Bresenham step so the owner can BFS from each `centre` with structure
+   * cells as propagation walls. Coordinates only — the owner looks up
+   * matching darkness cell ids.
    */
-  onDarknessErase?: (floorId: string, cells: BrushCell[]) => void;
+  onDarknessErase?: (floorId: string, footprints: StrokeFootprint[]) => void;
   /** ONLY attached when `isActive`. Opens an interactive trait menu (e.g.
    *  door-states right-click). */
   onOpenTraitMenu?: (

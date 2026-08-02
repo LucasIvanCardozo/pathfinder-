@@ -5,7 +5,7 @@ import { useStageViewport } from '@/hooks/useStageViewport';
 import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
 import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
 import { useVisibleFloors } from '../hooks/useVisibleFloors';
-import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../tools';
+import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { useTextureImages } from '../useTextureImages';
 import { FloorCanvas } from './FloorCanvas';
 import styles from './floor-stack.module.css';
@@ -41,7 +41,7 @@ type Props = {
     pieceId: string | null,
   ) => void;
   /** Darkness erase handler forwarded from EditorClient. */
-  onDarknessErase?: (floorId: string, cells: BrushCell[]) => void;
+  onDarknessErase?: (floorId: string, footprints: StrokeFootprint[]) => void;
   onOpenTraitMenu?: (
     cellId: string,
     traitKind: string,

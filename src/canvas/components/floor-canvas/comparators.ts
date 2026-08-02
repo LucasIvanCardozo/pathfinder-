@@ -56,28 +56,49 @@ export function cellsContentEqual(a: PaintedCell[], b: PaintedCell[]): boolean {
  * `cells` is the exception (re-bucketed on every paint), so it goes
  * through `cellsContentEqual`. Dev-only `console.warn` fires for inactive
  * floors whose memo would otherwise mask a broken ref chain. DCE'd in prod.
+ *
+ * When both sides are inactive, a number of props are decorative:
+ * - `isPanDown`, `isPanning`, `beginPan`, and the callbacks (`onPaint`,
+ *   `onDarknessErase`, `onOpenTraitMenu`): every event handler short-circuits
+ *   on `!isActive`, and the cursor is only applied to the active container.
+ * - `activeSubdivisionId`, `activePieceId`, `tool`, `darknessMode`,
+ *   `brushSize`, `brushShape`, `showBrushPreview`: the brush preview's
+ *   `hoverCell` is cleared when `isActive` flips to false (see the
+ *   `setHoverCell(null)` effect in `FloorCanvas`), so `previewCells` is
+ *   always `[]` for an inactive floor and none of these reach the output.
+ *
+ * Skipping them prevents the inactive stack from re-rendering on every tool
+ * change, brush size/shape toggle, subdivision/piece selection, pan-modifier
+ * toggle, or parent callback rebuild.
  */
 export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<Props>): boolean {
+  const inactiveBothSides = !prev.isActive && !next.isActive;
+
   if (process.env.NODE_ENV !== 'production') {
     if (!prev.isActive) {
       const changes: string[] = [];
       if (prev.subdivisions !== next.subdivisions) changes.push('subdivisions');
       if (prev.pieces !== next.pieces) changes.push('pieces');
       if (prev.textureImages !== next.textureImages) changes.push('textureImages');
-      if (prev.activeSubdivisionId !== next.activeSubdivisionId)
+      if (!inactiveBothSides && prev.activeSubdivisionId !== next.activeSubdivisionId)
         changes.push('activeSubdivisionId');
-      if (prev.activePieceId !== next.activePieceId) changes.push('activePieceId');
-      if (prev.tool !== next.tool) changes.push('tool');
-      if (prev.darknessMode !== next.darknessMode) changes.push('darknessMode');
-      if (prev.brushSize !== next.brushSize) changes.push('brushSize');
-      if (prev.brushShape !== next.brushShape) changes.push('brushShape');
-      if (prev.showBrushPreview !== next.showBrushPreview) changes.push('showBrushPreview');
-      if (prev.beginPan !== next.beginPan) changes.push('beginPan');
-      if (prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
-      if (prev.isPanning !== next.isPanning) changes.push('isPanning');
-      if (prev.onPaint !== next.onPaint) changes.push('onPaint');
-      if (prev.onDarknessErase !== next.onDarknessErase) changes.push('onDarknessErase');
-      if (prev.onOpenTraitMenu !== next.onOpenTraitMenu) changes.push('onOpenTraitMenu');
+      if (!inactiveBothSides && prev.activePieceId !== next.activePieceId)
+        changes.push('activePieceId');
+      if (!inactiveBothSides && prev.tool !== next.tool) changes.push('tool');
+      if (!inactiveBothSides && prev.darknessMode !== next.darknessMode)
+        changes.push('darknessMode');
+      if (!inactiveBothSides && prev.brushSize !== next.brushSize) changes.push('brushSize');
+      if (!inactiveBothSides && prev.brushShape !== next.brushShape) changes.push('brushShape');
+      if (!inactiveBothSides && prev.showBrushPreview !== next.showBrushPreview)
+        changes.push('showBrushPreview');
+      if (!inactiveBothSides && prev.beginPan !== next.beginPan) changes.push('beginPan');
+      if (!inactiveBothSides && prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
+      if (!inactiveBothSides && prev.isPanning !== next.isPanning) changes.push('isPanning');
+      if (!inactiveBothSides && prev.onPaint !== next.onPaint) changes.push('onPaint');
+      if (!inactiveBothSides && prev.onDarknessErase !== next.onDarknessErase)
+        changes.push('onDarknessErase');
+      if (!inactiveBothSides && prev.onOpenTraitMenu !== next.onOpenTraitMenu)
+        changes.push('onOpenTraitMenu');
       if (changes.length > 0) {
         // eslint-disable-next-line no-console
         console.warn(
@@ -94,22 +115,22 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     prev.mapDims === next.mapDims &&
     prev.subdivisions === next.subdivisions &&
     prev.pieces === next.pieces &&
-    prev.activeSubdivisionId === next.activeSubdivisionId &&
-    prev.activePieceId === next.activePieceId &&
-    prev.tool === next.tool &&
-    prev.darknessMode === next.darknessMode &&
-    prev.brushSize === next.brushSize &&
-    prev.brushShape === next.brushShape &&
-    prev.showBrushPreview === next.showBrushPreview &&
+    (inactiveBothSides || prev.activeSubdivisionId === next.activeSubdivisionId) &&
+    (inactiveBothSides || prev.activePieceId === next.activePieceId) &&
+    (inactiveBothSides || prev.tool === next.tool) &&
+    (inactiveBothSides || prev.darknessMode === next.darknessMode) &&
+    (inactiveBothSides || prev.brushSize === next.brushSize) &&
+    (inactiveBothSides || prev.brushShape === next.brushShape) &&
+    (inactiveBothSides || prev.showBrushPreview === next.showBrushPreview) &&
     prev.textureImages === next.textureImages &&
     prev.viewportSize === next.viewportSize &&
     prev.pan === next.pan &&
     prev.zoom === next.zoom &&
-    prev.beginPan === next.beginPan &&
-    prev.isPanDown === next.isPanDown &&
-    prev.isPanning === next.isPanning &&
-    prev.onPaint === next.onPaint &&
-    prev.onDarknessErase === next.onDarknessErase &&
-    prev.onOpenTraitMenu === next.onOpenTraitMenu
+    (inactiveBothSides || prev.beginPan === next.beginPan) &&
+    (inactiveBothSides || prev.isPanDown === next.isPanDown) &&
+    (inactiveBothSides || prev.isPanning === next.isPanning) &&
+    (inactiveBothSides || prev.onPaint === next.onPaint) &&
+    (inactiveBothSides || prev.onDarknessErase === next.onDarknessErase) &&
+    (inactiveBothSides || prev.onOpenTraitMenu === next.onOpenTraitMenu)
   );
 }

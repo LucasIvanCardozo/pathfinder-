@@ -41,6 +41,11 @@ export type BrushStroke = {
   cells: BrushCell[];
 };
 
+// Re-exported from `brush.ts` to keep tool-layer types co-located. The shape
+// is a single brush stamp inside a stroke: the Bresenham centre plus the
+// clipped footprint cells. See `computeStrokeFootprints` for context.
+export type { StrokeFootprint } from './brush';
+
 /**
  * Minimal piece projection used by the tool layer. Mirrors the subset of
  * fields the paint logic needs from `Piece`. Keeping the projection narrow

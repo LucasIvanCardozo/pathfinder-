@@ -2,8 +2,14 @@
 
 import { useCallback, useRef } from 'react';
 import { DARKNESS_PIECE_ID } from '@/lib/shared/constants';
-import type { BrushCell, BrushShape, BrushSize, ToolKind } from '../../tools';
-import { computeStrokeCells } from '../../tools';
+import type {
+  BrushCell,
+  BrushShape,
+  BrushSize,
+  StrokeFootprint,
+  ToolKind,
+} from '../../tools';
+import { computeStrokeCells, computeStrokeFootprints } from '../../tools';
 
 type ApplyArgs = {
   pointer: { x: number; y: number };
@@ -21,10 +27,12 @@ type ApplyArgs = {
     pieceId: string | null,
   ) => void;
   /**
-   * Called when the darkness tool is in erase mode. Receives the brush
-   * footprint cells (coordinates only — the owner looks up matching ids).
+   * Called when the darkness tool is in erase mode. Receives one stamp per
+   * Bresenham step so the owner can BFS from each `centre` with structure
+   * cells as propagation walls. Coordinates only — the owner looks up
+   * matching ids.
    */
-  onDarknessErase: (floorId: string, cells: BrushCell[]) => void;
+  onDarknessErase: (floorId: string, footprints: StrokeFootprint[]) => void;
   pointerToCell: (pointer: { x: number; y: number }) => BrushCell | null;
   tool: ToolKind;
   darknessMode: 'apply' | 'erase';
@@ -73,21 +81,39 @@ export function usePaintStroke(): UsePaintStrokeResult {
       return;
     }
     const start = isDragging ? lastStrokeCellRef.current : null;
-    const cells = computeStrokeCells(start, target, brushSize, bounds, brushShape);
     lastStrokeCellRef.current = target;
 
     if (tool === 'darkness') {
       if (darknessMode === 'erase') {
-        onDarknessErase(floorId, cells);
+        // Per-centre footprints so the owner can apply wall-aware BFS per
+        // stamp; the union is reconstructed downstream if needed.
+        const footprints = computeStrokeFootprints(
+          start,
+          target,
+          brushSize,
+          bounds,
+          brushShape,
+        );
+        onDarknessErase(floorId, footprints);
       } else {
         // Apply mode uses the fixed subdivision and sentinel pieceId.
+        const cells = computeStrokeCells(
+          start,
+          target,
+          brushSize,
+          bounds,
+          brushShape,
+        );
         onPaint(floorId, 'obscured', cells, DARKNESS_PIECE_ID);
       }
-    } else if (tool === 'paint') {
-      if (!activePieceId) return;
-      onPaint(floorId, activeSubdivisionId, cells, activePieceId);
     } else {
-      onPaint(floorId, activeSubdivisionId, cells, null);
+      const cells = computeStrokeCells(start, target, brushSize, bounds, brushShape);
+      if (tool === 'paint') {
+        if (!activePieceId) return;
+        onPaint(floorId, activeSubdivisionId, cells, activePieceId);
+      } else {
+        onPaint(floorId, activeSubdivisionId, cells, null);
+      }
     }
   }, []);
 

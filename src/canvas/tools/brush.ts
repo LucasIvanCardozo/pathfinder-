@@ -135,6 +135,50 @@ function iterateGridLine(start: BrushCell, end: BrushCell): Array<[number, numbe
 }
 
 /**
+ * A single brush stamp within a stroke: the Bresenham centre plus the cells
+ * covered by the brush footprint at that centre (clipped to bounds). Used by
+ * tools that need both pieces of information, e.g. darkness erase runs BFS
+ * from `centre` against the footprint cells.
+ */
+export type StrokeFootprint = { centre: BrushCell; cells: BrushCell[] };
+
+/**
+ * Per-centre footprints of a stroke. Each entry is `{ centre, cells }` for
+ * one cell along the Bresenham line from `start` to `end`, clipped to
+ * `bounds`. Order matches the Bresenham order (start first).
+ *
+ * Used by tools that need to reason about coverage per centre instead of
+ * the union (e.g. darkness erase needs to BFS from each centre so a wall
+ * in one footprint does not bleed into the next).
+ *
+ * When `start` is `null` (the first sample of a drag), returns a single
+ * footprint at `end`.
+ */
+export function computeStrokeFootprints(
+  start: BrushCell | null,
+  end: BrushCell,
+  size: BrushSize,
+  bounds: BrushBounds,
+  shape: BrushShape = DEFAULT_BRUSH_SHAPE,
+): StrokeFootprint[] {
+  if (!start) return [{ centre: end, cells: brushCellsAt(end, size, bounds, shape) }];
+  const line = iterateGridLine(start, end);
+  const offsets = brushOffsets(size, shape);
+  const out: StrokeFootprint[] = [];
+  for (const [gx, gy] of line) {
+    const cells: BrushCell[] = [];
+    for (const { dx, dy } of offsets) {
+      const x = gx + dx;
+      const y = gy + dy;
+      if (x < 0 || y < 0 || x >= bounds.maxX || y >= bounds.maxY) continue;
+      cells.push({ gridX: x, gridY: y });
+    }
+    out.push({ centre: { gridX: gx, gridY: gy }, cells });
+  }
+  return out;
+}
+
+/**
  * Cells painted by a stroke that starts at `start` and ends at `end`. The
  * brush footprint is stamped at every cell along the Bresenham line, then
  * the union is de-duplicated and clipped to the map bounds. This is what
@@ -151,19 +195,15 @@ export function computeStrokeCells(
   shape: BrushShape = DEFAULT_BRUSH_SHAPE,
 ): BrushCell[] {
   if (!start) return brushCellsAt(end, size, bounds, shape);
-  const line = iterateGridLine(start, end);
-  const offsets = brushOffsets(size, shape);
+  const footprints = computeStrokeFootprints(start, end, size, bounds, shape);
   const seen = new Set<string>();
   const out: BrushCell[] = [];
-  for (const [gx, gy] of line) {
-    for (const { dx, dy } of offsets) {
-      const x = gx + dx;
-      const y = gy + dy;
-      if (x < 0 || y < 0 || x >= bounds.maxX || y >= bounds.maxY) continue;
-      const key = `${x}|${y}`;
+  for (const fp of footprints) {
+    for (const c of fp.cells) {
+      const key = `${c.gridX}|${c.gridY}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ gridX: x, gridY: y });
+      out.push(c);
     }
   }
   return out;

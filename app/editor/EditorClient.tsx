@@ -17,6 +17,7 @@ import {
   WeatherPanel,
   type BrushShape,
   type PaintTool,
+  type StrokeFootprint,
 } from '@/canvas';
 import { Button } from '@/components/Button';
 import { FloatingPanel } from '@/components/FloatingPanel';
@@ -28,6 +29,7 @@ import { telemetry } from '@/dev/perf/telemetry';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { normalizeBrushSize } from '@/canvas/tools';
+import { eraseFootprintFor } from '@/canvas/tools';
 import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
@@ -122,8 +124,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   );
   const { zoom, zoomIn, zoomOut } = useZoomControl();
   const activeSubdivision = subdivisions.find((s) => s.id === activeSubdivisionId);
-  const activePieces = allPieces;
-  const pieceById = usePieceMap(allPieces);
+  // Freeze the piece catalog reference on mount. The catalog is build-time
+  // static (`pnpm gen-cat`, `'use cache'` with `cacheLife('hours')`), so the
+  // first value is the right one for the lifetime of this editor instance.
+  // Without this, `router.refresh()` after save re-runs the Server Component
+  // and `listAllPieces()` returns a new array (same content, new reference),
+  // which propagates to `FloorStack` -> `FloorCanvas` and trips the memo
+  // comparator on `pieces` for every inactive floor.
+  const [stableAllPieces] = useState(allPieces);
+  const activePieces = stableAllPieces;
+  const pieceById = usePieceMap(stableAllPieces);
   const { computeStrokeDiff, computeRemovedIds } = usePaintStrokeDiff();
 
   const markDirty = useCallback(() => setIsDirty(true), []);
@@ -233,15 +243,21 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         subdivisionId === 'obscured' &&
         pieceId === DARKNESS_PIECE_ID
       ) {
-        const darknessKey = (gx: number, gy: number) =>
-          `${floorId}|obscured|${gx}|${gy}`;
+        // `darknessKey` must include the per-cell floorId. Painting darkness
+        // in floor A then floor B at the same logical (gx, gy) used to
+        // collide because the closure captured only the stroke's floorId,
+        // so every existing darkness cell got keyed against the active
+        // floor — making the dedupe think B's stroke was entirely over
+        // already-painted darkness.
+        const darknessKey = (fId: string, gx: number, gy: number) =>
+          `${fId}|obscured|${gx}|${gy}`;
         const existing = new Set(
           currentPaintedCells
             .filter((c) => c.pieceId === DARKNESS_PIECE_ID)
-            .map((c) => darknessKey(c.gridX, c.gridY)),
+            .map((c) => darknessKey(c.floorId, c.gridX, c.gridY)),
         );
         const newCells = uniqueCells
-          .filter((c) => !existing.has(darknessKey(c.gridX, c.gridY)))
+          .filter((c) => !existing.has(darknessKey(floorId, c.gridX, c.gridY)))
           .map((c) => ({
             id: newId('cell'),
             floorId,
@@ -322,14 +338,39 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const handleBrushSizeChange = (size: number) => setBrushSize(normalizeBrushSize(size));
 
   const handleDarknessErase = useCallback(
-    (floorId: string, cells: { gridX: number; gridY: number }[]) => {
-      if (cells.length === 0) return;
+    (floorId: string, footprints: StrokeFootprint[]) => {
+      if (footprints.length === 0) return;
       // Record the pre-erase state so undo can restore the darkness cells.
       // Done before the `removedIds.length === 0` guard because the record
       // is harmless even if the erase ends up a no-op (one redundant step
       // in the history).
       history.record(buildSnapshot());
       const current = paintedCellsRef.current;
+
+      // Precompute the structure walls for this floor once. Structures
+      // (`subdivisionId === 'estructuras'`) act as propagation walls for the
+      // darkness erase: the BFS per footprint erases the wall's own darkness
+      // (so it stays visible) but stops there, so cells behind the wall keep
+      // their darkness.
+      const wallKeys = new Set<string>();
+      for (const c of current) {
+        if (c.floorId === floorId && c.subdivisionId === 'estructuras') {
+          wallKeys.add(`${c.gridX}|${c.gridY}`);
+        }
+      }
+      const isWall = (x: number, y: number) => wallKeys.has(`${x}|${y}`);
+
+      // Run wall-aware BFS per stamp so a wall in one stamp does not bleed
+      // into the next. Accumulates the union of eraseable cell coords.
+      const eraseable = new Set<string>();
+      for (const { centre, cells } of footprints) {
+        if (cells.length === 0) continue;
+        const filtered = eraseFootprintFor(centre, cells, isWall);
+        for (const f of filtered) eraseable.add(`${f.gridX}|${f.gridY}`);
+      }
+
+      if (eraseable.size === 0) return;
+
       const byKey = new Map(
         current.map((c) => [
           `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`,
@@ -337,9 +378,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         ]),
       );
       const removedIds: string[] = [];
-      for (const cell of cells) {
-        const key = `${floorId}|obscured|${cell.gridX}|${cell.gridY}`;
-        const found = byKey.get(key);
+      for (const key of eraseable) {
+        const [gx, gy] = key.split('|').map(Number);
+        const found = byKey.get(`${floorId}|obscured|${gx}|${gy}`);
         if (found) removedIds.push(found.id);
       }
       if (removedIds.length === 0) return;
@@ -643,7 +684,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
-          pieces={allPieces}
+          pieces={stableAllPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
           tool={tool}

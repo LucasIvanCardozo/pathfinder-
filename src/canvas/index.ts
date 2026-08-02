@@ -7,7 +7,7 @@ export type { PaintTool } from './components/PaintToolbar';
 export { PaintToolbar } from './components/PaintToolbar';
 export { PiecePalette } from './components/PiecePalette';
 export { SubdivisionTabs } from './components/SubdivisionTabs';
-export type { BrushCell, BrushShape, BrushSize, ToolKind } from './tools';
+export type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from './tools';
 export {
   applyEraseStroke,
   applyPaintStroke,
