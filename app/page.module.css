@@ -58,6 +58,21 @@
   border-color: var(--accent);
 }
 
+/* Same visual shape as .homeNavLink but on a <button>: reset the default
+   user-agent background/font so it sits next to the help link without a
+   size mismatch. The .homeNavLink:hover rule applies through composes. */
+.homeNavLinkAsButton {
+  composes: homeNavLink;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.homeNavLinkAsButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .homeSection {
   display: flex;
   flex-direction: column;

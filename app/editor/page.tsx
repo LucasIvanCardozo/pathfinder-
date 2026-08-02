@@ -1,7 +1,9 @@
+import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
 import { loadScenario } from '@/lib/server/actions/scenario.action';
 import { listAllPieces } from '@/lib/server/actions/piece.action';
+import { isUnlocked } from '@/lib/server/auth/session';
 import { EditorClient } from './EditorClient';
 import styles from './editor.module.css';
 
@@ -17,6 +19,12 @@ function EditorFallback() {
 
 async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
   await connection();
+  // Soft gate: the home page is public, but the editor requires the session
+  // cookie. Without it, bounce back to the home page so the user can unlock
+  // through the password prompt.
+  if (!(await isUnlocked())) {
+    redirect('/');
+  }
   const { id } = await searchParams;
 
   // Run the scenario + pieces reads in parallel. Subdivisions are an immutable
