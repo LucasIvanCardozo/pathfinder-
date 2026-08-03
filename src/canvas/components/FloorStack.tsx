@@ -1,8 +1,14 @@
 'use client';
 
-import { memo,  useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { useStageViewport } from '@/hooks/useStageViewport';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import type {
+  Floor,
+  PaintedCell,
+  Piece,
+  ScenarioEffect,
+  SubdivisionConfig,
+} from '@/lib/shared/types';
 import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
 import { useVisibleFloors } from '../hooks/useVisibleFloors';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
@@ -21,6 +27,12 @@ type Props = {
   zoom: number;
   subdivisions: readonly SubdivisionConfig[];
   paintedCells: PaintedCell[];
+  /**
+   * Persisted AoE markers for the scenario, rendered on a dedicated Konva
+   * layer. PR 1 surfaces the read side; the modal that creates new effects
+   * ships in PR 2, which still routes writes through the op buffer.
+   */
+  effects: ScenarioEffect[];
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -63,6 +75,7 @@ function FloorStackImpl({
   zoom,
   subdivisions,
   paintedCells,
+  effects,
   pieces,
   activeSubdivisionId,
   activePieceId,
@@ -101,31 +114,33 @@ function FloorStackImpl({
         const isActive = idx === activeIndex;
         const cells = cellsForFloor.get(floor.id) ?? [];
         return (
-          <FloorCanvas key={floor.id}
-              floor={floor}
-              cells={cells}
-              depthFromActive={activeIndex - idx}
-              isActive={isActive}
-              mapDims={mapDims}
-              subdivisions={subdivisions}
-              pieces={pieces}
-              textureImages={textureImages}
-              activeSubdivisionId={activeSubdivisionId}
-              activePieceId={activePieceId}
-              tool={tool}
-              darknessMode={darknessMode}
-              brushSize={brushSize}
-              brushShape={brushShape}
-              showBrushPreview={showBrushPreview}
-              viewportSize={viewportSize}
-              pan={pan}
-              zoom={zoom}
-              beginPan={beginPan}
-              isPanDown={isPanDown}
-              isPanning={isPanning}
-              onPaint={onPaint}
-              onDarknessErase={onDarknessErase}
-              onOpenTraitMenu={onOpenTraitMenu}
+          <FloorCanvas
+            key={floor.id}
+            floor={floor}
+            cells={cells}
+            depthFromActive={activeIndex - idx}
+            isActive={isActive}
+            mapDims={mapDims}
+            subdivisions={subdivisions}
+            effects={effects}
+            pieces={pieces}
+            textureImages={textureImages}
+            activeSubdivisionId={activeSubdivisionId}
+            activePieceId={activePieceId}
+            tool={tool}
+            darknessMode={darknessMode}
+            brushSize={brushSize}
+            brushShape={brushShape}
+            showBrushPreview={showBrushPreview}
+            viewportSize={viewportSize}
+            pan={pan}
+            zoom={zoom}
+            beginPan={beginPan}
+            isPanDown={isPanDown}
+            isPanning={isPanning}
+            onPaint={onPaint}
+            onDarknessErase={onDarknessErase}
+            onOpenTraitMenu={onOpenTraitMenu}
           />
         );
       })}
@@ -142,8 +157,6 @@ function FloorStackImpl({
     </div>
   );
 }
-
-
 
 /**
  * React.memo: FloorStack re-renders only when its props change. Without

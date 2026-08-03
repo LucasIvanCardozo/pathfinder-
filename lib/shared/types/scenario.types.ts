@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { ScenarioInputSchema, ScenarioSchema } from '@/lib/shared/schemas/scenario.schemas';
+import type { ScenarioEffect } from '@/lib/shared/types/effect.types';
 import type { Floor } from '@/lib/shared/types/floor.types';
 import type { PaintedCell } from '@/lib/shared/types/paintedCell.types';
 
@@ -36,6 +37,10 @@ export type LoadScenarioResult = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
+  /** GM-placed effects for the scenario, ordered by `createdAt asc` so
+   *  reloads render in the same order they were placed. PR 1 ships the
+   *  read side; the modal editor lands in PR 2. */
+  effects: ScenarioEffect[];
 };
 
 /** Input for `scenarioUseCases.save(db, input)`. */

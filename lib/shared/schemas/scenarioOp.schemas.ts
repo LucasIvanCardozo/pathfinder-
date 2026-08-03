@@ -1,8 +1,6 @@
 import { z } from 'zod';
-import {
-  FLOOR_LIMITS,
-  SCENARIO_LIMITS,
-} from '@/lib/shared/constants';
+import { FLOOR_LIMITS, SCENARIO_LIMITS } from '@/lib/shared/constants';
+import { EffectInputSchema } from '@/lib/shared/schemas/effect.schemas';
 
 /**
  * Discriminated union of editor mutations. Each variant maps to one server
@@ -27,7 +25,9 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
           gridX: z.number().int(),
           gridY: z.number().int(),
           pieceId: z.string().min(1),
-          entityState: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+          entityState: z
+            .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+            .optional(),
         }),
       )
       .min(1),
@@ -43,9 +43,7 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('setEntityState'),
     cellId: z.string().min(1),
-    entityState: z
-      .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-      .nullable(),
+    entityState: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).nullable(),
   }),
 
   /** Delete every painted cell of the scenario. */
@@ -73,6 +71,27 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
     type: z.literal('setScenarioName'),
     name: z.string().min(1).max(SCENARIO_LIMITS.NAME_MAX),
   }),
+
+  /** Place a new GM-placed effect on a floor. Persisted as a `ScenarioEffect`
+   *  row; the canvas hook renders it from the effect's footprint. */
+  z.object({
+    type: z.literal('addEffect'),
+    effect: EffectInputSchema,
+  }),
+
+  /** Remove an effect by id. Missing ids are silently ignored (idempotent)
+   *  so the client can replay a stale op without surfacing an error. */
+  z.object({
+    type: z.literal('removeEffect'),
+    effectId: z.string().min(1),
+  }),
+
+  /** Decrement every non-expired effect's `remainingRounds` by one, then
+   *  flip `expired = true` on the ones that hit zero. Server uses two
+   *  `updateMany` calls — no in-memory loop. */
+  z.object({
+    type: z.literal('tickRound'),
+  }),
 ]);
 
 /**
@@ -99,9 +118,15 @@ export const ScenarioSaveRequestSchema = z.object({
         .min(SCENARIO_LIMITS.BASE_CELL_SIZE.MIN)
         .max(SCENARIO_LIMITS.BASE_CELL_SIZE.MAX),
       width: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
-      height: z.number().int().min(SCENARIO_LIMITS.DIMENSION.MIN).max(SCENARIO_LIMITS.DIMENSION.MAX),
+      height: z
+        .number()
+        .int()
+        .min(SCENARIO_LIMITS.DIMENSION.MIN)
+        .max(SCENARIO_LIMITS.DIMENSION.MAX),
       floors: z
-        .array(z.object({ id: z.string().min(1), name: z.string().min(1).max(FLOOR_LIMITS.NAME_MAX) }))
+        .array(
+          z.object({ id: z.string().min(1), name: z.string().min(1).max(FLOOR_LIMITS.NAME_MAX) }),
+        )
         .min(1),
       paintedCells: z.array(
         z.object({

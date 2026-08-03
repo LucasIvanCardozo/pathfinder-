@@ -3,17 +3,24 @@
 import type Konva from 'konva';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
-import { usePieceMap, useSubdivisionMap } from '@/hooks';
 import { telemetry } from '@/dev/perf/telemetry';
-import type { Floor, PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import { usePieceMap, useSubdivisionMap } from '@/hooks';
+import type {
+  Floor,
+  PaintedCell,
+  Piece,
+  ScenarioEffect,
+  SubdivisionConfig,
+} from '@/lib/shared/types';
+import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
-import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
 import { depthToTier } from './floor-canvas/depthToTier';
 import { pointerToCell } from './floor-canvas/pointerToCell';
 import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
+import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
 import styles from './floor-canvas.module.css';
 
@@ -30,6 +37,10 @@ export type Props = {
   isActive: boolean;
   mapDims: MapDims;
   subdivisions: readonly SubdivisionConfig[];
+  /** GM-placed effects rendered on a dedicated Konva layer above the painted
+   *  subdivisions (still below the brush preview). PR 1 surfaces the read
+   *  side; the modal that creates new effects ships in PR 2. */
+  effects: ScenarioEffect[];
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -92,6 +103,7 @@ function FloorCanvasImpl({
   mapDims,
   subdivisions,
   pieces,
+  effects,
   activeSubdivisionId,
   activePieceId,
   tool,
@@ -137,6 +149,20 @@ function FloorCanvasImpl({
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
+
+  // Effects overlay — locked design contract: insert this layer BEFORE
+  // `cellsBySub.map(...)` so the existing `obscured` subdivision keeps
+  // stacking on top of any AoE marker (PR 1 rule, design §12.2). The
+  // wall-aware BFS that gates cells behind structure walls arrives in
+  // PR 2 (T2.14); PR 1 ships the unconditional rectangular footprint
+  // computed by `useEffectMarkers`.
+  const effectMarkers = useEffectMarkers({
+    floorId: floor.id,
+    effects,
+    paintedCells: cells,
+    subdivisions,
+    baseCellSize: mapDims.baseCellSize,
+  });
 
   // Bucket cells by subdivision, then always emit one entry per subdivision
   // sorted by `order`. Empty cell arrays for subdivisions with no painted
@@ -305,6 +331,28 @@ function FloorCanvasImpl({
         onTouchMove={events.onTouchMove}
         onTouchEnd={events.onTouchEnd}
       >
+        {/*
+          Effects overlay MUST stay above this layer so darkness (`obscured`,
+          highest `subdivision.order`) renders on top of AoE markers. PR 1
+          renders one `<Rect>` per visible cell with `opacity` hardcoded to
+          0.35; the alpha-blend cap 0.7 + per-shape geometry arrive in PR 2.
+        */}
+        <Layer listening={false}>
+          {effectMarkers.flatMap(({ effect, visibleCells }) =>
+            visibleCells.map((m) => (
+              <Rect
+                key={`effect-${effect.id}-${m.gridX}-${m.gridY}`}
+                x={m.gridX * activeCellSize}
+                y={m.gridY * activeCellSize}
+                width={activeCellSize}
+                height={activeCellSize}
+                fill={effect.color}
+                opacity={effect.expired ? 0.15 : 0.35}
+                perfectDrawEnabled={false}
+              />
+            )),
+          )}
+        </Layer>
         {cellsBySub.map(({ sub, cells: subCells }) => {
           const cellSize = cellSizeFor(sub);
           if (sub.id === 'obscured') {

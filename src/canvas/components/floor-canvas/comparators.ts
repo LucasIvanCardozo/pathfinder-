@@ -79,6 +79,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
       const changes: string[] = [];
       if (prev.subdivisions !== next.subdivisions) changes.push('subdivisions');
       if (prev.pieces !== next.pieces) changes.push('pieces');
+      if (prev.effects !== next.effects) changes.push('effects');
       if (prev.textureImages !== next.textureImages) changes.push('textureImages');
       if (!inactiveBothSides && prev.activeSubdivisionId !== next.activeSubdivisionId)
         changes.push('activeSubdivisionId');

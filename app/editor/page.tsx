@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { Suspense } from 'react';
-import { loadScenario } from '@/lib/server/actions/scenario.action';
 import { listAllPieces } from '@/lib/server/actions/piece.action';
+import { loadScenario } from '@/lib/server/actions/scenario.action';
 import { isUnlocked } from '@/lib/server/auth/session';
 import { EditorClient } from './EditorClient';
 import styles from './editor.module.css';
@@ -58,6 +58,7 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
               floors: scenario.floors,
               activeFloorId: scenario.activeFloorId,
               paintedCells: scenario.paintedCells,
+              effects: scenario.effects,
             }
           : null
       }

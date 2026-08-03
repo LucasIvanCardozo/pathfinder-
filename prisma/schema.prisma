@@ -20,7 +20,8 @@ model Scenario {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  floors Floor[]
+  floors  Floor[]
+  effects ScenarioEffect[]
 }
 
 model Floor {
@@ -29,10 +30,43 @@ model Floor {
   name       String
   order      Int    @default(0)
 
-  scenario     Scenario      @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  scenario     Scenario         @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   paintedCells PaintedCell[]
+  effects      ScenarioEffect[]
 
   @@index([scenarioId])
+}
+
+/// Transient GM-placed effect (burst / cone / line / wall). Persisted to
+/// the scenario so a hard reload re-renders the overlay. Anchored in world
+/// coordinates (originX/originY in metres) with widthM/depthM dimensions
+/// and a free rotation; geometry clipping happens in the canvas hook.
+/// `durationKind` selects how `remainingRounds` decrements on the
+/// `tickRound` op. `expired` flips to true once `remainingRounds` reaches
+/// zero and the renderer hides the marker.
+model ScenarioEffect {
+  id              String   @id @default(cuid())
+  scenarioId      String
+  floorId         String
+  label           String
+  kind            String
+  originX         Float
+  originY         Float
+  widthM          Float
+  depthM          Float
+  rotationDeg     Float    @default(0)
+  color           String
+  durationKind    String
+  remainingRounds Int
+  expired         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  floor    Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@index([floorId])
 }
 
 model PaintedCell {

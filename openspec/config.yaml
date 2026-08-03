@@ -1,0 +1,60 @@
+project:
+  name: pathfinder
+  description: Single Next.js App Router application for a game-master battle-map editor.
+  stack:
+    framework: Next.js 16
+    ui: React 19.2
+    rendering: Konva via react-konva, client-only
+    database: PostgreSQL through Prisma 7 with @prisma/adapter-pg
+    cache: Next.js Cache Components enabled
+    language: TypeScript strict mode with noUncheckedIndexedAccess
+    styles: CSS Modules exclusively
+  runtime:
+    node: ">=22"
+    package_manager: pnpm@10.33.2
+  tooling:
+    formatter_linter: Biome 2.5.5
+  conventions:
+    styles_reference: docs/patterns/css-modules.md
+    architecture: Server Action (createAction wrapper) -> Use Case -> Repository -> Prisma
+    cached_reads: "'use cache' + cacheTag('pathfinder:...')"
+    writes: updateTag and revalidatePath; never use revalidateTag in Server Actions
+    id_generation: lib/shared/utils/generateId.ts; use newId('cell') and extend with newId('effect') when needed
+    runtime_constants: Read lib/shared/constants/timing.ts, subdivisions.ts, and keyboard.ts before modifying them
+    trait_registry: src/canvas/traits/registry.ts
+    effects_render_order: Insert the effects Konva.Layer before cellsBySub.map(...) in FloorCanvas.tsx so obscured darkness remains above markers
+sdd:
+  artifact_store: openspec
+  strict_tdd: false
+  chained_pr_strategy: force-chained
+  review_budget_changed_lines_per_pr: 600
+  phase_rules:
+    init: Bootstrap config and change skeleton only; do not implement feature behavior
+    proposal: Define scope, goals, and non-goals for the chained change
+    spec: Define verifiable behavioral requirements and scenarios
+    design: Define architecture and sequencing consistent with repository conventions
+    tasks: Break implementation into four reviewable PR slices
+  change: effects-and-combat-tracker
+  change_scope: Persistent AoE markers and combat tracker, delivered as four chained PRs
+  phases:
+    - proposal.md
+    - spec.md
+    - design.md
+    - tasks.md
+testing:
+  runner: none
+  coverage_claims: prohibited
+  note: AGENTS.md states that no test runner is configured and pnpm test does not exist.
+  allowed_commands:
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm lint:fix
+    - pnpm format
+    - pnpm check
+    - pnpm gen-cat
+    - pnpm prisma:generate
+    - pnpm db:migrate:local
+    - pnpm db:migrate:prod
+    - pnpm db:reset
+  forbidden_test_commands:
+    - pnpm test

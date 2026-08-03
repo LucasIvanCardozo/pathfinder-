@@ -2,6 +2,7 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { Prisma } from '@/generated/prisma/client';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
+import { effectRepository } from '@/lib/server/db/repository/effect.repository';
 import { runInTx } from '@/lib/server/utils/runInTx';
 import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
 import type { SaveScenarioInput } from '@/lib/shared/types/scenario.types';
@@ -69,6 +70,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       const plantaBaja = scenario.floors.find((f) => isPlantaBajaName(f.name));
       const initialFloor = plantaBaja ?? scenario.floors[0];
       if (!initialFloor) return null;
+      const effects = await effectRepository(db).findManyByScenarioId(id);
       return {
         id: scenario.id,
         name: scenario.name,
@@ -95,6 +97,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
               | undefined,
           })),
         ),
+        effects,
       };
     },
 
@@ -414,6 +417,60 @@ async function applyOp(
       await tx.scenario.update({
         where: { id: scenarioId },
         data: { name: op.name },
+      });
+      return;
+    }
+    case 'addEffect': {
+      // `applyOp` runs inside the existing `runInTx` wrapper, so the
+      // `tx` client is already open. The `op.effect.id` is generated
+      // client-side via `newId('effect')` so a re-applied op can collide
+      // with a pre-existing row only on the rare path where the GM
+      // reload + autosaves before the in-flight op is acknowledged.
+      await tx.scenarioEffect.create({
+        data: {
+          id: op.effect.id,
+          scenarioId,
+          floorId: op.effect.floorId,
+          label: op.effect.label,
+          kind: op.effect.kind,
+          originX: op.effect.originX,
+          originY: op.effect.originY,
+          widthM: op.effect.widthM,
+          depthM: op.effect.depthM,
+          rotationDeg: op.effect.rotationDeg,
+          color: op.effect.color,
+          durationKind: op.effect.durationKind,
+          remainingRounds: op.effect.remainingRounds,
+          expired: op.effect.expired,
+          createdAt: op.effect.createdAt,
+          updatedAt: op.effect.updatedAt,
+        },
+      });
+      return;
+    }
+    case 'removeEffect': {
+      // Idempotent — a stale op replayed after a successful removal is a
+      // no-op, not an error.
+      await tx.scenarioEffect.deleteMany({ where: { id: op.effectId } });
+      return;
+    }
+    case 'tickRound': {
+      // Two `updateMany` calls in this exact order: decrement the
+      // remaining counter first, then flip the `expired` flag on rows
+      // whose counter hit zero. PR 1 only handles `rounds` and
+      // `rounds-concentration` durationKinds; the other two land in
+      // PR 2+ along with the modal.
+      await tx.scenarioEffect.updateMany({
+        where: {
+          scenarioId,
+          expired: false,
+          durationKind: { in: ['rounds', 'rounds-concentration'] },
+        },
+        data: { remainingRounds: { decrement: 1 } },
+      });
+      await tx.scenarioEffect.updateMany({
+        where: { scenarioId, expired: false, remainingRounds: { lte: 0 } },
+        data: { expired: true },
       });
       return;
     }

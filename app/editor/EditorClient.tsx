@@ -1,39 +1,37 @@
 'use client';
 
+import { faCloud, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCloud, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   applyEraseStroke,
   applyPaintStroke,
+  type BrushShape,
+  type PaintTool,
   PaintToolbar,
   PiecePalette,
+  type StrokeFootprint,
   SubdivisionTabs,
   useKeyboardShortcuts,
   WeatherOverlay,
   WeatherPanel,
-  type BrushShape,
-  type PaintTool,
-  type StrokeFootprint,
 } from '@/canvas';
+import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
 import { FloatingPanel } from '@/components/FloatingPanel';
 import { Popover } from '@/components/Popover';
 import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { Spinner } from '@/components/Spinner';
-import { usePieceMap } from '@/hooks';
 import { telemetry } from '@/dev/perf/telemetry';
-import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
+import { usePieceMap } from '@/hooks';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
-import { normalizeBrushSize } from '@/canvas/tools';
-import { eraseFootprintFor } from '@/canvas/tools';
-import type { Floor, PaintedCell, Piece } from '@/lib/shared/types';
+import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
+import type { Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './editor.module.css';
-import { buildEditorShortcuts } from './shortcuts';
 import { useClearHandlers } from './hooks/use-clear-handlers';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useHistory } from './hooks/use-history';
@@ -43,6 +41,7 @@ import { useScenarioAutosave } from './hooks/use-scenario-autosave';
 import { useTraitMenu } from './hooks/use-trait-menu';
 import { useWeatherSession } from './hooks/use-weather-session';
 import { useZoomControl } from './hooks/use-zoom-control';
+import { buildEditorShortcuts } from './shortcuts';
 
 const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorStack), {
   ssr: false,
@@ -58,6 +57,10 @@ type InitialScenario = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
+  /** GM-placed effects for the scenario, loaded once from the server and
+   *  held in state until the next refetch. PR 1 ships the read side; the
+   *  modal editor lands in PR 2 (which writes via the ops buffer). */
+  effects: ScenarioEffect[];
 };
 
 type Props = {
@@ -82,6 +85,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(
     initialScenario?.paintedCells ?? [],
   );
+  const [effects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(SUBDIVISIONS[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<PaintTool>('paint');
@@ -238,19 +242,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       // patch twice doesn't duplicate the underlying rows. Without this,
       // every drag over an already-darkened area appends new cells with
       // fresh ids.
-      if (
-        tool === 'darkness' &&
-        subdivisionId === 'obscured' &&
-        pieceId === DARKNESS_PIECE_ID
-      ) {
+      if (tool === 'darkness' && subdivisionId === 'obscured' && pieceId === DARKNESS_PIECE_ID) {
         // `darknessKey` must include the per-cell floorId. Painting darkness
         // in floor A then floor B at the same logical (gx, gy) used to
         // collide because the closure captured only the stroke's floorId,
         // so every existing darkness cell got keyed against the active
         // floor — making the dedupe think B's stroke was entirely over
         // already-painted darkness.
-        const darknessKey = (fId: string, gx: number, gy: number) =>
-          `${fId}|obscured|${gx}|${gy}`;
+        const darknessKey = (fId: string, gx: number, gy: number) => `${fId}|obscured|${gx}|${gy}`;
         const existing = new Set(
           currentPaintedCells
             .filter((c) => c.pieceId === DARKNESS_PIECE_ID)
@@ -303,11 +302,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         paintedCells: currentPaintedCells,
         generateId: () => newId('cell'),
       });
-      const { eraseIds, paintCells } = computeStrokeDiff(
-        currentPaintedCells,
-        next,
-        stroke,
-      );
+      const { eraseIds, paintCells } = computeStrokeDiff(currentPaintedCells, next, stroke);
       if (eraseIds.length === 0 && paintCells.length === 0) return;
       telemetry.recordEvent('paint');
       history.record(buildSnapshot());
@@ -316,7 +311,17 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setPaintedCells(next);
       markDirty();
     },
-    [tool, markDirty, pieceById, pushPaint, pushErase, computeStrokeDiff, computeRemovedIds, history, buildSnapshot],
+    [
+      tool,
+      markDirty,
+      pieceById,
+      pushPaint,
+      pushErase,
+      computeStrokeDiff,
+      computeRemovedIds,
+      history,
+      buildSnapshot,
+    ],
   );
 
   const handleToolChange = (newTool: PaintTool) => {
@@ -372,10 +377,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       if (eraseable.size === 0) return;
 
       const byKey = new Map(
-        current.map((c) => [
-          `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`,
-          c,
-        ]),
+        current.map((c) => [`${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`, c]),
       );
       const removedIds: string[] = [];
       for (const key of eraseable) {
@@ -541,9 +543,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
                   disabled={
                     !activeSubdivision ||
                     paintedCells.filter(
-                      (c) =>
-                        c.floorId === activeFloorId &&
-                        c.subdivisionId === activeSubdivisionId,
+                      (c) => c.floorId === activeFloorId && c.subdivisionId === activeSubdivisionId,
                     ).length === 0
                   }
                 >
@@ -670,8 +670,10 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
               <Spinner size={14} label="Guardando" />
               Guardando…
             </>
+          ) : scenarioId ? (
+            'Guardar'
           ) : (
-            scenarioId ? 'Guardar' : 'Crear'
+            'Crear'
           )}
         </Button>
       </FloatingPanel>
@@ -684,6 +686,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
+          effects={effects}
           pieces={stableAllPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
