@@ -44,3 +44,13 @@ export const DEFAULT_MAP_DIMS: MapDims = {
   width: MAP_WORLD_WIDTH,
   height: MAP_WORLD_HEIGHT,
 };
+
+/**
+ * Game rule (Pathfinder TTRPG): one base cell = 5 ft. Effect footprints use
+ * feet as their primary unit (`widthFt` / `depthFt` on the wire); the canvas
+ * converts to grid cells with `widthFt * cellSizeRatio / FEET_PER_BASE_CELL`.
+ * For ratio=1 subdivisions (suelo, estructuras, obscured) this is the
+ * intuitive `widthFt / 5`; for ratio=2 (objetos-grandes) and ratio=4
+ * (objetos-pequenos) the per-subdivision cell is correspondingly smaller.
+ */
+export const FEET_PER_BASE_CELL = 5;

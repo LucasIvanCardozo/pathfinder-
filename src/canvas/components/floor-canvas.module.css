@@ -29,14 +29,16 @@
    <Stage>; the Stage's container (`.konvajs-content`) lists them in DOM
    order matching `subdivision.order` because FloorCanvas iterates the
    subdivisions in that order (see FloorCanvas.tsx). The brush preview is
-   the last Layer so it gets `canvas:nth-child(6)` and is excluded here.
+   the last Layer so it gets `canvas:nth-child(7)` and is excluded here.
 
-   Subdivision order (lib/shared/constants/subdivisions.ts):
-     0 suelo            -> nth-child(1)
-     1 objetos-grandes  -> nth-child(2)
-     2 objetos-pequenos -> nth-child(3)
-     3 estructuras      -> nth-child(4)
-     4 obscured         -> nth-child(5)  [NEW]
+   DOM order in FloorCanvas.tsx:
+     1 suelo            -> nth-child(1)
+     2 objetos-grandes  -> nth-child(2)
+     3 objetos-pequenos -> nth-child(3)
+     4 estructuras      -> nth-child(4)
+     5 effects          -> nth-child(5)  [NEW in PR 2 — between estructuras and obscured]
+     6 obscured         -> nth-child(6)
+     7 brush preview    -> nth-child(7)
 
    Direction: light from top-left, so shadow offset is down + right.
    Intensity scales with `order` to simulate elevation. */
@@ -56,13 +58,20 @@
   filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, 1));
 }
 
-/* Obscured subdivision: no drop-shadow (the dark fill is the shadow). */
+/* Effects Layer (PR 2): no extra filter — each <Group> already owns its
+   fill + opacity, and any CSS filter would double-darken the marker. */
 .floor canvas:nth-child(5) {
-    filter: blur(10px);
+  filter: none;
 }
 
-/* Brush preview Layer is the 6th canvas in the Stage. No shadow (it's
-   not a painted piece, it's a UI affordance). */
+/* Obscured subdivision: blur the cells behind so the darkness is felt as
+   "you can't see clearly", not a solid black. */
 .floor canvas:nth-child(6) {
+  filter: blur(10px);
+}
+
+/* Brush preview Layer is the 7th canvas in the Stage. No shadow (it's
+   not a painted piece, it's a UI affordance). */
+.floor canvas:nth-child(7) {
   filter: none;
 }

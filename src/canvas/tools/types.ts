@@ -6,7 +6,7 @@ import type { PaintedCell, Piece } from '@/lib/shared/types';
 /** Which tool is currently active. `paint` writes a piece; `erase` clears;
  *  `darkness` toggles the special `obscured` subdivision (left-click = paint,
  *  right-click = erase). */
-export type ToolKind = 'paint' | 'erase' | 'darkness';
+export type ToolKind = 'paint' | 'erase' | 'darkness' | 'effects';
 
 /**
  * Brush footprint size measured in subdivision cells along one edge. Always a

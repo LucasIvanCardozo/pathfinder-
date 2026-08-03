@@ -1,6 +1,6 @@
 'use client';
 
-import { faCloud, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCloud, faHatWizard, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -10,7 +10,6 @@ import {
   applyEraseStroke,
   applyPaintStroke,
   type BrushShape,
-  type PaintTool,
   PaintToolbar,
   PiecePalette,
   type StrokeFootprint,
@@ -19,6 +18,8 @@ import {
   WeatherOverlay,
   WeatherPanel,
 } from '@/canvas';
+import { EffectTooltip } from '@/canvas/components/EffectTooltip';
+import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
 import { FloatingPanel } from '@/components/FloatingPanel';
@@ -29,10 +30,12 @@ import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap } from '@/hooks';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import type { Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
+import type { EffectInput, Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
+import { EffectsModal } from './components/EffectsModal/EffectsModal';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
+import { useEffectsModal } from './hooks/use-effects-modal';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useHistory } from './hooks/use-history';
 import { useOpsBuffer } from './hooks/use-ops-buffer';
@@ -85,10 +88,10 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(
     initialScenario?.paintedCells ?? [],
   );
-  const [effects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
+  const [effects, setEffects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(SUBDIVISIONS[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
-  const [tool, setTool] = useState<PaintTool>('paint');
+  const [tool, setTool] = useState<ToolKind>('paint');
   const [darknessMode, setDarknessMode] = useState<'apply' | 'erase'>('apply');
   const [brushSize, setBrushSize] = useState<number>(1);
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
@@ -96,6 +99,19 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [isDirty, setIsDirty] = useState(false);
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  // PR 2: marker click tooltip state. Holds the effect id and the
+  // screen position so the EffectTooltip can render. Cleared on
+  // the next canvas click or on Escape (the Popover handles its own
+  // focus trap and pointerdown-outside escape).
+  const [markerTooltip, setMarkerTooltip] = useState<{
+    effectId: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  // Dismissed-effect ids live in client state only — PR 2 keeps the
+  // row in the DB and toggles the colour to '' so the renderer hides
+  // the marker. Closed-over so the modal and the marker tooltip can
+  // consult the same set.
+  const [dismissedEffects, setDismissedEffects] = useState<Set<string>>(() => new Set<string>());
 
   /**
    * Snapshot of the user-visible state needed to roll back a mutation. The
@@ -142,6 +158,60 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const opsBuffer = useOpsBuffer();
+
+  // PR 2 wrapper around the ops buffer that updates local `effects`
+  // state synchronously so the new marker renders on the next
+  // paint frame (the autosave drains the buffer asynchronously).
+  // The wrappers mirror what `handlePaint` does: push the op to the
+  // autosave buffer AND flip `isDirty` so the autosave interval actually
+  // fires. Without `markDirty()`, the buffer holds the op, the local
+  // effects state mirrors it (optimistic UI), and F5 erases both — the
+  // server never sees a write. PR 2 bug that ships the persistence flow.
+  const effectOps = {
+    pushAddEffect: (effect: EffectInput) => {
+      opsBuffer.pushAddEffect(effect);
+      markDirty();
+      setEffects((prev) => [...prev, { ...effect, scenarioId: scenarioId ?? '' }]);
+    },
+    pushRemoveEffect: (effectId: string) => {
+      opsBuffer.pushRemoveEffect(effectId);
+      markDirty();
+      setEffects((prev) => prev.filter((e) => e.id !== effectId));
+    },
+    pushRelabelEffect: (effectId: string, label: string) => {
+      opsBuffer.pushRelabelEffect(effectId, label);
+      markDirty();
+      setEffects((prev) => prev.map((e) => (e.id === effectId ? { ...e, label } : e)));
+    },
+    pushDismissEffect: (effectId: string) => {
+      opsBuffer.pushDismissEffect(effectId);
+      markDirty();
+      setDismissedEffects((prev) => {
+        const next = new Set(prev);
+        next.add(effectId);
+        return next;
+      });
+    },
+  };
+
+  // Effects list memoised by `[effects, activeFloorId]` so the comparator
+  // in `floor-canvas/comparators.ts` does not flag a reference change on
+  // unrelated re-renders (a fresh `.filter()` array would otherwise force
+  // every FloorCanvas to re-render whenever EditorClient re-renders).
+  // The PR 2 modal-guard ref was removed entirely — a previous version
+  // called `effectsModal.open()` from inside `onOpen`, which triggered
+  // an immediate recursion because the hook's `open` callback also calls
+  // `onOpen?.()` at the end. PR 3 (combat tracker) will re-introduce
+  // the guard with a stable wiring.
+  const effectsForFloor = useMemo(
+    () => effects.filter((e) => e.floorId === activeFloorId),
+    [effects, activeFloorId],
+  );
+  const effectsModal = useEffectsModal({
+    opsBuffer: effectOps,
+    activeFloorId,
+    effects: effectsForFloor,
+  });
 
   // Mirror `paintedCells` in a ref so `handlePaint` can read the current
   // cells without listing them in its useCallback deps (see `use-ops-buffer`
@@ -324,7 +394,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     ],
   );
 
-  const handleToolChange = (newTool: PaintTool) => {
+  const handleToolChange = (newTool: ToolKind) => {
     if (newTool === 'darkness') {
       if (tool === 'darkness') {
         // Already active: toggle the internal mode.
@@ -336,9 +406,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setDarknessMode('apply');
       return;
     }
-    // Any non-darkness tool resets the mode before darkness is selected again.
+    // Any non-darkness tool leaves the current darkness mode unchanged.
     setTool(newTool);
-    setDarknessMode('apply');
   };
   const handleBrushSizeChange = (size: number) => setBrushSize(normalizeBrushSize(size));
 
@@ -435,6 +504,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setBrushShape,
       setShowBrushPreview,
       setShowShortcuts,
+      setEffectsModalOpen: (v) => (v ? effectsModal.open() : effectsModal.close()),
       save: () => {
         if (isSaving) return;
         save(false);
@@ -482,6 +552,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           />
         ) : null}
         <div className={styles.secondaryActions}>
+          <Button
+            type="button"
+            variant="default"
+            size="mini"
+            onClick={() => effectsModal.open()}
+            aria-label="Efectos"
+            title="Efectos (Shift+E)"
+          >
+            <FontAwesomeIcon icon={faHatWizard} />
+          </Button>
           <Button
             type="button"
             variant="default"
@@ -687,6 +767,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           subdivisions={subdivisions}
           paintedCells={paintedCells}
           effects={effects}
+          dismissedEffects={dismissedEffects}
           pieces={stableAllPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
@@ -698,6 +779,13 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
+          onMarkerClick={(effectId, screenPos) => {
+            setMarkerTooltip({ effectId, position: screenPos });
+          }}
+          onAnchorClick={(cell) => {
+            const cellSize = mapDims.baseCellSize;
+            effectsModal.open({ anchorCell: cell, activeCellSize: cellSize });
+          }}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </div>
@@ -705,6 +793,51 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       {traitMenu.render}
 
       <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <EffectsModal
+        isOpen={effectsModal.isOpen}
+        onClose={effectsModal.close}
+        effects={effects.filter((e) => e.floorId === activeFloorId && !dismissedEffects.has(e.id))}
+        defaultValues={effectsModal.defaultValues}
+        isEditing={effectsModal.editingId !== null}
+        onCreateNew={() => {
+          const cellSize = mapDims.baseCellSize;
+          effectsModal.open({ activeCellSize: cellSize });
+        }}
+        onSelect={(id) => effectsModal.openEdit(id)}
+        onSubmit={effectsModal.submit}
+        onDismiss={effectsModal.dismiss}
+        onRemove={effectsModal.remove}
+      />
+      {markerTooltip
+        ? (() => {
+            const effect = effects.find((e) => e.id === markerTooltip.effectId);
+            if (!effect) return null;
+            // Count overlapping effects on the same floor for the coverage hint.
+            const overlap = effects.filter(
+              (e) => e.floorId === effect.floorId && !dismissedEffects.has(e.id),
+            ).length;
+            return (
+              <EffectTooltip
+                effect={effect}
+                overlappingCount={overlap}
+                position={markerTooltip.position}
+                dismissed={dismissedEffects.has(effect.id)}
+                onEdit={() => {
+                  effectsModal.openEdit(effect.id);
+                  setMarkerTooltip(null);
+                }}
+                onDismiss={() => {
+                  effectsModal.dismiss(effect.id);
+                  setMarkerTooltip(null);
+                }}
+                onDispel={() => {
+                  effectsModal.remove(effect.id);
+                  setMarkerTooltip(null);
+                }}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }

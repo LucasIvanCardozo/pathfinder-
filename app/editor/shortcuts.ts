@@ -4,7 +4,6 @@ import {
   bumpBrushSizeUp,
   normalizeBrushSize,
   type BrushShape,
-  type PaintTool,
   type Shortcut,
 } from '@/canvas';
 import {
@@ -16,11 +15,13 @@ import {
 import type { SubdivisionConfig } from '@/lib/shared/types';
 
 type Args = {
-  setTool: (t: PaintTool) => void;
+  setTool: (t: import('@/canvas/tools').ToolKind) => void;
   setBrushSize: Dispatch<SetStateAction<number>>;
   setBrushShape: Dispatch<SetStateAction<BrushShape>>;
   setShowBrushPreview: Dispatch<SetStateAction<boolean>>;
   setShowShortcuts: Dispatch<SetStateAction<boolean>>;
+  /** Toggles the `Efectos` modal (PR 2). */
+  setEffectsModalOpen: Dispatch<SetStateAction<boolean>>;
   /** Wrapped save — the call site decides whether the autosave is currently
    *  in progress and short-circuits if so. */
   save: () => void;
@@ -67,6 +68,9 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     ),
     bindShortcut('toggleBrushPreview', () => args.setShowBrushPreview((v) => !v)),
     bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
+    bindShortcut('toggleEffectsModal', () => {
+      args.setEffectsModalOpen((v) => !v);
+    }),
     bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
     bindShortcut('save', () => args.save()),
     bindShortcut('closeOverlay', () => {

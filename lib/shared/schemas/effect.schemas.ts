@@ -38,10 +38,19 @@ export const EffectInputSchema = z.object({
   floorId: z.string().min(1),
   label: z.string().min(1).max(120),
   kind: EffectKindSchema,
-  originX: z.number().finite(),
-  originY: z.number().finite(),
-  widthM: z.number().finite().nonnegative(),
-  depthM: z.number().finite().nonnegative(),
+  /** Anchor cell coordinate on the active subdivision's grid (X axis).
+   *  Stored as a `Float` on the Prisma row so the wire is forward-compatible
+   *  with future sub-cell anchors, but the modal pre-fills with integer
+   *  `gridX` values from the cell the GM clicked. */
+  originCellX: z.number().finite(),
+  /** Anchor cell coordinate on the active subdivision's grid (Y axis). See
+   *  `originCellX` for the Float / integer rationale. */
+  originCellY: z.number().finite(),
+  /** Footprint width in feet. The canvas converts to active-subdivision cells
+   *  via `widthFt * cellSizeRatio / FEET_PER_BASE_CELL`. */
+  widthFt: z.number().finite().nonnegative(),
+  /** Footprint depth (forward length) in feet. Same conversion as `widthFt`. */
+  depthFt: z.number().finite().nonnegative(),
   rotationDeg: z.number().finite().default(0),
   color: z.string().min(1),
   durationKind: EffectDurationKindSchema,
@@ -56,4 +65,21 @@ export const EffectInputSchema = z.object({
  *  the owning scenario's id server-side. */
 export const ScenarioEffectSchema = EffectInputSchema.extend({
   scenarioId: z.string().min(1),
+});
+
+/**
+ * Form-level schema for the EffectsModal. The modal pre-fills every field
+ * (including `id`, `floorId`, `createdAt`, `updatedAt` via `defaultValues`)
+ * and react-hook-form preserves them through submit. The resolver therefore
+ * must NOT omit them — `@hookform/resolvers/zod` strips fields the schema
+ * does not declare, which would drop `id`/`floorId`/timestamps from the
+ * parsed `data` and the op sent to the server would fail validation.
+ *
+ * The only relaxation vs. `EffectInputSchema` is `label`: we allow empty
+ * strings so the form starts blank, and the hook falls back to the literal
+ * "Marcador" when the user submits without typing (preserves the PR 2
+ * behaviour where a blank label still produces a valid op).
+ */
+export const EffectFormSchema = EffectInputSchema.extend({
+  label: z.string().max(120),
 });

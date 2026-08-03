@@ -33,6 +33,12 @@ type Props = {
    * ships in PR 2, which still routes writes through the op buffer.
    */
   effects: ScenarioEffect[];
+  /**
+   * Effects the GM has toggled off client-side (Bug 3a). Threaded through
+   * to every `FloorCanvas` so the marker disappears without mutating the
+   * DB row. Owned by EditorClient.
+   */
+  dismissedEffects: ReadonlySet<string>;
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -59,6 +65,10 @@ type Props = {
     traitKind: string,
     screenPos: { x: number; y: number },
   ) => void;
+  /** PR 2: wired from the editor's marker click handler. */
+  onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
+  /** PR 2: wired from the editor's `effects` tool anchor click. */
+  onAnchorClick?: (cell: { gridX: number; gridY: number }) => void;
   /** Optional overlay (e.g. WeatherOverlay) rendered above the WorldGrid. */
   overlay?: React.ReactNode;
 };
@@ -76,6 +86,7 @@ function FloorStackImpl({
   subdivisions,
   paintedCells,
   effects,
+  dismissedEffects,
   pieces,
   activeSubdivisionId,
   activePieceId,
@@ -87,6 +98,8 @@ function FloorStackImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
+  onMarkerClick,
+  onAnchorClick,
   overlay,
 }: Props) {
   const { containerRef, viewportSize, pan, beginPan, isPanDown, isPanning, worldBounds } =
@@ -123,6 +136,7 @@ function FloorStackImpl({
             mapDims={mapDims}
             subdivisions={subdivisions}
             effects={effects}
+            dismissedEffects={dismissedEffects}
             pieces={pieces}
             textureImages={textureImages}
             activeSubdivisionId={activeSubdivisionId}
@@ -141,6 +155,8 @@ function FloorStackImpl({
             onPaint={onPaint}
             onDarknessErase={onDarknessErase}
             onOpenTraitMenu={onOpenTraitMenu}
+            onMarkerClick={onMarkerClick}
+            onAnchorClick={onAnchorClick}
           />
         );
       })}

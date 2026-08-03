@@ -8,4 +8,7 @@ export const PREVIEW_STYLE = {
   // Darkness preview: nearly-opaque black so it previews what the painted
   // darkness cell will look like (the actual cell renders as solid black).
   darkness: { stroke: '#000000', fill: 'rgba(0, 0, 0, 0.5)' },
+  // PR 2: `effects` tool preview. The actual marker is drawn by the
+  // EffectsLayer, so the brush preview is omitted to avoid double-rendering.
+  effects: { stroke: '#6c4ab6', fill: 'rgba(108, 74, 182, 0.18)' },
 } as const;

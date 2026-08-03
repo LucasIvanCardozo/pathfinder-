@@ -3,7 +3,6 @@
 // import from "@/canvas/konva" via dynamic({ ssr: false }).
 
 export type { SubdivisionConfig } from '@/lib/shared/types';
-export type { PaintTool } from './components/PaintToolbar';
 export { PaintToolbar } from './components/PaintToolbar';
 export { PiecePalette } from './components/PiecePalette';
 export { SubdivisionTabs } from './components/SubdivisionTabs';

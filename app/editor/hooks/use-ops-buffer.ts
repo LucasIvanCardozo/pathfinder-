@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { ScenarioOp } from '@/lib/shared/types';
+import type { EffectInput, ScenarioOp } from '@/lib/shared/types';
 
 /**
  * Accumulates `ScenarioOp`s produced by editor mutations. Each push* helper
@@ -111,6 +111,49 @@ export function useOpsBuffer() {
     [],
   );
 
+  // Effect ops (PR 2 of effects-and-combat-tracker). The four helpers route
+  // through the existing op buffer so the autosave hook drains them in one
+  // batch the same way as paint/erase. The server replay (see
+  // `scenario.repository.applyOp`) is the source of truth for the wire shape;
+  // these helpers are thin wrappers around the discriminated-union variants.
+  const pushAddEffect = useCallback(
+    (effect: EffectInput) => {
+      syncPush({ type: 'addEffect', effect });
+    },
+    [syncPush],
+  );
+
+  const pushRemoveEffect = useCallback(
+    (effectId: string) => {
+      syncPush({ type: 'removeEffect', effectId });
+    },
+    [syncPush],
+  );
+
+  const pushRelabelEffect = useCallback(
+    (effectId: string, label: string) => {
+      // Coalesce consecutive relabels for the same effect id so typing in the
+      // editor doesn't generate one op per keystroke. Mirrors the
+      // `pushScenarioName` coalescing pattern.
+      const current = opsRef.current;
+      const last = current[current.length - 1];
+      const next: ScenarioOp[] =
+        last?.type === 'relabelEffect' && last.effectId === effectId
+          ? [...current.slice(0, -1), { type: 'relabelEffect', effectId, label }]
+          : [...current, { type: 'relabelEffect', effectId, label }];
+      opsRef.current = next;
+      setOps(next);
+    },
+    [],
+  );
+
+  const pushDismissEffect = useCallback(
+    (effectId: string) => {
+      syncPush({ type: 'dismissEffect', effectId });
+    },
+    [syncPush],
+  );
+
   /**
    * Returns the current ops and clears the buffer atomically. The autosave
    * hook calls this right before shipping; a failed save leaves the ops in
@@ -162,6 +205,10 @@ export function useOpsBuffer() {
     pushClearSubdivision,
     pushAddFloor,
     pushScenarioName,
+    pushAddEffect,
+    pushRemoveEffect,
+    pushRelabelEffect,
+    pushDismissEffect,
     drain,
     restore,
     markDirtyForRebase,

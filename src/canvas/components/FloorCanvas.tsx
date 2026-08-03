@@ -22,6 +22,7 @@ import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
+import { EffectsLayer } from './EffectsLayer';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -41,6 +42,13 @@ export type Props = {
    *  subdivisions (still below the brush preview). PR 1 surfaces the read
    *  side; the modal that creates new effects ships in PR 2. */
   effects: ScenarioEffect[];
+  /**
+   * Effects the GM has toggled off client-side (Bug 3a). The set is
+   * closed-over by `useEffectMarkers` to skip rendering and by the
+   * EffectsModal filter, so the marker disappears from the canvas and
+   * from the modal list without mutating the DB row.
+   */
+  dismissedEffects: ReadonlySet<string>;
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -93,6 +101,16 @@ export type Props = {
     traitKind: string,
     screenPos: { x: number; y: number },
   ) => void;
+  /**
+   * Fired when the user clicks an effect marker. PR 2 surfaces this
+   * so the tooltip can open; FloorStack forwards it. Optional.
+   */
+  onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
+  /**
+   * Fired when the user clicks an empty cell with the effects tool
+   * active. PR 2 wires the anchor picker; FloorStack forwards it.
+   */
+  onAnchorClick?: (cell: { gridX: number; gridY: number }) => void;
 };
 
 function FloorCanvasImpl({
@@ -104,6 +122,7 @@ function FloorCanvasImpl({
   subdivisions,
   pieces,
   effects,
+  dismissedEffects,
   activeSubdivisionId,
   activePieceId,
   tool,
@@ -121,6 +140,8 @@ function FloorCanvasImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
+  onMarkerClick,
+  onAnchorClick,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
@@ -162,6 +183,7 @@ function FloorCanvasImpl({
     paintedCells: cells,
     subdivisions,
     baseCellSize: mapDims.baseCellSize,
+    dismissedEffects,
   });
 
   // Bucket cells by subdivision, then always emit one entry per subdivision
@@ -271,6 +293,13 @@ function FloorCanvasImpl({
     subById,
     pieceById,
     onOpenTraitMenu,
+    // PR 2: forward `tool` and `onAnchorClick` so the handler can dispatch
+    // on `tool === 'effects'` (open the modal pre-filled with the click
+    // coordinates) instead of falling through to the paint branch.
+    // PR 1 did not wire these, so the paint branch ran even when the
+    // effects tool was active — the user saw nothing happen on click.
+    tool,
+    onAnchorClick,
   });
 
   // Cursor reflects the current interaction: default crosshair (paint),
@@ -332,35 +361,65 @@ function FloorCanvasImpl({
         onTouchEnd={events.onTouchEnd}
       >
         {/*
-          Effects overlay MUST stay above this layer so darkness (`obscured`,
-          highest `subdivision.order`) renders on top of AoE markers. PR 1
-          renders one `<Rect>` per visible cell with `opacity` hardcoded to
-          0.35; the alpha-blend cap 0.7 + per-shape geometry arrive in PR 2.
+          Effects overlay — wrapped in a <Konva.Group> per effect. The
+          Layer sits BETWEEN the paintable subdivisions (suelo/og/op/
+          estructuras) and `obscured` so a fireball is visible on top of
+          walls but hidden by a darkness overlay. The Konva.Group
+          collapses each effect into one draw call. Cap 0.7 still
+          applies (post-render alpha).
         */}
-        <Layer listening={false}>
-          {effectMarkers.flatMap(({ effect, visibleCells }) =>
-            visibleCells.map((m) => (
-              <Rect
-                key={`effect-${effect.id}-${m.gridX}-${m.gridY}`}
-                x={m.gridX * activeCellSize}
-                y={m.gridY * activeCellSize}
-                width={activeCellSize}
-                height={activeCellSize}
-                fill={effect.color}
-                opacity={effect.expired ? 0.15 : 0.35}
-                perfectDrawEnabled={false}
-              />
-            )),
-          )}
-        </Layer>
-        {cellsBySub.map(({ sub, cells: subCells }) => {
-          const cellSize = cellSizeFor(sub);
-          if (sub.id === 'obscured') {
+        {cellsBySub
+          .filter(({ sub }) => sub.id !== 'obscured')
+          .map(({ sub, cells: subCells }) => {
+            // PR 2: render every paintable subdivision (suelo, og, op,
+            // estructuras) in DOM order BEFORE the effects Layer. The
+            // effects Layer renders AFTER estructuras and BEFORE obscured
+            // so a fireball is visible on top of walls/structures but
+            // hidden by a darkness overlay painted with the lunar tool.
+            // FloorCanvas.module.css keys the drop-shadow/blur per canvas
+            // by `:nth-child(N)` — keep this block at positions 1-4.
+            const cellSize = cellSizeFor(sub);
+            return (
+              <Layer key={sub.id} listening={false}>
+                {subCells.map((cell) => {
+                  const piece = pieceById.get(cell.pieceId);
+                  const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
+                  const fallbackPath = def?.imagePath ?? '';
+                  const imagePath = resolveRenderImagePath(cell, fallbackPath, pieceById);
+                  const img = textureImages.get(imagePath);
+                  if (!img) return null;
+                  return (
+                    <KonvaImage
+                      key={cell.id}
+                      image={img}
+                      x={cell.gridX * cellSize}
+                      y={cell.gridY * cellSize}
+                      width={cellSize}
+                      height={cellSize}
+                      perfectDrawEnabled={false}
+                    />
+                  );
+                })}
+              </Layer>
+            );
+          })}
+        <EffectsLayer
+          markers={effectMarkers}
+          activeCellSize={activeCellSize}
+          onMarkerClick={onMarkerClick}
+        />
+        {cellsBySub
+          .filter(({ sub }) => sub.id === 'obscured')
+          .map(({ sub, cells: subCells }) => {
             // Darkness overlay: solid black rects. No texture, no piece
             // lookup — the renderer dispatches on subdivisionId and
             // ignores `pieceId` (which holds the sentinel `DARKNESS_PIECE_ID`
             // string). `listening={false}` so darkness cells never block
-            // hit tests for the pieces underneath.
+            // hit tests for the pieces underneath. Renders AFTER the
+            // effects Layer so a darkness spell hides any AoE marker it
+            // covers (the marker still exists in the state but is
+            // occluded by the black rect).
+            const cellSize = cellSizeFor(sub);
             return (
               <Layer key={sub.id} listening={false}>
                 {subCells.map((cell) => (
@@ -376,31 +435,7 @@ function FloorCanvasImpl({
                 ))}
               </Layer>
             );
-          }
-          return (
-            <Layer key={sub.id} listening={false}>
-              {subCells.map((cell) => {
-                const piece = pieceById.get(cell.pieceId);
-                const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
-                const fallbackPath = def?.imagePath ?? '';
-                const imagePath = resolveRenderImagePath(cell, fallbackPath, pieceById);
-                const img = textureImages.get(imagePath);
-                if (!img) return null;
-                return (
-                  <KonvaImage
-                    key={cell.id}
-                    image={img}
-                    x={cell.gridX * cellSize}
-                    y={cell.gridY * cellSize}
-                    width={cellSize}
-                    height={cellSize}
-                    perfectDrawEnabled={false}
-                  />
-                );
-              })}
-            </Layer>
-          );
-        })}
+          })}
         {showBrushPreview && (
           <Layer listening={false}>
             {previewCells.map((cell) => (

@@ -45,10 +45,10 @@ export function effectRepository(db: PrismaClient | Prisma.TransactionClient) {
             floorId: r.floorId,
             label: r.label,
             kind: r.kind,
-            originX: r.originX,
-            originY: r.originY,
-            widthM: r.widthM,
-            depthM: r.depthM,
+            originCellX: r.originCellX,
+            originCellY: r.originCellY,
+            widthFt: r.widthFt,
+            depthFt: r.depthFt,
             rotationDeg: r.rotationDeg,
             color: r.color,
             durationKind: r.durationKind,
@@ -73,10 +73,10 @@ function toDto(row: {
   floorId: string;
   label: string;
   kind: string;
-  originX: number;
-  originY: number;
-  widthM: number;
-  depthM: number;
+  originCellX: number;
+  originCellY: number;
+  widthFt: number;
+  depthFt: number;
   rotationDeg: number;
   color: string;
   durationKind: string;
@@ -91,10 +91,10 @@ function toDto(row: {
     floorId: row.floorId,
     label: row.label,
     kind: row.kind as ScenarioEffect['kind'],
-    originX: row.originX,
-    originY: row.originY,
-    widthM: row.widthM,
-    depthM: row.depthM,
+    originCellX: row.originCellX,
+    originCellY: row.originCellY,
+    widthFt: row.widthFt,
+    depthFt: row.depthFt,
     rotationDeg: row.rotationDeg,
     color: row.color,
     durationKind: row.durationKind as ScenarioEffect['durationKind'],

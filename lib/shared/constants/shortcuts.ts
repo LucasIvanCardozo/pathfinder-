@@ -144,6 +144,20 @@ export const SHORTCUTS = {
     label: 'Ver atajos de teclado',
     category: 'overlay',
   },
+  /**
+   * Toggles the `Efectos` modal (PR 2 of `effects-and-combat-tracker`).
+   * Bound to `Shift+E` so it sits next to `B` (paint) and `Shift+B`
+   * (cycle brush shape) without overlapping any single-key binding.
+   * The shortcuts modal will auto-list this entry once it exists in the
+   * registry because `listShortcuts()` reads the registry directly.
+   */
+  toggleEffectsModal: {
+    id: 'toggleEffectsModal',
+    code: KEYS_BY_CODE.keyE,
+    shift: true,
+    label: 'Abrir / cerrar modal de efectos',
+    category: 'overlay',
+  },
   save: {
     id: 'save',
     code: KEYS_BY_CODE.keyS,

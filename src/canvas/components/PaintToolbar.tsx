@@ -1,10 +1,10 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEraser, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
+import { faEraser, faHatWizard, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
-import type { BrushShape } from '../tools';
+import type { BrushShape, ToolKind } from '../tools';
 import {
   bumpBrushSizeDown,
   bumpBrushSizeUp,
@@ -14,12 +14,10 @@ import {
 } from '../tools';
 import styles from './paint-toolbar.module.css';
 
-export type PaintTool = 'paint' | 'erase' | 'darkness';
-
 type Props = {
-  tool: PaintTool;
+  tool: ToolKind;
   darknessMode: 'apply' | 'erase';
-  onChange: (tool: PaintTool) => void;
+  onChange: (tool: ToolKind) => void;
   /**
    * Brush footprint size in active-subdivision cells. Must be odd. The parent
    * owns the value so the brush size survives tool toggles and reloads.
@@ -113,7 +111,18 @@ export function PaintToolbar({
             icon={tool === 'darkness' && darknessMode === 'erase' ? faSun : faMoon}
           />
         </button>
+        <button
+          type="button"
+          className={`${styles.tool} ${tool === 'effects' ? styles.active : ''}`}
+          onClick={() => onChange('effects')}
+          title="Efectos (Shift+E) — abrir el modal para crear / editar marcadores"
+          aria-label="Efectos"
+          aria-pressed={tool === 'effects'}
+        >
+          <FontAwesomeIcon icon={faHatWizard} />
+        </button>
       </div>
+
 
       <div className={styles.brushSection}>
         <div className={styles.brushControls}>

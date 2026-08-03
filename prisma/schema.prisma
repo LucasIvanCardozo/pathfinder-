@@ -38,22 +38,32 @@ model Floor {
 }
 
 /// Transient GM-placed effect (burst / cone / line / wall). Persisted to
-/// the scenario so a hard reload re-renders the overlay. Anchored in world
-/// coordinates (originX/originY in metres) with widthM/depthM dimensions
-/// and a free rotation; geometry clipping happens in the canvas hook.
-/// `durationKind` selects how `remainingRounds` decrements on the
-/// `tickRound` op. `expired` flips to true once `remainingRounds` reaches
-/// zero and the renderer hides the marker.
+/// the scenario so a hard reload re-renders the overlay.
+///
+/// Units (PR 2 of `effects-and-combat-tracker`):
+///   - `originCellX` / `originCellY`: anchor in **grid cell coords** of the
+///     active subdivision. A value of `1` means cell (1, 1). The canvas hook
+///     converts to render pixels via `* activeCellSize`. Stored as `Float` to
+///     stay forward-compatible with sub-cell anchors in PR 4.
+///   - `widthFt` / `depthFt`: dimensions in **feet** (Pathfinder game rule:
+///     1 base cell = 5 ft). The hook converts to active-subdivision cells via
+///     `widthFt * cellSizeRatio / FEET_PER_BASE_CELL`.
+///   - `rotationDeg`: free rotation in degrees; geometry walkers rotate the
+///     direction unit vector before fanning out.
+///
+/// `durationKind` selects how `remainingRounds` decrements on the `tickRound`
+/// op. `expired` flips to true once `remainingRounds` reaches zero and the
+/// renderer hides the marker.
 model ScenarioEffect {
   id              String   @id @default(cuid())
   scenarioId      String
   floorId         String
   label           String
   kind            String
-  originX         Float
-  originY         Float
-  widthM          Float
-  depthM          Float
+  originCellX     Float
+  originCellY     Float
+  widthFt         Float
+  depthFt         Float
   rotationDeg     Float    @default(0)
   color           String
   durationKind    String

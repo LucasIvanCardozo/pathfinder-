@@ -3,7 +3,7 @@
 import type Konva from 'konva';
 import { useCallback } from 'react';
 import type { Piece, PaintedCell, SubdivisionConfig } from '@/lib/shared/types';
-import type { BrushCell } from '../../tools';
+import type { BrushCell, ToolKind } from '../../tools';
 import { findInteractiveCellAtPixel } from '../../traits';
 
 export type FloorCanvasEvents = {
@@ -38,6 +38,13 @@ type UseCanvasEventHandlersArgs = {
     traitKind: string,
     screenPos: { x: number; y: number },
   ) => void;
+  /** PR 2: triggered when the user clicks an empty cell with the `effects`
+   *  tool active. The Stage's onMouseDown dispatches this when the tool is
+   *  `effects` AND the click did not hit a marker (the marker Rect listens
+   *  for its own click and stops the bubble). */
+  onAnchorClick?: (cell: { gridX: number; gridY: number }) => void;
+  /** Current tool so the handler can dispatch on `tool === 'effects'`. */
+  tool?: ToolKind;
 };
 
 /**
@@ -69,10 +76,22 @@ export function useCanvasEventHandlers(
         args.beginPan(e.evt.clientX, e.evt.clientY);
         return;
       }
-      // Left-click without space: paint or erase.
+      // Left-click without space: paint, erase, or `effects` tool.
       if (e.evt.button === 0) {
         const pointer = getPointer();
         if (!pointer) return;
+        // PR 2: the `effects` tool short-circuits paint/erase. The marker
+        // Rect's onClick handler cancelled the bubble if the click landed
+        // on a marker, so this branch only fires for empty cells. We
+        // forward the active-subdivision cell to the parent so the modal
+        // can pre-fill the anchor.
+        if (args.tool === 'effects') {
+          const cell = args.pointerToCell(pointer);
+          if (cell && args.onAnchorClick) {
+            args.onAnchorClick(cell);
+          }
+          return;
+        }
         args.apply(pointer, false);
         args.isDrawingRef.current = true;
       }

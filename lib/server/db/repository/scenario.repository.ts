@@ -426,6 +426,7 @@ async function applyOp(
       // client-side via `newId('effect')` so a re-applied op can collide
       // with a pre-existing row only on the rare path where the GM
       // reload + autosaves before the in-flight op is acknowledged.
+      //
       await tx.scenarioEffect.create({
         data: {
           id: op.effect.id,
@@ -433,10 +434,10 @@ async function applyOp(
           floorId: op.effect.floorId,
           label: op.effect.label,
           kind: op.effect.kind,
-          originX: op.effect.originX,
-          originY: op.effect.originY,
-          widthM: op.effect.widthM,
-          depthM: op.effect.depthM,
+          originCellX: op.effect.originCellX,
+          originCellY: op.effect.originCellY,
+          widthFt: op.effect.widthFt,
+          depthFt: op.effect.depthFt,
           rotationDeg: op.effect.rotationDeg,
           color: op.effect.color,
           durationKind: op.effect.durationKind,
@@ -472,6 +473,27 @@ async function applyOp(
         where: { scenarioId, expired: false, remainingRounds: { lte: 0 } },
         data: { expired: true },
       });
+      return;
+    }
+    case 'relabelEffect': {
+      // Idempotent — a stale op replayed against a deleted effect is a
+      // no-op (the update matches zero rows). Idempotency matches the
+      // `removeEffect` semantics so the client can replay a stale op
+      // without surfacing an error after an undo.
+      await tx.scenarioEffect.updateMany({
+        where: { id: op.effectId, scenarioId },
+        data: { label: op.label },
+      });
+      return;
+    }
+    case 'dismissEffect': {
+      // PR 2: dismiss is a VISUAL state — the row stays in the DB so
+      // the GM can re-activate the marker by re-creating it or via the
+      // "Forzar Dismiss" prompt (PR 4). The application UI renders the
+      // marker with an empty `color` to hide it; the marker tooltip
+      // shows a "Dismissed" tag. The op is preserved as a no-op on
+      // the server so the wire is stable and PR 4 can flip the
+      // semantics without a wire change.
       return;
     }
     default: {
