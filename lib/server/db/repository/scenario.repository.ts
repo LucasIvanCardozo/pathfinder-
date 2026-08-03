@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { Prisma } from '@/generated/prisma/client';
+import { combatRepository } from '@/lib/server/db/repository/combat.repository';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
 import { effectRepository } from '@/lib/server/db/repository/effect.repository';
@@ -71,6 +72,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       const initialFloor = plantaBaja ?? scenario.floors[0];
       if (!initialFloor) return null;
       const effects = await effectRepository(db).findManyByScenarioId(id);
+      const combat = await combatRepository(db).findByScenario(id);
       return {
         id: scenario.id,
         name: scenario.name,
@@ -98,6 +100,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
           })),
         ),
         effects,
+        combat,
       };
     },
 
@@ -494,6 +497,89 @@ async function applyOp(
       // shows a "Dismissed" tag. The op is preserved as a no-op on
       // the server so the wire is stable and PR 4 can flip the
       // semantics without a wire change.
+      return;
+    }
+    case 'startCombat': {
+      // Idempotent on replay: a stale op against an existing combat
+      // would violate the `Combat.scenarioId` unique constraint, so
+      // short-circuit when a combat already exists for the scenario.
+      // The client only emits this op once per "Iniciar combate" click.
+      const existing = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (existing) return;
+      await combatRepository(tx).createInTx(tx, scenarioId, op.combatants);
+      return;
+    }
+    case 'endCombat': {
+      // Idempotent — replaying endCombat after a successful end is a
+      // no-op. The cascade delete drops every Combatant row along with
+      // the Combat row (locked decision: no soft archive).
+      const combat = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (!combat) return;
+      await combatRepository(tx).endInTx(tx, combat.id);
+      return;
+    }
+    case 'nextTurn': {
+      // Wrap past the last combatant → tick the round inside the same
+      // TX (locked decision: wrap triggers tickRound atomically). The
+      // `combatRepository` wraps its `tx` parameter so the tick and
+      // the cursor advance commit or roll back together.
+      const combat = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (!combat) return;
+      const { wrapped } = await combatRepository(tx).nextTurnInTx(tx, combat.id);
+      if (wrapped) {
+        await effectRepository(tx).tickRoundInTx(tx, scenarioId);
+      }
+      return;
+    }
+    case 'previousTurn': {
+      // Asymmetric — clamping at round 1 turn 0 is enforced inside the
+      // repository (no decrement of `roundNumber` on the rollback path).
+      const combat = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (!combat) return;
+      await combatRepository(tx).previousTurnInTx(tx, combat.id);
+      return;
+    }
+    case 'advanceRound': {
+      // Locked decision: manual `R` shortcut also ticks effects in the
+      // same TX — matches the wrap-on-nextTurn behaviour so the GM
+      // never sees a round bump without the markers expiring.
+      const combat = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (!combat) return;
+      await combatRepository(tx).advanceRoundInTx(tx, combat.id);
+      await effectRepository(tx).tickRoundInTx(tx, scenarioId);
+      return;
+    }
+    case 'addCombatant': {
+      // Inserts at the correct initiative-sorted position. The
+      // repository computes the position based on the current count;
+      // the read side ignores `position` and sorts by `initiative`.
+      const combat = await tx.combat.findUnique({
+        where: { scenarioId },
+        select: { id: true },
+      });
+      if (!combat) return;
+      await combatRepository(tx).insertInTx(tx, combat.id, op.combatant);
+      return;
+    }
+    case 'removeCombatant': {
+      // Idempotent — the `deleteMany` matches zero rows after a
+      // successful prior remove. Mirrors `removeEffect` semantics.
+      await combatRepository(tx).removeInTx(tx, op.combatantId);
       return;
     }
     default: {

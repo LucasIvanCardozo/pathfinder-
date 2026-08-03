@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { EffectInput, ScenarioOp } from '@/lib/shared/types';
+import type { CombatantInsert, EffectInput, ScenarioOp } from '@/lib/shared/types';
 
 /**
  * Accumulates `ScenarioOp`s produced by editor mutations. Each push* helper
@@ -154,6 +154,43 @@ export function useOpsBuffer() {
     [syncPush],
   );
 
+  const pushStartCombat = useCallback(
+    (combatants: readonly CombatantInsert[]) => {
+      syncPush({ type: 'startCombat', combatants: [...combatants] });
+    },
+    [syncPush],
+  );
+
+  const pushEndCombat = useCallback(() => {
+    syncPush({ type: 'endCombat' });
+  }, [syncPush]);
+
+  const pushNextTurn = useCallback(() => {
+    syncPush({ type: 'nextTurn' });
+  }, [syncPush]);
+
+  const pushPreviousTurn = useCallback(() => {
+    syncPush({ type: 'previousTurn' });
+  }, [syncPush]);
+
+  const pushAdvanceRound = useCallback(() => {
+    syncPush({ type: 'advanceRound' });
+  }, [syncPush]);
+
+  const pushAddCombatant = useCallback(
+    (combatant: CombatantInsert) => {
+      syncPush({ type: 'addCombatant', combatant });
+    },
+    [syncPush],
+  );
+
+  const pushRemoveCombatant = useCallback(
+    (combatantId: string) => {
+      syncPush({ type: 'removeCombatant', combatantId });
+    },
+    [syncPush],
+  );
+
   /**
    * Returns the current ops and clears the buffer atomically. The autosave
    * hook calls this right before shipping; a failed save leaves the ops in
@@ -209,6 +246,13 @@ export function useOpsBuffer() {
     pushRemoveEffect,
     pushRelabelEffect,
     pushDismissEffect,
+    pushStartCombat,
+    pushEndCombat,
+    pushNextTurn,
+    pushPreviousTurn,
+    pushAdvanceRound,
+    pushAddCombatant,
+    pushRemoveCombatant,
     drain,
     restore,
     markDirtyForRebase,

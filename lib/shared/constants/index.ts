@@ -17,6 +17,7 @@
  * through the codebase.
  */
 export * from './brush';
+export * from './combat';
 export * from './darkness';
 export * from './effect-palette';
 export * from './floors';

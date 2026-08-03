@@ -1,3 +1,4 @@
+export * from './combat.types';
 export * from './effect.types';
 export * from './floor.types';
 export * from './paintedCell.types';

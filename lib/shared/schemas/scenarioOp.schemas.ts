@@ -1,5 +1,14 @@
 import { z } from 'zod';
 import { FLOOR_LIMITS, SCENARIO_LIMITS } from '@/lib/shared/constants';
+import {
+  AddCombatantOpSchema,
+  AdvanceRoundOpSchema,
+  EndCombatOpSchema,
+  NextTurnOpSchema,
+  PreviousTurnOpSchema,
+  RemoveCombatantOpSchema,
+  StartCombatOpSchema,
+} from './combat.schemas';
 import { EffectInputSchema } from '@/lib/shared/schemas/effect.schemas';
 
 /**
@@ -113,6 +122,14 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
     type: z.literal('dismissEffect'),
     effectId: z.string().min(1),
   }),
+
+  StartCombatOpSchema,
+  EndCombatOpSchema,
+  NextTurnOpSchema,
+  PreviousTurnOpSchema,
+  AdvanceRoundOpSchema,
+  AddCombatantOpSchema,
+  RemoveCombatantOpSchema,
 ]);
 
 /**

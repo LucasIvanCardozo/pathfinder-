@@ -71,7 +71,14 @@ export type ShortcutBinding = {
 };
 
 /** Top-level grouping for shortcuts. Useful when surfacing a help overlay. */
-export type ShortcutCategory = 'tool' | 'brush' | 'save' | 'navigation' | 'overlay' | 'edit';
+export type ShortcutCategory =
+  | 'tool'
+  | 'brush'
+  | 'save'
+  | 'navigation'
+  | 'overlay'
+  | 'edit'
+  | 'combat';
 
 /** A fully-bound shortcut: its binding plus human-facing metadata. */
 export type ShortcutDef = ShortcutBinding & {
@@ -157,6 +164,36 @@ export const SHORTCUTS = {
     shift: true,
     label: 'Abrir / cerrar modal de efectos',
     category: 'overlay',
+  },
+  toggleCombat: {
+    id: 'toggleCombat',
+    code: KEYS_BY_CODE.keyC,
+    label: 'Iniciar / finalizar combate',
+    category: 'combat',
+  },
+  nextTurn: {
+    id: 'nextTurn',
+    code: KEYS_BY_CODE.keyN,
+    label: 'Siguiente turno',
+    category: 'combat',
+  },
+  previousTurn: {
+    id: 'previousTurn',
+    code: KEYS_BY_CODE.keyJ,
+    label: 'Turno anterior',
+    category: 'combat',
+  },
+  advanceRound: {
+    id: 'advanceRound',
+    code: KEYS_BY_CODE.keyR,
+    label: 'Avanzar ronda',
+    category: 'combat',
+  },
+  addCombatant: {
+    id: 'addCombatant',
+    code: KEYS_BY_CODE.keyK,
+    label: 'Agregar combatiente',
+    category: 'combat',
   },
   save: {
     id: 'save',

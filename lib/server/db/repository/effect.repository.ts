@@ -60,6 +60,33 @@ export function effectRepository(db: PrismaClient | Prisma.TransactionClient) {
         ),
       });
     },
+
+    /**
+     * Decrement every non-expired effect's `remainingRounds` by one, then
+     * flip `expired = true` on the rows that hit zero. Two `updateMany`
+     * calls in this exact order — the second matches rows whose counter
+     * was just decremented below zero (the `{ lte: 0 }` predicate is
+     * inclusive of zero for effects already at zero).
+     *
+     * Called from `scenario.applyOp` on both the standalone `tickRound`
+     * op and the implicit ticks triggered by `nextTurn` wrap / manual
+     * `advanceRound`. Stays in the same TX so the marker expiry and the
+     * combat cursor advance atomically.
+     */
+    async tickRoundInTx(tx: Prisma.TransactionClient, scenarioId: string): Promise<void> {
+      await tx.scenarioEffect.updateMany({
+        where: {
+          scenarioId,
+          expired: false,
+          durationKind: { in: ['rounds', 'rounds-concentration'] },
+        },
+        data: { remainingRounds: { decrement: 1 } },
+      });
+      await tx.scenarioEffect.updateMany({
+        where: { scenarioId, expired: false, remainingRounds: { lte: 0 } },
+        data: { expired: true },
+      });
+    },
   };
 }
 

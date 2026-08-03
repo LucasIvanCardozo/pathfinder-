@@ -22,6 +22,7 @@ model Scenario {
 
   floors  Floor[]
   effects ScenarioEffect[]
+  combat  Combat?
 }
 
 model Floor {
@@ -92,5 +93,44 @@ model PaintedCell {
   floor Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
 
   @@index([floorId, subdivisionId])
+}
+
+/// Active combat session for a scenario. 1:1 with Scenario (one combat at a
+/// time per scenario). When combat ends, the cascade delete removes every
+/// Combatant row as well — no soft archive (locked decision). `roundNumber` /
+/// `currentTurnIndex` are the cursor the client renders in the RoundViewer.
+model Combat {
+  id               String   @id @default(cuid())
+  scenarioId       String   @unique
+  roundNumber      Int      @default(1)
+  currentTurnIndex Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  scenario   Scenario    @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  combatants Combatant[]
+
+  @@index([scenarioId])
+}
+
+/// A single combatant in a Combat. Cascade-deleted when the parent Combat
+/// goes (endCombat op). The `initiative` drives turn order; ties are broken
+/// by insertion order (the first inserted wins — `id asc` tiebreaker in the
+/// read query mirrors this). `position` is a write-time hint only; the read
+/// side sorts by `initiative desc`, `id asc` so positions stay gap-tolerant.
+model Combatant {
+  id         String   @id @default(cuid())
+  combatId   String
+  name       String
+  initiative Int
+  side       String // 'players' | 'enemies' | 'neutral'
+  position   Int // explicit ordering field (best-effort, recomputed on add)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  combat Combat @relation(fields: [combatId], references: [id], onDelete: Cascade)
+
+  @@index([combatId])
+  @@index([combatId, position])
 }
 

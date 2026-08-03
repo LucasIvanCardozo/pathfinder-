@@ -22,6 +22,16 @@ type Args = {
   setShowShortcuts: Dispatch<SetStateAction<boolean>>;
   /** Toggles the `Efectos` modal (PR 2). */
   setEffectsModalOpen: Dispatch<SetStateAction<boolean>>;
+  /** Toggles the combat modal or its active-combat view. */
+  toggleCombat: () => void;
+  /** Combat turn operations are routed through the editor ops buffer. */
+  nextTurn: () => void;
+  previousTurn: () => void;
+  advanceRound: () => void;
+  /** Opens the combat modal in add-combatant mode. */
+  addCombatant: () => void;
+  /** Shared guard for modal-triggered shortcuts. */
+  modalOpenRef?: { current: boolean };
   /** Wrapped save — the call site decides whether the autosave is currently
    *  in progress and short-circuits if so. */
   save: () => void;
@@ -70,6 +80,26 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
     bindShortcut('toggleEffectsModal', () => {
       args.setEffectsModalOpen((v) => !v);
+    }),
+    bindShortcut('toggleCombat', () => {
+      if (args.modalOpenRef?.current) return;
+      args.toggleCombat();
+    }),
+    bindShortcut('nextTurn', () => {
+      if (args.modalOpenRef?.current) return;
+      args.nextTurn();
+    }),
+    bindShortcut('previousTurn', () => {
+      if (args.modalOpenRef?.current) return;
+      args.previousTurn();
+    }),
+    bindShortcut('advanceRound', () => {
+      if (args.modalOpenRef?.current) return;
+      args.advanceRound();
+    }),
+    bindShortcut('addCombatant', () => {
+      if (args.modalOpenRef?.current) return;
+      args.addCombatant();
     }),
     bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
     bindShortcut('save', () => args.save()),

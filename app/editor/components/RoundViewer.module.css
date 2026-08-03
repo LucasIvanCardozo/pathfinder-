@@ -1,0 +1,109 @@
+.viewer {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(90vw, 52rem);
+  padding: 0.55rem 0.8rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.round {
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.turn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 7rem;
+}
+
+.turnLabel {
+  color: var(--fg-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.turnName {
+  overflow: hidden;
+  max-width: 12rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.queue {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 30rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+}
+
+.queueItem {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  font-size: 0.7rem;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.queueItem[data-side='players'] {
+  border-color: #427a56;
+}
+
+.queueItem[data-side='enemies'] {
+  border-color: #8b4545;
+}
+
+.queueItem[data-side='neutral'] {
+  border-color: #666d77;
+}
+
+.queueItem[data-active='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  color: var(--fg);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .viewer {
+    max-width: 94vw;
+    gap: 0.45rem;
+    padding: 0.45rem 0.55rem;
+  }
+
+  .turn {
+    min-width: 0;
+  }
+
+  .turnName {
+    max-width: 7rem;
+  }
+
+  .queue {
+    max-width: 11rem;
+  }
+}

@@ -189,9 +189,17 @@
   border-color: #2a5a2a;
 }
 
-.autosaveStatus[data-status='error'] {
-  color: #e07a7a;
-  border-color: #5a2a2a;
+.combatIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #2a5a2a;
+  border-radius: 4px;
+  background: var(--bg);
+  color: #7adc7a;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* Danger menu opened from the Popover. Mirrors the toolbar row look so the

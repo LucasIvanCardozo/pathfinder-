@@ -1,6 +1,12 @@
 'use client';
 
-import { faCloud, faHatWizard, faKeyboard, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCloud,
+  faHatWizard,
+  faKeyboard,
+  faShieldHalved,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -30,11 +36,23 @@ import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap } from '@/hooks';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import type { EffectInput, Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
+import type {
+  CombatView,
+  Combatant,
+  CombatantInsert,
+  EffectInput,
+  Floor,
+  PaintedCell,
+  Piece,
+  ScenarioEffect,
+} from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
+import { CombatModal, type CombatModalMode } from './components/CombatModal/CombatModal';
 import { EffectsModal } from './components/EffectsModal/EffectsModal';
+import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
+import { useCombatSession } from './hooks/use-combat-session';
 import { useEffectsModal } from './hooks/use-effects-modal';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useHistory } from './hooks/use-history';
@@ -51,6 +69,13 @@ const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorSta
   loading: () => <div className={styles.canvasLoading}>Cargando canvas…</div>,
 });
 
+function sortCombatants(combatants: readonly Combatant[]): Combatant[] {
+  return [...combatants].sort((a, b) => {
+    if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 type InitialScenario = {
   id: string;
   name: string;
@@ -64,6 +89,7 @@ type InitialScenario = {
    *  held in state until the next refetch. PR 1 ships the read side; the
    *  modal editor lands in PR 2 (which writes via the ops buffer). */
   effects: ScenarioEffect[];
+  combat: CombatView | null;
 };
 
 type Props = {
@@ -99,6 +125,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [isDirty, setIsDirty] = useState(false);
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const modalOpenRef = useRef(false);
   // PR 2: marker click tooltip state. Holds the effect id and the
   // screen position so the EffectTooltip can render. Cleared on
   // the next canvas click or on Escape (the Popover handles its own
@@ -207,11 +234,21 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     () => effects.filter((e) => e.floorId === activeFloorId),
     [effects, activeFloorId],
   );
+  const onModalOpen = useCallback(() => {
+    modalOpenRef.current = true;
+  }, []);
+  const onModalClose = useCallback(() => {
+    modalOpenRef.current = false;
+  }, []);
   const effectsModal = useEffectsModal({
     opsBuffer: effectOps,
     activeFloorId,
     effects: effectsForFloor,
+    onOpen: onModalOpen,
+    onClose: onModalClose,
   });
+
+  const combatSession = useCombatSession(initialScenario?.combat ?? null);
 
   // Mirror `paintedCells` in a ref so `handlePaint` can read the current
   // cells without listing them in its useCallback deps (see `use-ops-buffer`
@@ -279,6 +316,128 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     markDirty,
     pushEntityState: opsBuffer.pushEntityState,
   });
+
+  const [combatModalOpen, setCombatModalOpen] = useState(false);
+  const [combatModalMode, setCombatModalMode] = useState<CombatModalMode>('new');
+  const openCombatModal = useCallback((options?: { mode?: CombatModalMode }) => {
+    setCombatModalMode(options?.mode ?? 'new');
+    setCombatModalOpen(true);
+    modalOpenRef.current = true;
+  }, []);
+  const closeCombatModal = useCallback(() => {
+    setCombatModalOpen(false);
+    modalOpenRef.current = false;
+  }, []);
+  const toggleCombatModal = useCallback(() => {
+    if (combatModalOpen) {
+      closeCombatModal();
+      return;
+    }
+    openCombatModal();
+  }, [closeCombatModal, combatModalOpen, openCombatModal]);
+
+  const combatOps = {
+    startCombat: (combatants: CombatantInsert[]) => {
+      opsBuffer.pushStartCombat(combatants);
+      markDirty();
+      const combatId = newId('combat');
+      const localCombatants = sortCombatants(
+        combatants.map((combatant) => ({
+          ...combatant,
+          id: newId('combatant'),
+          combatId,
+        })),
+      );
+      combatSession.setCombat({
+        id: combatId,
+        scenarioId: scenarioId ?? 'pending-scenario',
+        roundNumber: 1,
+        currentTurnIndex: 0,
+        combatants: localCombatants,
+      });
+    },
+    endCombat: () => {
+      opsBuffer.pushEndCombat();
+      markDirty();
+      combatSession.setCombat(null);
+      closeCombatModal();
+    },
+    nextTurn: () => {
+      opsBuffer.pushNextTurn();
+      markDirty();
+      combatSession.setCombat((current) => {
+        if (!current || current.combatants.length === 0) return current;
+        const combatants = sortCombatants(current.combatants);
+        const currentIndex = Math.min(current.currentTurnIndex, combatants.length - 1);
+        const nextIndex = currentIndex + 1;
+        if (nextIndex >= combatants.length) {
+          return { ...current, combatants, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 };
+        }
+        return { ...current, combatants, currentTurnIndex: nextIndex };
+      });
+    },
+    previousTurn: () => {
+      opsBuffer.pushPreviousTurn();
+      markDirty();
+      combatSession.setCombat((current) => {
+        if (!current || current.combatants.length === 0) return current;
+        const combatants = sortCombatants(current.combatants);
+        const currentIndex = Math.min(current.currentTurnIndex, combatants.length - 1);
+        const previousIndex = currentIndex === 0 ? combatants.length - 1 : currentIndex - 1;
+        return { ...current, combatants, currentTurnIndex: previousIndex };
+      });
+    },
+    advanceRound: () => {
+      opsBuffer.pushAdvanceRound();
+      markDirty();
+      combatSession.setCombat((current) =>
+        current
+          ? { ...current, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 }
+          : current,
+      );
+    },
+    addCombatant: (combatant: CombatantInsert) => {
+      opsBuffer.pushAddCombatant(combatant);
+      markDirty();
+      combatSession.setCombat((current) => {
+        if (!current) return current;
+        const existing = sortCombatants(current.combatants);
+        const currentIndex = Math.min(
+          current.currentTurnIndex,
+          Math.max(existing.length - 1, 0),
+        );
+        const currentId = existing[currentIndex]?.id;
+        const added: Combatant = {
+          ...combatant,
+          id: newId('combatant'),
+          combatId: current.id,
+        };
+        const nextCombatants = sortCombatants([...existing, added]);
+        const nextIndex = currentId
+          ? Math.max(0, nextCombatants.findIndex((item) => item.id === currentId))
+          : 0;
+        return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
+      });
+    },
+    removeCombatant: (combatantId: string) => {
+      opsBuffer.pushRemoveCombatant(combatantId);
+      markDirty();
+      combatSession.setCombat((current) => {
+        if (!current) return current;
+        const existing = sortCombatants(current.combatants);
+        const removedIndex = existing.findIndex((item) => item.id === combatantId);
+        if (removedIndex < 0) return current;
+        const currentIndex = Math.min(
+          current.currentTurnIndex,
+          Math.max(existing.length - 1, 0),
+        );
+        const nextCombatants = existing.filter((item) => item.id !== combatantId);
+        const rebased = removedIndex <= currentIndex ? currentIndex - 1 : currentIndex;
+        const nextIndex = Math.max(0, Math.min(rebased, Math.max(nextCombatants.length - 1, 0)));
+        return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
+      });
+    },
+  };
 
   const handleSubdivisionChange = (id: string) => setActiveSubdivisionId(id);
 
@@ -505,6 +664,12 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setShowBrushPreview,
       setShowShortcuts,
       setEffectsModalOpen: (v) => (v ? effectsModal.open() : effectsModal.close()),
+      toggleCombat: toggleCombatModal,
+      nextTurn: combatOps.nextTurn,
+      previousTurn: combatOps.previousTurn,
+      advanceRound: combatOps.advanceRound,
+      addCombatant: () => openCombatModal({ mode: 'add' }),
+      modalOpenRef,
       save: () => {
         if (isSaving) return;
         save(false);
@@ -561,6 +726,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             title="Efectos (Shift+E)"
           >
             <FontAwesomeIcon icon={faHatWizard} />
+          </Button>
+          <Button
+            type="button"
+            variant={combatSession.isActive ? 'primary' : 'default'}
+            size="mini"
+            onClick={() => openCombatModal()}
+            aria-label="Combate"
+            title="Combate (C)"
+          >
+            <FontAwesomeIcon icon={faShieldHalved} />
           </Button>
           <Button
             type="button"
@@ -744,6 +919,12 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           {autosaveStatus === 'error' && '✗ Error al guardar'}
           {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
         </span>
+        {combatSession.isActive ? (
+          <span className={styles.combatIndicator}>
+            ● Combate · Ronda {combatSession.roundNumber} ·{' '}
+            {combatSession.currentCombatant?.name ?? '—'}
+          </span>
+        ) : null}
         <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
           {isSaving ? (
             <>
@@ -807,6 +988,17 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         onSubmit={effectsModal.submit}
         onDismiss={effectsModal.dismiss}
         onRemove={effectsModal.remove}
+      />
+      <RoundViewer combat={combatSession.combat} />
+      <CombatModal
+        isOpen={combatModalOpen}
+        mode={combatModalMode}
+        onClose={closeCombatModal}
+        combat={combatSession.combat}
+        onStartCombat={combatOps.startCombat}
+        onEndCombat={combatOps.endCombat}
+        onAddCombatant={combatOps.addCombatant}
+        onRemoveCombatant={combatOps.removeCombatant}
       />
       {markerTooltip
         ? (() => {

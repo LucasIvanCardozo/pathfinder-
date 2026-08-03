@@ -15,7 +15,7 @@ export function generateId(prefix: string): string {
  * canonical source of truth for the prefix literals `cell` / `floor` /
  * `scenario` so typos surface at compile time instead of in a runtime id.
  */
-export type IdKind = 'cell' | 'effect' | 'floor' | 'scenario';
+export type IdKind = 'cell' | 'combat' | 'combatant' | 'effect' | 'floor' | 'scenario';
 
 /** Typed wrapper around `generateId` for the known entity prefixes. */
 export function newId(kind: IdKind): string {
