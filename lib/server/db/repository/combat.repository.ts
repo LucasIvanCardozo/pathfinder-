@@ -207,7 +207,11 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
     },
 
     /**
-     * Delete the combat and every combatant (cascade on the FK). Used by
+     * End-combat purges `Combatant[]` via Prisma cascade; application code
+     * MUST NOT issue `tx.combatant.deleteMany`. The cascade is locked at
+     * the FK level (`Combatant.combatId` -> `Combat.id` with
+     * `onDelete: Cascade`, migration `20260803184020_add_combat_and_combatants`),
+     * so deleting the parent row is the single legal entry point. Used by
      * the `endCombat` op; idempotent at the DB layer because the parent
      * op short-circuits when no combat exists.
      */

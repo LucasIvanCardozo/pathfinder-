@@ -6,7 +6,7 @@ import {
   faCompass,
   faFloppyDisk,
   faPaintbrush,
-  faShieldHalved,
+  faFistRaised,
   faToolbox,
   faWindowMaximize,
   type IconDefinition,
@@ -22,7 +22,7 @@ const CATEGORY_META: Record<ShortcutCategory, { label: string; icon: IconDefinit
   navigation: { label: 'Navegación', icon: faCompass },
   overlay: { label: 'Overlay', icon: faWindowMaximize },
   edit: { label: 'Edición', icon: faArrowRotateBackward },
-  combat: { label: 'Combate', icon: faShieldHalved },
+  combat: { label: 'Combate', icon: faFistRaised },
 };
 
 const CATEGORY_ORDER: ShortcutCategory[] = [

@@ -5,6 +5,7 @@ import {
   faHatWizard,
   faKeyboard,
   faShieldHalved,
+  faTimes,
   faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -29,6 +30,7 @@ import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
 import { FloatingPanel } from '@/components/FloatingPanel';
+import { Modal } from '@/components/Modal';
 import { Popover } from '@/components/Popover';
 import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { Spinner } from '@/components/Spinner';
@@ -319,6 +321,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
   const [combatModalOpen, setCombatModalOpen] = useState(false);
   const [combatModalMode, setCombatModalMode] = useState<CombatModalMode>('new');
+  // PR 4: header pill Finalizar combate confirm dialog. Lives next to
+  // `combatModalOpen` because both gate on `combatSession.isActive`.
+  const [confirmEndCombat, setConfirmEndCombat] = useState(false);
   const openCombatModal = useCallback((options?: { mode?: CombatModalMode }) => {
     setCombatModalMode(options?.mode ?? 'new');
     setCombatModalOpen(true);
@@ -921,8 +926,19 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         </span>
         {combatSession.isActive ? (
           <span className={styles.combatIndicator}>
-            ● Combate · Ronda {combatSession.roundNumber} ·{' '}
-            {combatSession.currentCombatant?.name ?? '—'}
+            <span>
+              ● Combate · Ronda {combatSession.roundNumber} ·{' '}
+              {combatSession.currentCombatant?.name ?? '—'}
+            </span>
+            <Button
+              type="button"
+              size="mini"
+              variant="danger"
+              onClick={() => setConfirmEndCombat(true)}
+              title="Finalizar combate"
+            >
+              <FontAwesomeIcon icon={faTimes} /> Finalizar
+            </Button>
           </span>
         ) : null}
         <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
@@ -1000,6 +1016,32 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         onAddCombatant={combatOps.addCombatant}
         onRemoveCombatant={combatOps.removeCombatant}
       />
+      <Modal
+        isOpen={confirmEndCombat}
+        title="¿Finalizar el combate?"
+        onClose={() => setConfirmEndCombat(false)}
+      >
+        <p style={{ marginTop: 0 }}>
+          Se borrarán todos los combatientes del combate actual y la ronda vuelve a 1 cuando
+          inicies el próximo. Esta acción no se puede deshacer.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <Button type="button" onClick={() => setConfirmEndCombat(false)} title="Cancelar">
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => {
+              setConfirmEndCombat(false);
+              combatOps.endCombat();
+            }}
+            title="Confirmar finalización"
+          >
+            <FontAwesomeIcon icon={faTimes} /> Finalizar combate
+          </Button>
+        </div>
+      </Modal>
       {markerTooltip
         ? (() => {
             const effect = effects.find((e) => e.id === markerTooltip.effectId);
@@ -1024,6 +1066,10 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
                 }}
                 onDispel={() => {
                   effectsModal.remove(effect.id);
+                  setMarkerTooltip(null);
+                }}
+                onForceDismiss={() => {
+                  effectsModal.dismiss(effect.id);
                   setMarkerTooltip(null);
                 }}
               />

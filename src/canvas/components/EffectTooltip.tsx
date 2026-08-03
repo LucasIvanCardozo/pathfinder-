@@ -1,9 +1,10 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
+import { faClock, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Modal } from '@/components/Modal';
 import type { ScenarioEffect } from '@/lib/shared/types';
 import type { EffectMarkerCell } from '../hooks/useEffectMarkers';
 import { EffectMarkerRow } from './EffectMarkerRow';
@@ -18,7 +19,7 @@ import styles from './effect-tooltip.module.css';
 export type EffectTooltipProps = {
   /** The effect this tooltip is describing. */
   effect: ScenarioEffect;
-  /** Number of effects that cover this cell (≥ 1). */
+  /** Number of effects that cover this cell (>= 1). */
   overlappingCount: number;
   /** Position in the Konva stage container's coordinate space (what
    *  `Konva.Stage.getPointerPosition()` returns). Converted to viewport
@@ -31,6 +32,9 @@ export type EffectTooltipProps = {
   onDismiss: () => void;
   /** Wire from the "Dispel Magic" button — hard-remove via `removeEffect`. */
   onDispel: () => void;
+  /** Wire from the "Force Dismiss (sin D)" button — same op as Dismiss, but
+   *  gated by a confirm dialog (analytics + explicit GM intent). */
+  onForceDismiss: () => void;
   /** True when the effect has been dismissed. Affects the label pill. */
   dismissed?: boolean;
 };
@@ -49,10 +53,13 @@ export type EffectTooltipProps = {
  *
  * Action buttons:
  *   - **Editar** — opens the modal preloaded with this effect.
- *   - **Dismiss** — visual-only state in PR 2 (the row stays in the DB and
- *     the marker renders at reduced opacity with a "Dismissed" tag).
- *   - **Dispel Magic** — same wire as Dismiss in PR 2; kept distinct in the
- *     UI for analytics. PR 4 may escalate to a hard remove.
+ *   - **Dismiss** — visual-only state (the row stays in the DB and the
+ *     marker renders at reduced opacity with a "Dismissed" tag).
+ *   - **Dispel Magic** — same wire as Dismiss; kept distinct in the UI
+ *     for analytics. PR 4 leaves the wire in place.
+ *   - **Force Dismiss (sin D)** — same op as Dismiss but gated by a
+ *     confirm modal; the GM use case is "I want to dismiss this even
+ *     though I am not in the dismiss flow" (analytics + intent).
  */
 export function EffectTooltip({
   effect,
@@ -61,6 +68,7 @@ export function EffectTooltip({
   onEdit,
   onDismiss,
   onDispel,
+  onForceDismiss,
   dismissed = false,
 }: EffectTooltipProps) {
   // Konva's `getPointerPosition()` returns stage-relative coords. Add the
@@ -68,6 +76,7 @@ export function EffectTooltip({
   // click point. `useLayoutEffect` runs synchronously before paint so the
   // tooltip never flashes at (0, 0).
   const [viewportPos, setViewportPos] = useState<{ x: number; y: number } | null>(null);
+  const [confirmForceDismiss, setConfirmForceDismiss] = useState(false);
 
   useLayoutEffect(() => {
     const stageEl = document.querySelector<HTMLElement>('.konvajs-content');
@@ -125,7 +134,44 @@ export function EffectTooltip({
         <button type="button" className={`${styles.action} ${styles.danger}`} onClick={onDispel}>
           Dispel Magic
         </button>
+        <button
+          type="button"
+          className={`${styles.action} ${styles.danger}`}
+          onClick={() => setConfirmForceDismiss(true)}
+        >
+          Force Dismiss (sin D)
+        </button>
       </div>
+      <Modal
+        isOpen={confirmForceDismiss}
+        title="¿Forzar Dismiss sin (D)?"
+        onClose={() => setConfirmForceDismiss(false)}
+      >
+        <p style={{ marginTop: 0 }}>
+          Esta acción aplica el mismo <code>dismissEffect</code> que el botón Dismiss, pero sin
+          pasar por el atajo <kbd>D</kbd>. Útil para analítica y para registrar intención
+          explícita del GM.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className={styles.action}
+            onClick={() => setConfirmForceDismiss(false)}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.danger}`}
+            onClick={() => {
+              setConfirmForceDismiss(false);
+              onForceDismiss();
+            }}
+          >
+            <FontAwesomeIcon icon={faClock} /> Forzar Dismiss
+          </button>
+        </div>
+      </Modal>
     </div>,
     document.body,
   );

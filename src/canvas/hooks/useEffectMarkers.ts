@@ -48,11 +48,20 @@ export type UseEffectMarkersArgs = {
 /**
  * Joined effect + visible cells. The renderer collapses the array into one
  * `<Rect>` per cell with the alpha from `resultingAlpha(effect.alphasAt(x,y))`.
+ *
+ * `anchor` is set for every effect and lets the renderer draw the
+ * "blocked by wall" vignette when the wall-aware BFS emptied the footprint.
+ * `blockedByWall: true` means the renderer should fall back to the vignette
+ * at the anchor and skip the per-cell `<Rect>` loop.
  */
 export type EffectMarkerResult = {
   effect: ScenarioEffect;
   visibleCells: EffectMarkerCell[];
   renderKind: ScenarioEffect['kind'];
+  /** Anchor cell in the active subdivision's grid space. Set for every effect. */
+  anchor: { gridX: number; gridY: number };
+  /** True when the wall-aware BFS produced an empty footprint. */
+  blockedByWall: boolean;
 };
 
 /**
@@ -122,7 +131,13 @@ export function useEffectMarkers({
         const visibleCells = eraseFootprintFor(anchor, footprint, isWall).map<EffectMarkerCell>(
           (c) => ({ effect, gridX: c.gridX, gridY: c.gridY, renderKind: effect.kind }),
         );
-        return { effect, visibleCells, renderKind: effect.kind };
+        return {
+          effect,
+          visibleCells,
+          renderKind: effect.kind,
+          anchor,
+          blockedByWall: visibleCells.length === 0,
+        };
       });
   }, [effects, floorId, paintedCells, subdivisions, dismissedEffects]);
 }
