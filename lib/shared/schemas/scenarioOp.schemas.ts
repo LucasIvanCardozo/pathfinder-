@@ -95,35 +95,7 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
     effectId: z.string().min(1),
   }),
 
-  /** Decrement every non-expired effect's `remainingRounds` by one, then
-   *  flip `expired = true` on the ones that hit zero. Server uses two
-   *  `updateMany` calls — no in-memory loop. */
-  z.object({
-    type: z.literal('tickRound'),
-  }),
-
-  /** Update only the `label` field of an existing effect. Used by the marker
-   *  tooltip's "Editar" action and the duplicate-label warning in the modal
-   *  (PR 4 polish). Coalesced by the ops buffer when the GM types character
-   *  by character. */
-  z.object({
-    type: z.literal('relabelEffect'),
-    effectId: z.string().min(1),
-    label: z.string().min(1).max(120),
-  }),
-
-  /** PR 2: "dismiss" is a *visual* state. The server does NOT delete the row
-   *  or flip a `dismissed` column — the marker re-renders at reduced opacity
-   *  (the render layer hides it whenever `effect.color` is empty, so the
-   *  client toggles the colour to '' to render the "Dismissed" tag). PR 4
-   *  may escalate to a hard remove if the GM wants the row gone; the op is
-   *  reserved now so the client UI stays stable. */
-  z.object({
-    type: z.literal('dismissEffect'),
-    effectId: z.string().min(1),
-  }),
-
-  StartCombatOpSchema,
+StartCombatOpSchema,
   EndCombatOpSchema,
   NextTurnOpSchema,
   PreviousTurnOpSchema,

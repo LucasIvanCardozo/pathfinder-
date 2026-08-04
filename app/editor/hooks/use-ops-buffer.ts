@@ -111,7 +111,7 @@ export function useOpsBuffer() {
     [],
   );
 
-  // Effect ops (PR 2 of effects-and-combat-tracker). The four helpers route
+  // Spellcasting ops (PR 1 of the spellcasting refactor). Two helpers route
   // through the existing op buffer so the autosave hook drains them in one
   // batch the same way as paint/erase. The server replay (see
   // `scenario.repository.applyOp`) is the source of truth for the wire shape;
@@ -126,30 +126,6 @@ export function useOpsBuffer() {
   const pushRemoveEffect = useCallback(
     (effectId: string) => {
       syncPush({ type: 'removeEffect', effectId });
-    },
-    [syncPush],
-  );
-
-  const pushRelabelEffect = useCallback(
-    (effectId: string, label: string) => {
-      // Coalesce consecutive relabels for the same effect id so typing in the
-      // editor doesn't generate one op per keystroke. Mirrors the
-      // `pushScenarioName` coalescing pattern.
-      const current = opsRef.current;
-      const last = current[current.length - 1];
-      const next: ScenarioOp[] =
-        last?.type === 'relabelEffect' && last.effectId === effectId
-          ? [...current.slice(0, -1), { type: 'relabelEffect', effectId, label }]
-          : [...current, { type: 'relabelEffect', effectId, label }];
-      opsRef.current = next;
-      setOps(next);
-    },
-    [],
-  );
-
-  const pushDismissEffect = useCallback(
-    (effectId: string) => {
-      syncPush({ type: 'dismissEffect', effectId });
     },
     [syncPush],
   );
@@ -244,8 +220,6 @@ export function useOpsBuffer() {
     pushScenarioName,
     pushAddEffect,
     pushRemoveEffect,
-    pushRelabelEffect,
-    pushDismissEffect,
     pushStartCombat,
     pushEndCombat,
     pushNextTurn,

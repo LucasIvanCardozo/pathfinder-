@@ -3,7 +3,6 @@ import { Prisma } from '@/generated/prisma/client';
 import { combatRepository } from '@/lib/server/db/repository/combat.repository';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
-import { effectRepository } from '@/lib/server/db/repository/effect.repository';
 import { runInTx } from '@/lib/server/utils/runInTx';
 import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
 import type { SaveScenarioInput } from '@/lib/shared/types/scenario.types';
@@ -71,7 +70,6 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
       const plantaBaja = scenario.floors.find((f) => isPlantaBajaName(f.name));
       const initialFloor = plantaBaja ?? scenario.floors[0];
       if (!initialFloor) return null;
-      const effects = await effectRepository(db).findManyByScenarioId(id);
       const combat = await combatRepository(db).findByScenario(id);
       return {
         id: scenario.id,
@@ -99,7 +97,6 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
               | undefined,
           })),
         ),
-        effects,
         combat,
       };
     },
@@ -424,28 +421,23 @@ async function applyOp(
       return;
     }
     case 'addEffect': {
-      // `applyOp` runs inside the existing `runInTx` wrapper, so the
-      // `tx` client is already open. The `op.effect.id` is generated
-      // client-side via `newId('effect')` so a re-applied op can collide
-      // with a pre-existing row only on the rare path where the GM
-      // reload + autosaves before the in-flight op is acknowledged.
-      //
+      // Spellcasting refactor (PR 1): the wire shape collapsed to
+      // templateId + origin + rotation + caster snapshot. The columns
+      // that used to be user-editable (label, kind, widthFt, color,
+      // durationKind, remainingRounds, expired) are now derived from
+      // the template at render time.
       await tx.scenarioEffect.create({
         data: {
           id: op.effect.id,
           scenarioId,
           floorId: op.effect.floorId,
-          label: op.effect.label,
-          kind: op.effect.kind,
+          templateId: op.effect.templateId,
           originCellX: op.effect.originCellX,
           originCellY: op.effect.originCellY,
-          widthFt: op.effect.widthFt,
-          depthFt: op.effect.depthFt,
           rotationDeg: op.effect.rotationDeg,
-          color: op.effect.color,
-          durationKind: op.effect.durationKind,
-          remainingRounds: op.effect.remainingRounds,
-          expired: op.effect.expired,
+          casterCombatantId: op.effect.casterCombatantId,
+          castOnTurnIndex: op.effect.castOnTurnIndex,
+          castOnRoundNumber: op.effect.castOnRoundNumber,
           createdAt: op.effect.createdAt,
           updatedAt: op.effect.updatedAt,
         },
@@ -456,47 +448,6 @@ async function applyOp(
       // Idempotent — a stale op replayed after a successful removal is a
       // no-op, not an error.
       await tx.scenarioEffect.deleteMany({ where: { id: op.effectId } });
-      return;
-    }
-    case 'tickRound': {
-      // Two `updateMany` calls in this exact order: decrement the
-      // remaining counter first, then flip the `expired` flag on rows
-      // whose counter hit zero. PR 1 only handles `rounds` and
-      // `rounds-concentration` durationKinds; the other two land in
-      // PR 2+ along with the modal.
-      await tx.scenarioEffect.updateMany({
-        where: {
-          scenarioId,
-          expired: false,
-          durationKind: { in: ['rounds', 'rounds-concentration'] },
-        },
-        data: { remainingRounds: { decrement: 1 } },
-      });
-      await tx.scenarioEffect.updateMany({
-        where: { scenarioId, expired: false, remainingRounds: { lte: 0 } },
-        data: { expired: true },
-      });
-      return;
-    }
-    case 'relabelEffect': {
-      // Idempotent — a stale op replayed against a deleted effect is a
-      // no-op (the update matches zero rows). Idempotency matches the
-      // `removeEffect` semantics so the client can replay a stale op
-      // without surfacing an error after an undo.
-      await tx.scenarioEffect.updateMany({
-        where: { id: op.effectId, scenarioId },
-        data: { label: op.label },
-      });
-      return;
-    }
-    case 'dismissEffect': {
-      // PR 2: dismiss is a VISUAL state — the row stays in the DB so
-      // the GM can re-activate the marker by re-creating it or via the
-      // "Forzar Dismiss" prompt (PR 4). The application UI renders the
-      // marker with an empty `color` to hide it; the marker tooltip
-      // shows a "Dismissed" tag. The op is preserved as a no-op on
-      // the server so the wire is stable and PR 4 can flip the
-      // semantics without a wire change.
       return;
     }
     case 'startCombat': {
@@ -525,18 +476,30 @@ async function applyOp(
       return;
     }
     case 'nextTurn': {
-      // Wrap past the last combatant → tick the round inside the same
-      // TX (locked decision: wrap triggers tickRound atomically). The
-      // `combatRepository` wraps its `tx` parameter so the tick and
-      // the cursor advance commit or roll back together.
+      // Spell expiry lives here (PR 1 of the spellcasting refactor):
+      // when the cursor lands on a caster whose spells were cast in a
+      // prior round, those spells die in the same TX as the cursor
+      // advance. Asymmetric — `previousTurn` does NOT re-resurrect or
+      // re-expire anything.
       const combat = await tx.combat.findUnique({
         where: { scenarioId },
-        select: { id: true },
+        select: { id: true, roundNumber: true, currentTurnIndex: true },
       });
       if (!combat) return;
-      const { wrapped } = await combatRepository(tx).nextTurnInTx(tx, combat.id);
-      if (wrapped) {
-        await effectRepository(tx).tickRoundInTx(tx, scenarioId);
+      const { newRoundNumber } = await combatRepository(tx).nextTurnInTx(tx, combat.id);
+      const currentCasterId = await currentCasterCombatantId(
+        tx,
+        combat.id,
+        combat.currentTurnIndex,
+      );
+      if (currentCasterId) {
+        await tx.scenarioEffect.deleteMany({
+          where: {
+            scenarioId,
+            casterCombatantId: currentCasterId,
+            castOnRoundNumber: { lt: newRoundNumber },
+          },
+        });
       }
       return;
     }
@@ -552,16 +515,26 @@ async function applyOp(
       return;
     }
     case 'advanceRound': {
-      // Locked decision: manual `R` shortcut also ticks effects in the
-      // same TX — matches the wrap-on-nextTurn behaviour so the GM
-      // never sees a round bump without the markers expiring.
+      // Manual round advance kills the new cursor's prior-round spells
+      // (same rule as `nextTurn` when the cursor wraps to a fresh
+      // round).
       const combat = await tx.combat.findUnique({
         where: { scenarioId },
-        select: { id: true },
+        select: { id: true, roundNumber: true },
       });
       if (!combat) return;
       await combatRepository(tx).advanceRoundInTx(tx, combat.id);
-      await effectRepository(tx).tickRoundInTx(tx, scenarioId);
+      const newRoundNumber = combat.roundNumber + 1;
+      const currentCasterId = await currentCasterCombatantId(tx, combat.id, 0);
+      if (currentCasterId) {
+        await tx.scenarioEffect.deleteMany({
+          where: {
+            scenarioId,
+            casterCombatantId: currentCasterId,
+            castOnRoundNumber: { lt: newRoundNumber },
+          },
+        });
+      }
       return;
     }
     case 'addCombatant': {
@@ -587,4 +560,23 @@ async function applyOp(
       throw new Error(`applyOp: unknown op type`);
     }
   }
+}
+
+/**
+ * Resolve the id of the combatant at the given cursor position (initiative
+ * desc, id asc — the canonical read order). Returns `null` when the combat
+ * has no combatants; callers gate the expiry delete on a non-null result so
+ * the empty-combat case is a safe no-op.
+ */
+async function currentCasterCombatantId(
+  tx: Prisma.TransactionClient,
+  combatId: string,
+  turnIndex: number,
+): Promise<string | null> {
+  const combatants = await tx.combatant.findMany({
+    where: { combatId },
+    orderBy: [{ initiative: 'desc' }, { id: 'asc' }],
+    select: { id: true },
+  });
+  return combatants[turnIndex]?.id ?? null;
 }

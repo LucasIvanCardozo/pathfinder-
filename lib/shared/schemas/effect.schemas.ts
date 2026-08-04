@@ -1,85 +1,59 @@
 import { z } from 'zod';
+import { SPELL_TEMPLATES } from '@/canvas/effects/spell-templates';
 
 /**
- * Schemas for the GM-placed effects overlay (PR 1 of
- * `effects-and-combat-tracker`). Each `ScenarioEffect` is a translucent
- * marker on a floor with a rectangular footprint (the wall-aware BFS that
- * replaces this stub lives in PR 2, design §12.2).
+ * Wire + persisted shape for a GM-cast spell on a floor (PR 1 of the
+ * spellcasting refactor).
  *
- * Persistence lives in `ScenarioEffect` (Prisma) and replays through the
- * `addEffect` / `removeEffect` / `tickRound` ops in `scenarioOp.schemas.ts`.
+ * Shape is resolved from `templateId` against `SPELL_TEMPLATES` at read time;
+ * the schema is closed over the seven hardcoded ids so an unknown id fails
+ * validation before it can poison the read side. `rotationDeg` is discrete
+ * (0/90/180/270); the walker snaps to the nearest cardinal before walking.
+ *
+ * `originCellX` / `originCellY` are integer cell coords in the active
+ * subdivision's grid space (no Float — sub-cell anchors are out of scope).
+ *
+ * `casterCombatantId` is nullable because removing a caster mid-spell cascades
+ * the FK to SetNull rather than deleting the row (see `schema.prisma`). A
+ * spell whose caster was removed is rendered as an orphan and cleaned up on
+ * the next scenario load.
+ *
+ * `castOnTurnIndex` / `castOnRoundNumber` are the combat cursor snapshot at
+ * cast time. The expiry rule (server-side, `nextTurn`/`advanceRound`) reads
+ * these to decide whether to delete the spell: the spell dies when the
+ * cursor reaches its caster again on a later round.
  */
 
-/** Geometric shape of the marker. PR 1 renders all four kinds the same way
- *  (rectangular footprint); the per-shape geometry ships in PR 2. */
-export const EffectKindSchema = z.enum(['burst', 'cone', 'line', 'wall']);
+const SPELL_TEMPLATE_IDS = SPELL_TEMPLATES.map((t) => t.id) as [
+  (typeof SPELL_TEMPLATES)[number]['id'],
+  ...(typeof SPELL_TEMPLATES)[number]['id'][],
+];
 
-/** How `remainingRounds` decrements. PR 1 only honours `rounds` and
- *  `rounds-concentration` via the `tickRound` op; the others land in a later
- *  PR per design §11.4. */
-export const EffectDurationKindSchema = z.enum([
-  'rounds',
-  'rounds-concentration',
-  'minutes',
-  'concentration',
-]);
+export const SpellTemplateIdSchema = z.enum(SPELL_TEMPLATE_IDS);
+
+export const ROTATIONS = [0, 90, 180, 270] as const;
+export const RotationDegSchema = z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]);
 
 /**
  * Wire shape sent by the client in an `addEffect` op. Mirrors the columns of
  * the `ScenarioEffect` model except `scenarioId` (the server sets it from
- * the wrapping transaction so the client never has to know which scenario
- * it's editing). Defaults for `rotationDeg` and `expired` match the Prisma
- * `@default` values; `id` is generated client-side via `newId('effect')` and
- * `createdAt` / `updatedAt` are server-stamped on insert (the client still
- * sends them so the type stays closed).
+ * the wrapping transaction).
  */
 export const EffectInputSchema = z.object({
   id: z.string().min(1),
   floorId: z.string().min(1),
-  label: z.string().min(1).max(120),
-  kind: EffectKindSchema,
-  /** Anchor cell coordinate on the active subdivision's grid (X axis).
-   *  Stored as a `Float` on the Prisma row so the wire is forward-compatible
-   *  with future sub-cell anchors, but the modal pre-fills with integer
-   *  `gridX` values from the cell the GM clicked. */
-  originCellX: z.number().finite(),
-  /** Anchor cell coordinate on the active subdivision's grid (Y axis). See
-   *  `originCellX` for the Float / integer rationale. */
-  originCellY: z.number().finite(),
-  /** Footprint width in feet. The canvas converts to active-subdivision cells
-   *  via `widthFt * cellSizeRatio / FEET_PER_BASE_CELL`. */
-  widthFt: z.number().finite().nonnegative(),
-  /** Footprint depth (forward length) in feet. Same conversion as `widthFt`. */
-  depthFt: z.number().finite().nonnegative(),
-  rotationDeg: z.number().finite().default(0),
-  color: z.string().min(1),
-  durationKind: EffectDurationKindSchema,
-  remainingRounds: z.number().int(),
-  expired: z.boolean().default(false),
+  templateId: SpellTemplateIdSchema,
+  originCellX: z.number().int(),
+  originCellY: z.number().int(),
+  rotationDeg: RotationDegSchema.default(0),
+  casterCombatantId: z.string().min(1).nullable(),
+  castOnTurnIndex: z.number().int().min(0),
+  castOnRoundNumber: z.number().int().min(1),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-/** Persisted `ScenarioEffect` shape returned by `findByIdWithFloors`. Adds
- *  `scenarioId` on top of `EffectInputSchema` because the row always carries
- *  the owning scenario's id server-side. */
+/** Persisted shape returned by the read side (server-stamped scenarioId). */
 export const ScenarioEffectSchema = EffectInputSchema.extend({
   scenarioId: z.string().min(1),
-});
-
-/**
- * Form-level schema for the EffectsModal. The modal pre-fills every field
- * (including `id`, `floorId`, `createdAt`, `updatedAt` via `defaultValues`)
- * and react-hook-form preserves them through submit. The resolver therefore
- * must NOT omit them — `@hookform/resolvers/zod` strips fields the schema
- * does not declare, which would drop `id`/`floorId`/timestamps from the
- * parsed `data` and the op sent to the server would fail validation.
- *
- * The only relaxation vs. `EffectInputSchema` is `label`: we allow empty
- * strings so the form starts blank, and the hook falls back to the literal
- * "Marcador" when the user submits without typing (preserves the PR 2
- * behaviour where a blank label still produces a valid op).
- */
-export const EffectFormSchema = EffectInputSchema.extend({
-  label: z.string().max(120),
 });

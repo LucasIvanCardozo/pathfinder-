@@ -38,46 +38,45 @@ model Floor {
   @@index([scenarioId])
 }
 
-/// Transient GM-placed effect (burst / cone / line / wall). Persisted to
-/// the scenario so a hard reload re-renders the overlay.
+/// A GM-cast spell (PR 1 of the spellcasting refactor).
 ///
-/// Units (PR 2 of `effects-and-combat-tracker`):
-///   - `originCellX` / `originCellY`: anchor in **grid cell coords** of the
-///     active subdivision. A value of `1` means cell (1, 1). The canvas hook
-///     converts to render pixels via `* activeCellSize`. Stored as `Float` to
-///     stay forward-compatible with sub-cell anchors in PR 4.
-///   - `widthFt` / `depthFt`: dimensions in **feet** (Pathfinder game rule:
-///     1 base cell = 5 ft). The hook converts to active-subdivision cells via
-///     `widthFt * cellSizeRatio / FEET_PER_BASE_CELL`.
-///   - `rotationDeg`: free rotation in degrees; geometry walkers rotate the
-///     direction unit vector before fanning out.
+/// Shape, dimensions, and colour are resolved at read time from the
+/// hardcoded `SPELL_TEMPLATES` array (see `src/canvas/effects/spell-templates.ts`)
+/// keyed by `templateId`; the row stores only the *instance* data the GM
+/// chose when casting:
 ///
-/// `durationKind` selects how `remainingRounds` decrements on the `tickRound`
-/// op. `expired` flips to true once `remainingRounds` reaches zero and the
-/// renderer hides the marker.
+///   - `templateId`: which of the seven hardcoded spells (e.g. `cone-15-ne`).
+///   - `originCellX` / `originCellY`: anchor in integer **grid cell coords**
+///     of the active subdivision.
+///   - `rotationDeg`: 0/90/180/270. Cones use it; circles ignore it.
+///   - `casterCombatantId` + `castOnTurnIndex` + `castOnRoundNumber`:
+///     combat-cursor snapshot at cast time. The expiry rule (server-side
+///     inside `nextTurn` / `advanceRound`) deletes the row when the cursor
+///     reaches the caster again on a later round. `casterCombatantId` is
+///     nullable so removing the caster mid-spell cascades to SetNull rather
+///     than deleting the row (an orphan marker is shown until the GM
+///     removes it manually).
 model ScenarioEffect {
-  id              String   @id @default(cuid())
-  scenarioId      String
-  floorId         String
-  label           String
-  kind            String
-  originCellX     Float
-  originCellY     Float
-  widthFt         Float
-  depthFt         Float
-  rotationDeg     Float    @default(0)
-  color           String
-  durationKind    String
-  remainingRounds Int
-  expired         Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  scenarioId        String
+  floorId           String
+  templateId        String
+  originCellX       Int
+  originCellY       Int
+  rotationDeg       Int      @default(0)
+  casterCombatantId String?
+  castOnTurnIndex   Int
+  castOnRoundNumber Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
 
-  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  floor    Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  scenario Scenario   @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  floor    Floor      @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  caster   Combatant? @relation(fields: [casterCombatantId], references: [id], onDelete: SetNull)
 
   @@index([scenarioId])
   @@index([floorId])
+  @@index([casterCombatantId])
 }
 
 model PaintedCell {
@@ -128,7 +127,8 @@ model Combatant {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  combat Combat @relation(fields: [combatId], references: [id], onDelete: Cascade)
+  combat  Combat           @relation(fields: [combatId], references: [id], onDelete: Cascade)
+  effects ScenarioEffect[]
 
   @@index([combatId])
   @@index([combatId, position])

@@ -9,10 +9,8 @@ import type {
   Floor,
   PaintedCell,
   Piece,
-  ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
-import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
@@ -22,7 +20,6 @@ import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
-import { EffectsLayer } from './EffectsLayer';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -38,17 +35,6 @@ export type Props = {
   isActive: boolean;
   mapDims: MapDims;
   subdivisions: readonly SubdivisionConfig[];
-  /** GM-placed effects rendered on a dedicated Konva layer above the painted
-   *  subdivisions (still below the brush preview). PR 1 surfaces the read
-   *  side; the modal that creates new effects ships in PR 2. */
-  effects: ScenarioEffect[];
-  /**
-   * Effects the GM has toggled off client-side (Bug 3a). The set is
-   * closed-over by `useEffectMarkers` to skip rendering and by the
-   * EffectsModal filter, so the marker disappears from the canvas and
-   * from the modal list without mutating the DB row.
-   */
-  dismissedEffects: ReadonlySet<string>;
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -121,8 +107,6 @@ function FloorCanvasImpl({
   mapDims,
   subdivisions,
   pieces,
-  effects,
-  dismissedEffects,
   activeSubdivisionId,
   activePieceId,
   tool,
@@ -140,8 +124,6 @@ function FloorCanvasImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
-  onMarkerClick,
-  onAnchorClick,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
@@ -170,21 +152,6 @@ function FloorCanvasImpl({
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
-
-  // Effects overlay — locked design contract: insert this layer BEFORE
-  // `cellsBySub.map(...)` so the existing `obscured` subdivision keeps
-  // stacking on top of any AoE marker (PR 1 rule, design §12.2). The
-  // wall-aware BFS that gates cells behind structure walls arrives in
-  // PR 2 (T2.14); PR 1 ships the unconditional rectangular footprint
-  // computed by `useEffectMarkers`.
-  const effectMarkers = useEffectMarkers({
-    floorId: floor.id,
-    effects,
-    paintedCells: cells,
-    subdivisions,
-    baseCellSize: mapDims.baseCellSize,
-    dismissedEffects,
-  });
 
   // Bucket cells by subdivision, then always emit one entry per subdivision
   // sorted by `order`. Empty cell arrays for subdivisions with no painted
@@ -299,7 +266,6 @@ function FloorCanvasImpl({
     // PR 1 did not wire these, so the paint branch ran even when the
     // effects tool was active — the user saw nothing happen on click.
     tool,
-    onAnchorClick,
   });
 
   // Cursor reflects the current interaction: default crosshair (paint),
@@ -372,8 +338,6 @@ function FloorCanvasImpl({
           .filter(({ sub }) => sub.id !== 'obscured')
           .map(({ sub, cells: subCells }) => {
             // PR 2: render every paintable subdivision (suelo, og, op,
-            // estructuras) in DOM order BEFORE the effects Layer. The
-            // effects Layer renders AFTER estructuras and BEFORE obscured
             // so a fireball is visible on top of walls/structures but
             // hidden by a darkness overlay painted with the lunar tool.
             // FloorCanvas.module.css keys the drop-shadow/blur per canvas
@@ -403,11 +367,6 @@ function FloorCanvasImpl({
               </Layer>
             );
           })}
-        <EffectsLayer
-          markers={effectMarkers}
-          activeCellSize={activeCellSize}
-          onMarkerClick={onMarkerClick}
-        />
         {cellsBySub
           .filter(({ sub }) => sub.id === 'obscured')
           .map(({ sub, cells: subCells }) => {

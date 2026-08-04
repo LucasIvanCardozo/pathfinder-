@@ -2,7 +2,6 @@
 
 import {
   faCloud,
-  faHatWizard,
   faKeyboard,
   faShieldHalved,
   faTimes,
@@ -25,7 +24,6 @@ import {
   WeatherOverlay,
   WeatherPanel,
 } from '@/canvas';
-import { EffectTooltip } from '@/canvas/components/EffectTooltip';
 import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
@@ -42,20 +40,16 @@ import type {
   CombatView,
   Combatant,
   CombatantInsert,
-  EffectInput,
   Floor,
   PaintedCell,
   Piece,
-  ScenarioEffect,
 } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import { CombatModal, type CombatModalMode } from './components/CombatModal/CombatModal';
-import { EffectsModal } from './components/EffectsModal/EffectsModal';
 import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
 import { useCombatSession } from './hooks/use-combat-session';
-import { useEffectsModal } from './hooks/use-effects-modal';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useHistory } from './hooks/use-history';
 import { useOpsBuffer } from './hooks/use-ops-buffer';
@@ -87,10 +81,6 @@ type InitialScenario = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
-  /** GM-placed effects for the scenario, loaded once from the server and
-   *  held in state until the next refetch. PR 1 ships the read side; the
-   *  modal editor lands in PR 2 (which writes via the ops buffer). */
-  effects: ScenarioEffect[];
   combat: CombatView | null;
 };
 
@@ -116,7 +106,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [paintedCells, setPaintedCells] = useState<PaintedCell[]>(
     initialScenario?.paintedCells ?? [],
   );
-  const [effects, setEffects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(SUBDIVISIONS[0]?.id ?? '');
   const [activePieceId, setActivePieceId] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolKind>('paint');
@@ -128,19 +117,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const modalOpenRef = useRef(false);
-  // PR 2: marker click tooltip state. Holds the effect id and the
-  // screen position so the EffectTooltip can render. Cleared on
-  // the next canvas click or on Escape (the Popover handles its own
-  // focus trap and pointerdown-outside escape).
-  const [markerTooltip, setMarkerTooltip] = useState<{
-    effectId: string;
-    position: { x: number; y: number };
-  } | null>(null);
-  // Dismissed-effect ids live in client state only — PR 2 keeps the
-  // row in the DB and toggles the colour to '' so the renderer hides
-  // the marker. Closed-over so the modal and the marker tooltip can
-  // consult the same set.
-  const [dismissedEffects, setDismissedEffects] = useState<Set<string>>(() => new Set<string>());
 
   /**
    * Snapshot of the user-visible state needed to roll back a mutation. The
@@ -187,68 +163,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const opsBuffer = useOpsBuffer();
-
-  // PR 2 wrapper around the ops buffer that updates local `effects`
-  // state synchronously so the new marker renders on the next
-  // paint frame (the autosave drains the buffer asynchronously).
-  // The wrappers mirror what `handlePaint` does: push the op to the
-  // autosave buffer AND flip `isDirty` so the autosave interval actually
-  // fires. Without `markDirty()`, the buffer holds the op, the local
-  // effects state mirrors it (optimistic UI), and F5 erases both — the
-  // server never sees a write. PR 2 bug that ships the persistence flow.
-  const effectOps = {
-    pushAddEffect: (effect: EffectInput) => {
-      opsBuffer.pushAddEffect(effect);
-      markDirty();
-      setEffects((prev) => [...prev, { ...effect, scenarioId: scenarioId ?? '' }]);
-    },
-    pushRemoveEffect: (effectId: string) => {
-      opsBuffer.pushRemoveEffect(effectId);
-      markDirty();
-      setEffects((prev) => prev.filter((e) => e.id !== effectId));
-    },
-    pushRelabelEffect: (effectId: string, label: string) => {
-      opsBuffer.pushRelabelEffect(effectId, label);
-      markDirty();
-      setEffects((prev) => prev.map((e) => (e.id === effectId ? { ...e, label } : e)));
-    },
-    pushDismissEffect: (effectId: string) => {
-      opsBuffer.pushDismissEffect(effectId);
-      markDirty();
-      setDismissedEffects((prev) => {
-        const next = new Set(prev);
-        next.add(effectId);
-        return next;
-      });
-    },
-  };
-
-  // Effects list memoised by `[effects, activeFloorId]` so the comparator
-  // in `floor-canvas/comparators.ts` does not flag a reference change on
-  // unrelated re-renders (a fresh `.filter()` array would otherwise force
-  // every FloorCanvas to re-render whenever EditorClient re-renders).
-  // The PR 2 modal-guard ref was removed entirely — a previous version
-  // called `effectsModal.open()` from inside `onOpen`, which triggered
-  // an immediate recursion because the hook's `open` callback also calls
-  // `onOpen?.()` at the end. PR 3 (combat tracker) will re-introduce
-  // the guard with a stable wiring.
-  const effectsForFloor = useMemo(
-    () => effects.filter((e) => e.floorId === activeFloorId),
-    [effects, activeFloorId],
-  );
-  const onModalOpen = useCallback(() => {
-    modalOpenRef.current = true;
-  }, []);
-  const onModalClose = useCallback(() => {
-    modalOpenRef.current = false;
-  }, []);
-  const effectsModal = useEffectsModal({
-    opsBuffer: effectOps,
-    activeFloorId,
-    effects: effectsForFloor,
-    onOpen: onModalOpen,
-    onClose: onModalClose,
-  });
 
   const combatSession = useCombatSession(initialScenario?.combat ?? null);
 
@@ -668,7 +582,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setBrushShape,
       setShowBrushPreview,
       setShowShortcuts,
-      setEffectsModalOpen: (v) => (v ? effectsModal.open() : effectsModal.close()),
       toggleCombat: toggleCombatModal,
       nextTurn: combatOps.nextTurn,
       previousTurn: combatOps.previousTurn,
@@ -722,16 +635,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           />
         ) : null}
         <div className={styles.secondaryActions}>
-          <Button
-            type="button"
-            variant="default"
-            size="mini"
-            onClick={() => effectsModal.open()}
-            aria-label="Efectos"
-            title="Efectos (Shift+E)"
-          >
-            <FontAwesomeIcon icon={faHatWizard} />
-          </Button>
           <Button
             type="button"
             variant={combatSession.isActive ? 'primary' : 'default'}
@@ -963,8 +866,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
-          effects={effects}
-          dismissedEffects={dismissedEffects}
           pieces={stableAllPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
@@ -976,13 +877,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
-          onMarkerClick={(effectId, screenPos) => {
-            setMarkerTooltip({ effectId, position: screenPos });
-          }}
-          onAnchorClick={(cell) => {
-            const cellSize = mapDims.baseCellSize;
-            effectsModal.open({ anchorCell: cell, activeCellSize: cellSize });
-          }}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </div>
@@ -990,21 +884,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       {traitMenu.render}
 
       <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
-      <EffectsModal
-        isOpen={effectsModal.isOpen}
-        onClose={effectsModal.close}
-        effects={effects.filter((e) => e.floorId === activeFloorId && !dismissedEffects.has(e.id))}
-        defaultValues={effectsModal.defaultValues}
-        isEditing={effectsModal.editingId !== null}
-        onCreateNew={() => {
-          const cellSize = mapDims.baseCellSize;
-          effectsModal.open({ activeCellSize: cellSize });
-        }}
-        onSelect={(id) => effectsModal.openEdit(id)}
-        onSubmit={effectsModal.submit}
-        onDismiss={effectsModal.dismiss}
-        onRemove={effectsModal.remove}
-      />
       <RoundViewer combat={combatSession.combat} />
       <CombatModal
         isOpen={combatModalOpen}
@@ -1042,40 +921,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           </Button>
         </div>
       </Modal>
-      {markerTooltip
-        ? (() => {
-            const effect = effects.find((e) => e.id === markerTooltip.effectId);
-            if (!effect) return null;
-            // Count overlapping effects on the same floor for the coverage hint.
-            const overlap = effects.filter(
-              (e) => e.floorId === effect.floorId && !dismissedEffects.has(e.id),
-            ).length;
-            return (
-              <EffectTooltip
-                effect={effect}
-                overlappingCount={overlap}
-                position={markerTooltip.position}
-                dismissed={dismissedEffects.has(effect.id)}
-                onEdit={() => {
-                  effectsModal.openEdit(effect.id);
-                  setMarkerTooltip(null);
-                }}
-                onDismiss={() => {
-                  effectsModal.dismiss(effect.id);
-                  setMarkerTooltip(null);
-                }}
-                onDispel={() => {
-                  effectsModal.remove(effect.id);
-                  setMarkerTooltip(null);
-                }}
-                onForceDismiss={() => {
-                  effectsModal.dismiss(effect.id);
-                  setMarkerTooltip(null);
-                }}
-              />
-            );
-          })()
-        : null}
     </div>
   );
 }

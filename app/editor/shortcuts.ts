@@ -20,8 +20,6 @@ type Args = {
   setBrushShape: Dispatch<SetStateAction<BrushShape>>;
   setShowBrushPreview: Dispatch<SetStateAction<boolean>>;
   setShowShortcuts: Dispatch<SetStateAction<boolean>>;
-  /** Toggles the `Efectos` modal (PR 2). */
-  setEffectsModalOpen: Dispatch<SetStateAction<boolean>>;
   /** Toggles the combat modal or its active-combat view. */
   toggleCombat: () => void;
   /** Combat turn operations are routed through the editor ops buffer. */
@@ -78,9 +76,6 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     ),
     bindShortcut('toggleBrushPreview', () => args.setShowBrushPreview((v) => !v)),
     bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
-    bindShortcut('toggleEffectsModal', () => {
-      args.setEffectsModalOpen((v) => !v);
-    }),
     bindShortcut('toggleCombat', () => {
       if (args.modalOpenRef?.current) return;
       args.toggleCombat();

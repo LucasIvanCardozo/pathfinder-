@@ -158,13 +158,6 @@ export const SHORTCUTS = {
    * The shortcuts modal will auto-list this entry once it exists in the
    * registry because `listShortcuts()` reads the registry directly.
    */
-  toggleEffectsModal: {
-    id: 'toggleEffectsModal',
-    code: KEYS_BY_CODE.keyE,
-    shift: true,
-    label: 'Abrir / cerrar modal de efectos',
-    category: 'overlay',
-  },
   toggleCombat: {
     id: 'toggleCombat',
     code: KEYS_BY_CODE.keyC,

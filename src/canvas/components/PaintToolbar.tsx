@@ -1,7 +1,7 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEraser, faHatWizard, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
+import { faEraser, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape, ToolKind } from '../tools';
@@ -110,16 +110,6 @@ export function PaintToolbar({
           <FontAwesomeIcon
             icon={tool === 'darkness' && darknessMode === 'erase' ? faSun : faMoon}
           />
-        </button>
-        <button
-          type="button"
-          className={`${styles.tool} ${tool === 'effects' ? styles.active : ''}`}
-          onClick={() => onChange('effects')}
-          title="Efectos (Shift+E) — abrir el modal para crear / editar marcadores"
-          aria-label="Efectos"
-          aria-pressed={tool === 'effects'}
-        >
-          <FontAwesomeIcon icon={faHatWizard} />
         </button>
       </div>
 
