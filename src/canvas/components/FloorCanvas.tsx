@@ -9,8 +9,13 @@ import type {
   Floor,
   PaintedCell,
   Piece,
+  ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
+import { templateById } from '../effects/spell-templates';
+import type { RotationDeg, SpellTemplateId } from '../effects/spell-templates';
+import { computeEffectFootprint } from '../effects/footprint';
+import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
@@ -20,6 +25,7 @@ import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
+import { EffectsLayer } from './EffectsLayer';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -35,6 +41,8 @@ export type Props = {
   isActive: boolean;
   mapDims: MapDims;
   subdivisions: readonly SubdivisionConfig[];
+  /** Persisted spell markers for this floor (pre-filtered by FloorStack). */
+  effects: ScenarioEffect[];
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -94,9 +102,20 @@ export type Props = {
   onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
   /**
    * Fired when the user clicks an empty cell with the effects tool
-   * active. PR 2 wires the anchor picker; FloorStack forwards it.
+   * active AND a spell template selected. The parent translates this into
+   * a `pushAddEffect` with the cast snapshot. When `selectedSpellTemplateId`
+   * is `null` the parent ignores the click.
    */
-  onAnchorClick?: (cell: { gridX: number; gridY: number }) => void;
+  onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
+  /**
+   * Currently-selected spell template id (when tool === 'effects') or
+   * `null`. Drives the brush preview shape.
+   */
+  selectedSpellTemplateId: SpellTemplateId | null;
+  /**
+   * Currently-selected rotation for the spell preview (cones only).
+   */
+  spellRotationDeg: RotationDeg;
 };
 
 function FloorCanvasImpl({
@@ -106,6 +125,7 @@ function FloorCanvasImpl({
   isActive,
   mapDims,
   subdivisions,
+  effects,
   pieces,
   activeSubdivisionId,
   activePieceId,
@@ -124,6 +144,10 @@ function FloorCanvasImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
+  onMarkerClick,
+  onPlaceSpell,
+  selectedSpellTemplateId,
+  spellRotationDeg,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
@@ -152,6 +176,18 @@ function FloorCanvasImpl({
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);
+
+  // Spell markers. The hook resolves the template (shape, colour) from
+  // `effect.templateId` and runs the wall-aware BFS so the renderer only
+  // emits cells the GM should see. Blocked-by-wall markers get the
+  // 16x16 vignette via `marker.blockedByWall` (see EffectsLayer).
+  const effectMarkers = useEffectMarkers({
+    floorId: floor.id,
+    effects,
+    paintedCells: cells,
+    subdivisions,
+    baseCellSize: mapDims.baseCellSize,
+  });
 
   // Bucket cells by subdivision, then always emit one entry per subdivision
   // sorted by `order`. Empty cell arrays for subdivisions with no painted
@@ -260,13 +296,25 @@ function FloorCanvasImpl({
     subById,
     pieceById,
     onOpenTraitMenu,
-    // PR 2: forward `tool` and `onAnchorClick` so the handler can dispatch
-    // on `tool === 'effects'` (open the modal pre-filled with the click
-    // coordinates) instead of falling through to the paint branch.
-    // PR 1 did not wire these, so the paint branch ran even when the
-    // effects tool was active — the user saw nothing happen on click.
+    // PR 2: forward `tool` and `onPlaceSpell` so the handler can dispatch
+    // on `tool === 'effects'` (place a spell at the click cell) instead of
+    // falling through to the paint branch. The parent decides what to do
+    // with the click — usually pushAddEffect with the current spell
+    // template + caster snapshot.
     tool,
-  });
+    onPlaceSpell,
+  });            {/*
+              Spell markers (PR 2 of the spellcasting refactor). The Layer
+              sits between the paintable subdivisions and `obscured` so a
+              fireball is visible on top of walls/structures but hidden by
+              a darkness overlay.
+            */}
+            <EffectsLayer
+              markers={effectMarkers}
+              activeCellSize={activeCellSize}
+              onMarkerClick={onMarkerClick}
+            />
+
 
   // Cursor reflects the current interaction: default crosshair (paint),
   // grab when space is held, grabbing while a pan drag is in progress.
@@ -305,6 +353,34 @@ function FloorCanvasImpl({
     ? mapDims.baseCellSize / activeSubdivision.cellSizeRatio
     : 0;
   const previewStyle = PREVIEW_STYLE[tool];
+
+  // Spell preview (PR 2). When the effects tool is active AND a template
+  // is selected, the brush preview mirrors the spell's footprint
+  // (template size + rotation) anchored at the hover cell. The
+  // same `computeEffectFootprint` walker the persistent marker uses
+  // keeps the preview and the placed marker in sync.
+  const spellPreview = useMemo(() => {
+    if (tool !== 'effects' || !selectedSpellTemplateId || !activeSubdivision) return null;
+    const template = templateById(selectedSpellTemplateId);
+    const anchorX = hoverCell?.gridX ?? 0;
+    const anchorY = hoverCell?.gridY ?? 0;
+    const synthetic = {
+      id: '__preview__',
+      floorId: floor.id,
+      scenarioId: '',
+      templateId: selectedSpellTemplateId,
+      originCellX: anchorX,
+      originCellY: anchorY,
+      rotationDeg: spellRotationDeg,
+      casterCombatantId: null,
+      castOnTurnIndex: 0,
+      castOnRoundNumber: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const cells = computeEffectFootprint(synthetic, activeSubdivision.cellSizeRatio);
+    return { cells, color: template.color };
+  }, [tool, selectedSpellTemplateId, activeSubdivision, hoverCell, spellRotationDeg, floor.id]);
 
   return (
     <div className={className} style={isActive ? { cursor } : undefined}>
@@ -370,6 +446,18 @@ function FloorCanvasImpl({
         {cellsBySub
           .filter(({ sub }) => sub.id === 'obscured')
           .map(({ sub, cells: subCells }) => {
+            {/*
+              Spell markers (PR 2 of the spellcasting refactor). The Layer
+              sits between the paintable subdivisions and `obscured` so a
+              fireball is visible on top of walls/structures but hidden by
+              a darkness overlay. The hook resolved the per-cell geometry
+              already (wall-aware BFS) — the Layer is a pure renderer.
+            */}
+            <EffectsLayer
+              markers={effectMarkers}
+              activeCellSize={activeCellSize}
+              onMarkerClick={onMarkerClick}
+            />
             // Darkness overlay: solid black rects. No texture, no piece
             // lookup — the renderer dispatches on subdivisionId and
             // ignores `pieceId` (which holds the sentinel `DARKNESS_PIECE_ID`
@@ -397,18 +485,32 @@ function FloorCanvasImpl({
           })}
         {showBrushPreview && (
           <Layer listening={false}>
-            {previewCells.map((cell) => (
-              <Rect
-                key={`preview-${cell.gridX}-${cell.gridY}`}
-                x={cell.gridX * previewCellSize}
-                y={cell.gridY * previewCellSize}
-                width={previewCellSize}
-                height={previewCellSize}
-                fill={previewStyle.fill}
-                perfectDrawEnabled={false}
-                listening={false}
-              />
-            ))}
+            {spellPreview
+              ? spellPreview.cells.map((cell) => (
+                  <Rect
+                    key={`spell-preview-${cell.gridX}-${cell.gridY}`}
+                    x={cell.gridX * previewCellSize}
+                    y={cell.gridY * previewCellSize}
+                    width={previewCellSize}
+                    height={previewCellSize}
+                    fill={spellPreview.color}
+                    opacity={0.35}
+                    perfectDrawEnabled={false}
+                    listening={false}
+                  />
+                ))
+              : previewCells.map((cell) => (
+                  <Rect
+                    key={`preview-${cell.gridX}-${cell.gridY}`}
+                    x={cell.gridX * previewCellSize}
+                    y={cell.gridY * previewCellSize}
+                    width={previewCellSize}
+                    height={previewCellSize}
+                    fill={previewStyle.fill}
+                    perfectDrawEnabled={false}
+                    listening={false}
+                  />
+                ))}
           </Layer>
         )}
       </Stage>

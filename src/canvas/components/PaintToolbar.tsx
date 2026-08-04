@@ -1,7 +1,7 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEraser, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
+import { faEraser, faHatWizard, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape, ToolKind } from '../tools';
@@ -31,6 +31,12 @@ type Props = {
    */
   brushShape: BrushShape;
   onBrushShapeChange: (shape: BrushShape) => void;
+  /**
+   * When `false`, the effects tool button is disabled and shows a
+   * tooltip explaining that a combat must be active to cast spells
+   * (the spell needs a caster — the active combatant — to record).
+   */
+  combatActive: boolean;
 };
 
 // Shape iconography: circle uses a single-character glyph; square uses a small
@@ -60,6 +66,7 @@ export function PaintToolbar({
   onBrushSizeChange,
   brushShape,
   onBrushShapeChange,
+  combatActive,
 }: Props) {
   const size = normalizeBrushSize(brushSize);
 
@@ -110,6 +117,21 @@ export function PaintToolbar({
           <FontAwesomeIcon
             icon={tool === 'darkness' && darknessMode === 'erase' ? faSun : faMoon}
           />
+        </button>
+        <button
+          type="button"
+          className={`${styles.tool} ${tool === 'effects' ? styles.active : ''}`}
+          onClick={() => onChange('effects')}
+          disabled={!combatActive}
+          title={
+            combatActive
+              ? 'Hechizos (Shift+E) — elegir template y colocar en el canvas'
+              : 'Iniciá un combate para usar hechizos'
+          }
+          aria-label="Hechizos"
+          aria-pressed={tool === 'effects'}
+        >
+          <FontAwesomeIcon icon={faHatWizard} />
         </button>
       </div>
 

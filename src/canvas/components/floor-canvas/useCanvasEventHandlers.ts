@@ -41,8 +41,9 @@ type UseCanvasEventHandlersArgs = {
   /** PR 2: triggered when the user clicks an empty cell with the `effects`
    *  tool active. The Stage's onMouseDown dispatches this when the tool is
    *  `effects` AND the click did not hit a marker (the marker Rect listens
-   *  for its own click and stops the bubble). */
-  onAnchorClick?: (cell: { gridX: number; gridY: number }) => void;
+   *  for its own click and stops the bubble). The parent translates it
+   *  into a `pushAddEffect` (or ignores it if no template is selected). */
+  onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
   /** Current tool so the handler can dispatch on `tool === 'effects'`. */
   tool?: ToolKind;
 };
@@ -87,8 +88,8 @@ export function useCanvasEventHandlers(
         // can pre-fill the anchor.
         if (args.tool === 'effects') {
           const cell = args.pointerToCell(pointer);
-          if (cell && args.onAnchorClick) {
-            args.onAnchorClick(cell);
+          if (cell && args.onPlaceSpell) {
+            args.onPlaceSpell(cell);
           }
           return;
         }

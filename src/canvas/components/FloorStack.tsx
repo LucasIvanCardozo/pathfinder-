@@ -6,8 +6,10 @@ import type {
   Floor,
   PaintedCell,
   Piece,
+  ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
+import type { RotationDeg, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
 import { useVisibleFloors } from '../hooks/useVisibleFloors';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
@@ -26,6 +28,12 @@ type Props = {
   zoom: number;
   subdivisions: readonly SubdivisionConfig[];
   paintedCells: PaintedCell[];
+  /**
+   * Persisted spell markers for the scenario, rendered on a dedicated Konva
+   * layer. Read from `LoadScenarioResult.effects` and updated via the ops
+   * buffer on add/remove.
+   */
+  effects: ScenarioEffect[];
   pieces: Piece[];
   activeSubdivisionId: string;
   activePieceId: string | null;
@@ -52,6 +60,31 @@ type Props = {
     traitKind: string,
     screenPos: { x: number; y: number },
   ) => void;
+  /**
+   * Fired when the user clicks a spell marker on the canvas. The parent
+   * (EditorClient) opens the EffectTooltip with a "Quitar" action.
+   */
+  onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
+  /**
+   * Fired when the user clicks an empty cell with the effects tool active
+   * AND a spell template selected. The parent translates this into a
+   * `pushAddEffect` with the cast snapshot (casterCombatantId +
+   * castOnTurnIndex + castOnRoundNumber). When `selectedSpellTemplateId` is
+   * `null` the click is a no-op (the parent ignores it).
+   */
+  onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
+  /**
+   * Currently-selected spell template id (when tool === 'effects') or
+   * `null`. Propagated so FloorCanvas can draw the brush preview with the
+   * spell's shape and rotation.
+   */
+  selectedSpellTemplateId: SpellTemplateId | null;
+  /**
+   * Currently-selected rotation for the spell preview (cones only; circles
+   * ignore it). Co-located with the template id so the preview stays in
+   * sync when the GM cycles the rotate button in the SpellPalette.
+   */
+  spellRotationDeg: RotationDeg;
   /** Optional overlay (e.g. WeatherOverlay) rendered above the WorldGrid. */
   overlay?: React.ReactNode;
 };
@@ -68,6 +101,7 @@ function FloorStackImpl({
   zoom,
   subdivisions,
   paintedCells,
+  effects,
   pieces,
   activeSubdivisionId,
   activePieceId,
@@ -79,6 +113,10 @@ function FloorStackImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
+  onMarkerClick,
+  onPlaceSpell,
+  selectedSpellTemplateId,
+  spellRotationDeg,
   overlay,
 }: Props) {
   const { containerRef, viewportSize, pan, beginPan, isPanDown, isPanning, worldBounds } =
@@ -114,6 +152,7 @@ function FloorStackImpl({
             isActive={isActive}
             mapDims={mapDims}
             subdivisions={subdivisions}
+            effects={effects}
             pieces={pieces}
             textureImages={textureImages}
             activeSubdivisionId={activeSubdivisionId}
@@ -132,6 +171,10 @@ function FloorStackImpl({
             onPaint={onPaint}
             onDarknessErase={onDarknessErase}
             onOpenTraitMenu={onOpenTraitMenu}
+            onMarkerClick={onMarkerClick}
+            onPlaceSpell={onPlaceSpell}
+            selectedSpellTemplateId={selectedSpellTemplateId}
+            spellRotationDeg={spellRotationDeg}
           />
         );
       })}

@@ -24,6 +24,9 @@ import {
   WeatherOverlay,
   WeatherPanel,
 } from '@/canvas';
+import { EffectTooltip } from '@/canvas/components/EffectTooltip';
+import { SpellPalette, rotateBy90 } from '@/canvas/components/SpellPalette';
+import type { RotationDeg, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
@@ -40,9 +43,11 @@ import type {
   CombatView,
   Combatant,
   CombatantInsert,
+  EffectInput,
   Floor,
   PaintedCell,
   Piece,
+  ScenarioEffect,
 } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import { CombatModal, type CombatModalMode } from './components/CombatModal/CombatModal';
@@ -81,6 +86,9 @@ type InitialScenario = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
+  /** Persisted spell markers for the scenario. PR 2 of the spellcasting
+   *  refactor re-introduces the read-side here (PR 1 dropped it). */
+  effects: ScenarioEffect[];
   combat: CombatView | null;
 };
 
@@ -117,6 +125,20 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const modalOpenRef = useRef(false);
+
+  // PR 2 of the spellcasting refactor: spell markers state. `effects`
+  // mirrors the persisted rows (write-side goes through the ops buffer
+  // + autosave); `markerTooltip` holds the marker the canvas clicked so
+  // the EffectTooltip can render a "Quitar" action. `selectedSpellTemplateId`
+  // + `spellRotationDeg` drive the brush preview when `tool === 'effects'`.
+  const [effects, setEffects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
+  const [markerTooltip, setMarkerTooltip] = useState<{
+    effectId: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  const [selectedSpellTemplateId, setSelectedSpellTemplateId] =
+    useState<SpellTemplateId | null>(null);
+  const [spellRotationDeg, setSpellRotationDeg] = useState<RotationDeg>(0);
 
   /**
    * Snapshot of the user-visible state needed to roll back a mutation. The
@@ -355,6 +377,25 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         const nextIndex = Math.max(0, Math.min(rebased, Math.max(nextCombatants.length - 1, 0)));
         return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
       });
+    },
+  };
+
+  // PR 2 of the spellcasting refactor: spell wire. Pushes go through
+  // the existing ops buffer + autosave; the local `effects` state mirrors
+  // the persisted row so the marker renders on the next paint frame
+  // (optimistic UI). The cast snapshot (casterCombatantId + castOnTurnIndex
+  // + castOnRoundNumber) drives the server-side expiry rule.
+  const spellOps = {
+    pushAddEffect: (effect: EffectInput) => {
+      opsBuffer.pushAddEffect(effect);
+      markDirty();
+      setEffects((prev) => [...prev, { ...effect, scenarioId: scenarioId ?? '' }]);
+    },
+    pushRemoveEffect: (effectId: string) => {
+      opsBuffer.pushRemoveEffect(effectId);
+      markDirty();
+      setEffects((prev) => prev.filter((e) => e.id !== effectId));
+      setMarkerTooltip(null);
     },
   };
 
@@ -626,13 +667,27 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onBrushSizeChange={handleBrushSizeChange}
           brushShape={brushShape}
           onBrushShapeChange={setBrushShape}
+          combatActive={combatSession.isActive}
         />
-        {activeSubdivision ? (
+        {tool === 'paint' && activeSubdivision ? (
           <PiecePalette
             pieces={activePieces}
             activePieceId={activePieceId}
             onSelect={setActivePieceId}
           />
+        ) : null}
+        {tool === 'effects' ? (
+          <SpellPalette
+            selectedId={selectedSpellTemplateId}
+            rotation={spellRotationDeg}
+            onSelect={setSelectedSpellTemplateId}
+            onRotate={() => setSpellRotationDeg(rotateBy90(spellRotationDeg))}
+          />
+        ) : null}
+        {tool === 'erase' || tool === 'darkness' ? (
+          <p className={styles.helpText}>
+            Esta herramienta no usa piezas ni hechizos.
+          </p>
         ) : null}
         <div className={styles.secondaryActions}>
           <Button
@@ -866,6 +921,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           zoom={zoom}
           subdivisions={subdivisions}
           paintedCells={paintedCells}
+          effects={effects}
           pieces={stableAllPieces}
           activeSubdivisionId={activeSubdivisionId}
           activePieceId={activePieceId}
@@ -877,6 +933,31 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
+          onMarkerClick={(effectId, screenPos) => {
+            setMarkerTooltip({ effectId, position: screenPos });
+          }}
+          onPlaceSpell={(cell) => {
+            if (!selectedSpellTemplateId) return;
+            const sorted = sortCombatants(combatSession.combat?.combatants ?? []);
+            const caster = sorted[combatSession.combat?.currentTurnIndex ?? 0];
+            if (!caster) return;
+            spellOps.pushAddEffect({
+              id: newId('effect'),
+              floorId: activeFloorId,
+              templateId: selectedSpellTemplateId,
+              originCellX: cell.gridX,
+              originCellY: cell.gridY,
+              rotationDeg: spellRotationDeg,
+              casterCombatantId: caster.id,
+              castOnTurnIndex: combatSession.combat?.currentTurnIndex ?? 0,
+              castOnRoundNumber: combatSession.combat?.roundNumber ?? 1,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+            setSelectedSpellTemplateId(null);
+          }}
+          selectedSpellTemplateId={selectedSpellTemplateId}
+          spellRotationDeg={spellRotationDeg}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </div>
@@ -895,6 +976,22 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         onAddCombatant={combatOps.addCombatant}
         onRemoveCombatant={combatOps.removeCombatant}
       />
+      {markerTooltip
+        ? (() => {
+            const effect = effects.find((e) => e.id === markerTooltip.effectId);
+            if (!effect) return null;
+            return (
+              <EffectTooltip
+                effect={effect}
+                position={markerTooltip.position}
+                onRemove={() => {
+                  spellOps.pushRemoveEffect(effect.id);
+                  setMarkerTooltip(null);
+                }}
+              />
+            );
+          })()
+        : null}
       <Modal
         isOpen={confirmEndCombat}
         title="¿Finalizar el combate?"

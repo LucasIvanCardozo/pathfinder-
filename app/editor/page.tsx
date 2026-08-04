@@ -58,6 +58,7 @@ async function EditorContent({ searchParams }: { searchParams: SearchParams }) {
               floors: scenario.floors,
               activeFloorId: scenario.activeFloorId,
               paintedCells: scenario.paintedCells,
+              effects: scenario.effects,
               combat: scenario.combat,
             }
           : null

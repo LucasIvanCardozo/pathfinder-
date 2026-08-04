@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { ScenarioInputSchema, ScenarioSchema } from '@/lib/shared/schemas/scenario.schemas';
 import type { CombatView } from './combat.types';
+import type { ScenarioEffect } from './effect.types';
 import type { Floor } from '@/lib/shared/types/floor.types';
 import type { PaintedCell } from '@/lib/shared/types/paintedCell.types';
 
@@ -37,6 +38,10 @@ export type LoadScenarioResult = {
   floors: Floor[];
   activeFloorId: string;
   paintedCells: PaintedCell[];
+  /** Persisted spell markers for the scenario. PR 2 of the spellcasting
+   *  refactor re-introduces the read-side here (PR 1 dropped it; PR 2
+   *  wires the new shape through `scenario.repository.findByIdWithFloors`). */
+  effects: ScenarioEffect[];
   combat: CombatView | null;
 };
 

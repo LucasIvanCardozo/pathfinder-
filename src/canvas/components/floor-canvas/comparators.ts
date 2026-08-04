@@ -114,6 +114,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     prev.isActive === next.isActive &&
     prev.mapDims === next.mapDims &&
     prev.subdivisions === next.subdivisions &&
+    prev.effects === next.effects &&
     prev.pieces === next.pieces &&
     (inactiveBothSides || prev.activeSubdivisionId === next.activeSubdivisionId) &&
     (inactiveBothSides || prev.activePieceId === next.activePieceId) &&

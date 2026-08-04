@@ -6,6 +6,7 @@ import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.re
 import { runInTx } from '@/lib/server/utils/runInTx';
 import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
 import type { SaveScenarioInput } from '@/lib/shared/types/scenario.types';
+import type { ScenarioEffect } from '@/lib/shared/types/effect.types';
 import { isPlantaBajaName } from '@/lib/shared/floors/naming';
 import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
 import type {
@@ -64,6 +65,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
             orderBy: { order: 'asc' },
             include: { paintedCells: true },
           },
+            effects: true,
         },
       });
       if (!scenario) return null;
@@ -97,6 +99,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
               | undefined,
           })),
         ),
+        effects: scenario.effects as Array<ScenarioEffect>,
         combat,
       };
     },
