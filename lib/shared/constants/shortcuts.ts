@@ -139,12 +139,6 @@ export const SHORTCUTS = {
     label: 'Cambiar forma del pincel (circular ↔ cuadrada)',
     category: 'brush',
   },
-  toggleBrushPreview: {
-    id: 'toggleBrushPreview',
-    code: KEYS_BY_CODE.keyV,
-    label: 'Mostrar / ocultar previsualización del pincel',
-    category: 'brush',
-  },
   toggleShortcutsModal: {
     id: 'toggleShortcutsModal',
     code: KEYS_BY_CODE.slash,

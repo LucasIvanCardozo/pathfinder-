@@ -1,154 +1,70 @@
 import type { ScenarioEffect } from '@/lib/shared/types';
-import { FEET_PER_BASE_CELL } from '@/lib/shared/constants';
 import type { BrushCell } from '../tools/types';
-import { templateById } from './spell-templates';
+import { SPELL_TEMPLATES } from './spell-templates';
 
 // =============================================================================
 // Spell footprint geometry (PR 1 of the spellcasting refactor).
 //
-// Coordinates:
-//   - `effect.originCellX` / `effect.originCellY` are integer cell coords in the
-//     active subdivision's grid space.
-//   - The shape and dimensions are resolved from `SPELL_TEMPLATES` keyed by
-//     `effect.templateId` — the renderer and the picker UI share this single
-//     source of truth (see `spell-templates.ts`).
-//   - `effect.rotationDeg` is in discrete steps of 0/90/180/270. Circles ignore
-//     it (radii are rotation-invariant).
+// Each `effect.templateId` resolves to a template in `spell-templates.ts`
+// carrying a 1/0 matrix and an explicit pivot cell. The walker enumerates
+// every `1` cell, rotates its offset around the pivot by `effect.rotationDeg`
+// (snapped to 0/90/180/270, 90° clockwise in screen coords), and applies
+// `cellSizeRatio` as an affine scale around the anchor.
 //
-// Units:
-//   - Template `sizeFt` is forward length for cones, radius for circles.
-//   - `cellSizeRatio` is the active subdivision's `base cells per
-//     active-subdivision cell` (1 for suelo/estructuras/obscured, 2 for
-//     objetos-grandes, 4 for objetos-pequenos). One base cell = 5 ft.
+// For `cellSizeRatio = 1` (the active subdivision is `suelo`, the common case)
+// the output matches the legacy cone/circle walker exactly. For other ratios
+// the shape scales affinely with the ratio instead of regenerating a
+// halfCells ramp — the shape in cells stays invariant, the active-cell layout
+// differs. Spell rendering happens on `suelo` in practice, so this is a
+// non-issue in the running app.
 // =============================================================================
 
 /**
- * Direction unit vector for a discrete rotation (0/90/180/270). Cones walk
- * along this vector for the shape's forward length; the width fan-out is
- * perpendicular to it. 0° = north (-Y in screen coords).
- */
-function directionFor(rotationDeg: number): { dx: number; dy: number } {
-  // Snap to the nearest cardinal direction so 1° or 89° collapses to the
-  // closest of 0/90/180/270.
-  const snapped = Math.round(rotationDeg / 90) * 90;
-  const rad = (snapped * Math.PI) / 180;
-  // Y axis is flipped (screen coords) so we negate sin to keep clockwise
-  // rotation visually correct.
-  return { dx: Math.sin(rad), dy: -Math.cos(rad) };
-}
-
-/** Perpendicular unit vector (90° clockwise from the direction). */
-function perpRight(d: { dx: number; dy: number }): { dx: number; dy: number } {
-  return { dx: d.dy, dy: -d.dx };
-}
-
-/**
- * Cone / directional fan from the anchor. Bresenham-walk `lengthFt` cells
- * along the direction, and for each step expand the perpendicular footprint
- * by `lengthFt / 2` cells on each side (the width grows linearly from 0 at
- * the anchor to `lengthFt` at the tip and stays there — same proportions as
- * the original 5e cone template).
- */
-function coneFootprint(
-  anchorX: number,
-  anchorY: number,
-  lengthFt: number,
-  rotationDeg: number,
-  cellSizeRatio: number,
-): BrushCell[] {
-  if (cellSizeRatio <= 0) return [];
-  if (lengthFt <= 0) return [];
-  const lengthCells = Math.max(
-    1,
-    Math.floor((lengthFt * cellSizeRatio) / FEET_PER_BASE_CELL),
-  );
-  const dir = directionFor(rotationDeg);
-  const perp = perpRight(dir);
-  const cells: BrushCell[] = [];
-  const seen = new Set<string>();
-  const add = (gx: number, gy: number) => {
-    const key = `${gx}|${gy}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    cells.push({ gridX: gx, gridY: gy });
-  };
-  add(anchorX, anchorY);
-  for (let step = 1; step <= lengthCells; step++) {
-    const cx = anchorX + Math.round(dir.dx * step);
-    const cy = anchorY + Math.round(dir.dy * step);
-    // Width at this step: linear ramp from 0 (anchor) to `lengthFt` worth of
-    // cells. We use `lengthFt` as the cone's width spec (D&D convention:
-    // a 15-ft cone is 15 ft wide at the tip). Each "foot" maps to
-    // `cellSizeRatio / FEET_PER_BASE_CELL` active-subdivision cells.
-    const halfCells = Math.max(
-      0,
-      Math.floor(
-        ((lengthFt * cellSizeRatio) / FEET_PER_BASE_CELL / 2) * (step / lengthCells),
-      ),
-    );
-    for (let w = -halfCells; w <= halfCells; w++) {
-      const gx = cx + Math.round(perp.dx * w);
-      const gy = cy + Math.round(perp.dy * w);
-      add(gx, gy);
-    }
-  }
-  return cells;
-}
-
-/**
- * Circle / radius footprint. Emits every cell whose Euclidean distance from
- * the anchor is <= `radiusCells`. Includes the anchor cell.
- */
-function circleFootprint(
-  anchorX: number,
-  anchorY: number,
-  radiusFt: number,
-  cellSizeRatio: number,
-): BrushCell[] {
-  if (cellSizeRatio <= 0) return [];
-  if (radiusFt <= 0) return [];
-  const radiusCells = Math.max(
-    0,
-    (radiusFt * cellSizeRatio) / FEET_PER_BASE_CELL,
-  );
-  const cells: BrushCell[] = [];
-  const r = Math.ceil(radiusCells);
-  // We square the threshold instead of sqrt'ing per cell to skip the
-  // Math.sqrt call (small optimisation — the loop is hot).
-  const r2 = radiusCells * radiusCells;
-  for (let dx = -r; dx <= r; dx++) {
-    for (let dy = -r; dy <= r; dy++) {
-      if (dx * dx + dy * dy <= r2) {
-        cells.push({ gridX: anchorX + dx, gridY: anchorY + dy });
-      }
-    }
-  }
-  return cells;
-}
-
-/**
- * Compute the per-cell footprint for one spell. Dispatches on the persisted
- * `templateId` to the shape-specific walker. The walker ignores
- * `rotationDeg` for circles; cones read it directly.
+ * Compute the per-cell footprint for one spell. Resolves `effect.templateId`
+ * to a template (matrix + pivot), rotates every cell's offset around the
+ * pivot by `effect.rotationDeg`, and applies `cellSizeRatio` as an affine
+ * scale around the anchor cell.
  *
  * `cellSizeRatio` is the active subdivision's `base cells per
  * active-subdivision cell` (e.g. 1 for `suelo`, 2 for `objetos-grandes`).
  *
  * The returned cells are an *over-estimate* — the wall-aware BFS in
  * `useEffectMarkers` post-filters them via `eraseFootprintFor` so cells
- * behind a structure wall are dropped. The walkers return the full geometry
- * so the BFS has the right starting shape.
+ * behind a structure wall are dropped.
  */
 export function computeEffectFootprint(
   effect: ScenarioEffect,
   cellSizeRatio: number,
 ): BrushCell[] {
-  const template = templateById(effect.templateId);
-  const anchorX = Math.round(effect.originCellX);
-  const anchorY = Math.round(effect.originCellY);
-  return template.shape === 'cone'
-    ? coneFootprint(anchorX, anchorY, template.sizeFt, effect.rotationDeg, cellSizeRatio)
-    : circleFootprint(anchorX, anchorY, template.sizeFt, cellSizeRatio);
+  if (cellSizeRatio <= 0) return [];
+  const template = SPELL_TEMPLATES.find((t) => t.id === effect.templateId);
+  if (!template) return [];
+  const cells: BrushCell[] = [];
+  const times = ((Math.round(effect.rotationDeg / 90) % 4) + 4) % 4;
+  const originX = Math.round(effect.originCellX);
+  const originY = Math.round(effect.originCellY);
+  for (let row = 0; row < template.matrix.length; row++) {
+    const rowCells = template.matrix[row];
+    if (!rowCells) continue;
+    for (let col = 0; col < rowCells.length; col++) {
+      if (rowCells[col] !== 1) continue;
+      // Offset from pivot, in matrix coordinates.
+      const offsetCol = col - template.pivot.col;
+      const offsetRow = row - template.pivot.row;
+      // Rotate 90° clockwise in screen coords (Y grows downward).
+      // (offsetCol, offsetRow) → (-offsetRow, offsetCol)
+      let rc = offsetCol;
+      let rr = offsetRow;
+      for (let i = 0; i < times; i++) {
+        [rc, rr] = [-rr, rc];
+      }
+      cells.push({
+        gridX: originX + Math.round(rc * cellSizeRatio),
+        gridY: originY + Math.round(rr * cellSizeRatio),
+      });
+    }
+  }
+  return cells;
 }
 
 /**

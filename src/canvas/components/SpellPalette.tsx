@@ -6,7 +6,6 @@ import { faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import {
   ROTATIONS,
   SPELL_TEMPLATES,
-  templateSupportsRotation,
   type RotationDeg,
   type SpellTemplate,
   type SpellTemplateId,
@@ -46,8 +45,8 @@ function clampRounds(n: number): number {
  * Spell picker for the GM's combat spellcasting tool. Mirrors the visual
  * language of `PiecePalette`: a vertical list of swatch cards plus a
  * title. Each card shows the template's colour (the marker colour the GM
- * will see on the canvas) and its label. The rotate button at the bottom
- * only appears when the selected template supports rotation (cones only).
+ * will see on the canvas) and its label. The rotate button appears below
+ * the duration picker and supports rotation for every template.
  *
  * The picker does NOT know about combat gating or the `casterCombatantId`
  * — that's the parent's responsibility when it wires the click into the
@@ -62,8 +61,6 @@ export function SpellPalette({
   onDurationChange,
 }: Props) {
   const selectedTemplate = SPELL_TEMPLATES.find((t) => (t.id as string) === selectedId);
-  const supportsRotation = selectedTemplate ? templateSupportsRotation(selectedTemplate) : false;
-
 
   return (
     <div className={styles.palette}>
@@ -111,33 +108,23 @@ export function SpellPalette({
           </select>
         </div>
       ) : null}
-      {supportsRotation ? (
-        <div className={styles.rotationRow}>
-          <span className={styles.rotationLabel} title="Rotación del hechizo (cono)">
-            Rotación
-          </span>
-          <span className={styles.rotationValue} aria-live="polite">
-            {rotation}°
-          </span>
-          <button
-            type="button"
-            className={styles.rotateButton}
-            onClick={onRotate}
-            title="Rotar 90° en sentido horario"
-            aria-label="Rotar 90 grados"
-          >
-            <FontAwesomeIcon icon={faRotateRight} /> Rotar
-          </button>
-        </div>
-      ) : selectedTemplate ? (
-        <div className={styles.rotationHint}>
-          <span title="Los círculos no rotan">Rotación fija (círculo)</span>
-        </div>
-      ) : (
-        <div className={styles.rotationHint}>
-          <span>Elegí un hechizo para configurar la duración</span>
-        </div>
-      )}
+      <div className={styles.rotationRow}>
+        <span className={styles.rotationLabel} title="Rotación del hechizo">
+          Rotación
+        </span>
+        <span className={styles.rotationValue} aria-live="polite">
+          {rotation}°
+        </span>
+        <button
+          type="button"
+          className={styles.rotateButton}
+          onClick={onRotate}
+          title="Rotar 90° en sentido horario"
+          aria-label="Rotar 90 grados"
+        >
+          <FontAwesomeIcon icon={faRotateRight} /> Rotar
+        </button>
+      </div>
     </div>
   );
 }

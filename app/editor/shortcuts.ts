@@ -18,7 +18,6 @@ type Args = {
   setTool: (t: import('@/canvas/tools').ToolKind) => void;
   setBrushSize: Dispatch<SetStateAction<number>>;
   setBrushShape: Dispatch<SetStateAction<BrushShape>>;
-  setShowBrushPreview: Dispatch<SetStateAction<boolean>>;
   setShowShortcuts: Dispatch<SetStateAction<boolean>>;
   /** Toggles the combat modal or its active-combat view. */
   toggleCombat: () => void;
@@ -76,7 +75,6 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('toggleBrushShape', () =>
       args.setBrushShape((current) => (current === 'circle' ? 'square' : 'circle')),
     ),
-    bindShortcut('toggleBrushPreview', () => args.setShowBrushPreview((v) => !v)),
     bindShortcut('toggleShortcutsModal', () => args.setShowShortcuts((v) => !v)),
     bindShortcut('toggleCombat', () => {
       if (args.modalOpenRef?.current) return;

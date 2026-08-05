@@ -95,8 +95,13 @@ export function useCombatOps({
     opsBuffer.pushEndCombat();
     markDirty();
     combatSession.setCombat(null);
+    // Mirror `effectRepository.purgeOrphansInTx`: the endCombat cascade
+    // deletes every effect row server-side, so the local list must drop
+    // them too (same optimistic-UI pattern as `nextTurn`/`advanceRound`).
+    // Without this, stale markers linger until the next `router.refresh()`.
+    setEffects([]);
     closeCombatModal();
-  }, [opsBuffer, markDirty, combatSession, closeCombatModal]);
+  }, [opsBuffer, markDirty, combatSession, setEffects, closeCombatModal]);
 
   const nextTurn = useCallback(() => {
     // Detect the round wrap before mutating combat state so we know whether

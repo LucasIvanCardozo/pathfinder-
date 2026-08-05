@@ -56,8 +56,9 @@ export type Props = {
    *  agree on the same footprint. */
   brushShape: BrushShape;
   /** When false, skip rendering the brush footprint preview Layer. Defaults
-   *  to true so the prop is optional and existing callers don't have to
-   *  change. Toggled by the editor's `toggleBrushPreview` shortcut. */
+   *  to true so the prop is optional. The editor passes `chromeVisible` here
+   *  so the preview hides alongside the floating panels when the GM presses
+   *  `H`. */
   showBrushPreview?: boolean;
   /** Loaded texture images keyed by `imagePath`. One HTMLImageElement per path
    *  — depth blur is now done in CSS. */

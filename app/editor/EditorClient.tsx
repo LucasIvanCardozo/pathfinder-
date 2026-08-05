@@ -118,7 +118,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
   const [chromeVisible, setChromeVisible] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
-  const [showBrushPreview, setShowBrushPreview] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const modalOpenRef = useRef(false);
 
@@ -538,7 +537,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setTool: handleToolChange,
       setBrushSize,
       setBrushShape,
-      setShowBrushPreview,
       setShowShortcuts,
       toggleCombat: toggleCombatModal,
       nextTurn: combatOps.nextTurn,
@@ -835,7 +833,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           darknessMode={darknessMode}
           brushSize={brushSize}
           brushShape={brushShape}
-          showBrushPreview={showBrushPreview}
+          showBrushPreview={chromeVisible}
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}

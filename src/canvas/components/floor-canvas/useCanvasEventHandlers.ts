@@ -5,11 +5,7 @@ import { useCallback } from 'react';
 import type { Piece, PaintedCell, SubdivisionConfig } from '@/lib/shared/types';
 import type { BrushCell, ToolKind } from '../../tools';
 import { findInteractiveCellAtPixel } from '../../traits';
-import {
-  templateById,
-  templateSupportsRotation,
-  type SpellTemplateId,
-} from '../../effects/spell-templates';
+import type { SpellTemplateId } from '../../effects/spell-templates';
 
 export type FloorCanvasEvents = {
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -180,15 +176,10 @@ export function useCanvasEventHandlers(
       if (!isActive) return;
       e.evt.preventDefault();
       // PR Y: right-click rotates the spell preview 90° when the `effects`
-      // tool is active and a rotation-eligible template (cone) is selected.
-      // Fall through to the trait-menu flow when the gate doesn't match so
-      // piece clicks (doors, chests, etc.) keep working in any tool.
-      if (
-        args.tool === 'effects' &&
-        args.selectedSpellTemplateId &&
-        args.onRotateSpell &&
-        templateSupportsRotation(templateById(args.selectedSpellTemplateId))
-      ) {
+      // tool is active and a spell template is selected. Fall through to the
+      // trait-menu flow when the gate doesn't match so piece clicks (doors,
+      // chests, etc.) keep working in any tool.
+      if (args.tool === 'effects' && args.selectedSpellTemplateId && args.onRotateSpell) {
         args.onRotateSpell();
         return;
       }

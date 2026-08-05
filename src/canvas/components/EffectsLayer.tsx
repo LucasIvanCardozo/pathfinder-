@@ -2,6 +2,7 @@
 
 import { Group, Layer, Rect, Text } from 'react-konva';
 import type { ScenarioEffect } from '@/lib/shared/types';
+import type { SpellTemplate } from '../effects/spell-templates';
 
 /** Grid-space cell used by the renderer. Decoupled from `EffectMarkerCell`
  *  so the EffectsLayer does not depend on the hook's internal type. */
@@ -19,7 +20,7 @@ export interface EffectsLayerCell {
 export interface EffectsLayerMarker {
   effect: ScenarioEffect;
   visibleCells: readonly EffectsLayerCell[];
-  template: { shape: 'cone' | 'circle'; color: string };
+  template: SpellTemplate;
   anchor: { gridX: number; gridY: number };
   blockedByWall: boolean;
 }
@@ -34,6 +35,10 @@ interface EffectsLayerProps {
  *  scenario row, so the position is always valid. */
 const BLOCKED_EMOJI = '🕓';
 const BLOCKED_OPACITY = 0.6;
+/** Footprint tint. Lives on the per-cell rect (not the parent group) so the
+ *  anchor-cell counter keeps full opacity — Konva groups propagate opacity
+ *  to every child, so a group-level 0.35 would fade the digits too. */
+const FOOTPRINT_OPACITY = 0.35;
 
 /**
  * Renders all spell markers as a single Konva Layer. Each effect is
@@ -65,7 +70,6 @@ export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
       {markers.map(({ effect, visibleCells, template, anchor, blockedByWall }) => (
         <Group
           key={effect.id}
-          opacity={0.35}
           listening={false}
           onMouseDown={(e) => {
             // Stage.onMouseDown dispatches the `effects` tool branch
@@ -97,11 +101,38 @@ export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
                 width={activeCellSize}
                 height={activeCellSize}
                 fill={template.color}
+                opacity={FOOTPRINT_OPACITY}
                 perfectDrawEnabled={false}
                 listening={false}
               />
             ))
           )}
+          {/*
+            Anchor-cell duration counter. Paints `effect.durationRounds` on
+            top of the footprint (or the blocked vignette) so the GM always
+            sees remaining rounds. The opacity is kept on the cell rects and
+            the emoji, NOT on the counter — Konva groups propagate opacity
+            to every child, so a group-level 0.35 would fade the digits
+            into the template colour. White fill + dark stroke keeps the
+            label legible over any template colour; `strokeScaleEnabled={false}`
+            pins the stroke to 1px even at high zoom levels.
+          */}
+          <Text
+            x={anchor.gridX * activeCellSize}
+            y={anchor.gridY * activeCellSize}
+            width={activeCellSize}
+            height={activeCellSize}
+            align="center"
+            verticalAlign="middle"
+            fontSize={Math.min(28, activeCellSize * 0.7)}
+            fontStyle="bold"
+            fill="#fff"
+            stroke="#000"
+            strokeWidth={1.5}
+            strokeScaleEnabled={false}
+            text={String(effect.durationRounds)}
+            listening={false}
+          />
         </Group>
       ))}
     </Layer>

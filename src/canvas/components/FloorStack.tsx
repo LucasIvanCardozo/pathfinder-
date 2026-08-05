@@ -45,7 +45,8 @@ type Props = {
    *  the same footprint. */
   brushShape: BrushShape;
   /** When false, FloorCanvas skips rendering the brush footprint preview.
-   *  Toggled by the `toggleBrushPreview` shortcut in the editor. */
+   *  Forwarded from the editor, which derives it from `chromeVisible` so the
+   *  preview hides alongside the floating panels when the GM presses `H`. */
   showBrushPreview?: boolean;
   onPaint: (
     floorId: string,
