@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  max-width: min(90vw, 52rem);
+  max-width: min(90vw, 56rem);
   padding: 0.55rem 0.8rem;
   transform: translateX(-50%);
   border: 1px solid var(--border);
@@ -86,6 +86,23 @@
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
   color: var(--fg);
   font-weight: 700;
+}
+
+
+/* "Finalizar combate" lives to the right of the initiative queue. Its left
+   border acts as a visual separator from the queue; the wrapper collapses
+   with the button itself so the rounded corner looks unified. */
+.endButton {
+  display: inline-flex;
+  margin-left: 0.5rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid var(--border);
+}
+
+.endButton > button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

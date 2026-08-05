@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { Prisma } from '@/generated/prisma/client';
 import { combatRepository } from '@/lib/server/db/repository/combat.repository';
+import { effectRepository } from '@/lib/server/db/repository/effect.repository';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
 import { runInTx } from '@/lib/server/utils/runInTx';
@@ -58,6 +59,10 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
      *  fallback to the lowest-ordered floor for legacy scenarios that don't
      *  follow the naming convention. */
     async findByIdWithFloors(id: string): Promise<LoadScenarioResult | null> {
+      // Pure read. Orphan cleanup lives in `effectRepository.purgeOrphansInTx`
+      // and is invoked from the `endCombat` write op (not on read) so this
+      // path stays cacheable (`'use cache'` on the surrounding use case
+      // requires a side-effect-free read body).
       const scenario = await db.scenario.findUnique({
         where: { id },
         include: {
@@ -424,33 +429,15 @@ async function applyOp(
       return;
     }
     case 'addEffect': {
-      // Spellcasting refactor (PR 1): the wire shape collapsed to
-      // templateId + origin + rotation + caster snapshot. The columns
-      // that used to be user-editable (label, kind, widthFt, color,
-      // durationKind, remainingRounds, expired) are now derived from
-      // the template at render time.
-      await tx.scenarioEffect.create({
-        data: {
-          id: op.effect.id,
-          scenarioId,
-          floorId: op.effect.floorId,
-          templateId: op.effect.templateId,
-          originCellX: op.effect.originCellX,
-          originCellY: op.effect.originCellY,
-          rotationDeg: op.effect.rotationDeg,
-          casterCombatantId: op.effect.casterCombatantId,
-          castOnTurnIndex: op.effect.castOnTurnIndex,
-          castOnRoundNumber: op.effect.castOnRoundNumber,
-          createdAt: op.effect.createdAt,
-          updatedAt: op.effect.updatedAt,
-        },
-      });
+      // Delegates to effectRepository; the entity file owns every
+      // `ScenarioEffect` mutation per the five-file split.
+      await effectRepository().addInTx(tx, scenarioId, op.effect);
       return;
     }
     case 'removeEffect': {
       // Idempotent — a stale op replayed after a successful removal is a
       // no-op, not an error.
-      await tx.scenarioEffect.deleteMany({ where: { id: op.effectId } });
+      await effectRepository().removeInTx(tx, op.effectId);
       return;
     }
     case 'startCombat': {
@@ -469,40 +456,35 @@ async function applyOp(
     case 'endCombat': {
       // Idempotent — replaying endCombat after a successful end is a
       // no-op. The cascade delete drops every Combatant row along with
-      // the Combat row (locked decision: no soft archive).
+      // the Combat row (locked decision: no soft archive). After the
+      // cascade, every spell those combatants owned has its
+      // `casterCombatantId` set to NULL via the FK SetNull rule; sweep
+      // them in the same TX so the scenario never lands with orphan
+      // markers visible to the next render.
       const combat = await tx.combat.findUnique({
         where: { scenarioId },
         select: { id: true },
       });
       if (!combat) return;
       await combatRepository(tx).endInTx(tx, combat.id);
+      await effectRepository().purgeOrphansInTx(tx, scenarioId);
       return;
     }
     case 'nextTurn': {
-      // Spell expiry lives here (PR 1 of the spellcasting refactor):
-      // when the cursor lands on a caster whose spells were cast in a
-      // prior round, those spells die in the same TX as the cursor
-      // advance. Asymmetric — `previousTurn` does NOT re-resurrect or
-      // re-expire anything.
+      // PF1e expiry: a single combatant acting within a round does NOT
+      // age spells. The cursor wrapping back to the first combatant IS
+      // the round boundary, so spells tick only on that wrap. The
+      // repository's `nextTurnInTx` reports `wrapped` so this branch
+      // can decide whether to call `effectRepository.expireRoundInTx`.
+      // Asymmetric: `previousTurn` does not re-resurrect.
       const combat = await tx.combat.findUnique({
         where: { scenarioId },
-        select: { id: true, roundNumber: true, currentTurnIndex: true },
+        select: { id: true },
       });
       if (!combat) return;
-      const { newRoundNumber } = await combatRepository(tx).nextTurnInTx(tx, combat.id);
-      const currentCasterId = await currentCasterCombatantId(
-        tx,
-        combat.id,
-        combat.currentTurnIndex,
-      );
-      if (currentCasterId) {
-        await tx.scenarioEffect.deleteMany({
-          where: {
-            scenarioId,
-            casterCombatantId: currentCasterId,
-            castOnRoundNumber: { lt: newRoundNumber },
-          },
-        });
+      const { wrapped } = await combatRepository(tx).nextTurnInTx(tx, combat.id);
+      if (wrapped) {
+        await effectRepository().expireRoundInTx(tx, scenarioId);
       }
       return;
     }
@@ -518,26 +500,17 @@ async function applyOp(
       return;
     }
     case 'advanceRound': {
-      // Manual round advance kills the new cursor's prior-round spells
-      // (same rule as `nextTurn` when the cursor wraps to a fresh
-      // round).
+      // PF1e spell expiry: same world-round decrement as `nextTurn`.
+      // The cursor wraps to a fresh round, but the lifetime tick is
+      // independent of which combatant is "up" — every spell ages
+      // one round per `advanceRound` call.
       const combat = await tx.combat.findUnique({
         where: { scenarioId },
-        select: { id: true, roundNumber: true },
+        select: { id: true },
       });
       if (!combat) return;
       await combatRepository(tx).advanceRoundInTx(tx, combat.id);
-      const newRoundNumber = combat.roundNumber + 1;
-      const currentCasterId = await currentCasterCombatantId(tx, combat.id, 0);
-      if (currentCasterId) {
-        await tx.scenarioEffect.deleteMany({
-          where: {
-            scenarioId,
-            casterCombatantId: currentCasterId,
-            castOnRoundNumber: { lt: newRoundNumber },
-          },
-        });
-      }
+      await effectRepository().expireRoundInTx(tx, scenarioId);
       return;
     }
     case 'addCombatant': {
@@ -553,8 +526,12 @@ async function applyOp(
       return;
     }
     case 'removeCombatant': {
-      // Idempotent — the `deleteMany` matches zero rows after a
-      // successful prior remove. Mirrors `removeEffect` semantics.
+      // Idempotent — the inner `deleteMany` calls match zero rows after
+      // a successful prior remove. Pre-cascade cleanup: delete every
+      // effect whose `casterCombatantId` matches the combatant first,
+      // so the FK SetNull never has a row to fire on (no SetNull, no
+      // orphans to sweep afterwards).
+      await effectRepository().removeByCasterInTx(tx, scenarioId, op.combatantId);
       await combatRepository(tx).removeInTx(tx, op.combatantId);
       return;
     }
@@ -563,23 +540,4 @@ async function applyOp(
       throw new Error(`applyOp: unknown op type`);
     }
   }
-}
-
-/**
- * Resolve the id of the combatant at the given cursor position (initiative
- * desc, id asc — the canonical read order). Returns `null` when the combat
- * has no combatants; callers gate the expiry delete on a non-null result so
- * the empty-combat case is a safe no-op.
- */
-async function currentCasterCombatantId(
-  tx: Prisma.TransactionClient,
-  combatId: string,
-  turnIndex: number,
-): Promise<string | null> {
-  const combatants = await tx.combatant.findMany({
-    where: { combatId },
-    orderBy: [{ initiative: 'desc' }, { id: 'asc' }],
-    select: { id: true },
-  });
-  return combatants[turnIndex]?.id ?? null;
 }

@@ -1,7 +1,15 @@
 'use client';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEraser, faHatWizard, faMoon, faPaintbrush, faSun } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircle,
+  faEraser,
+  faHatWizard,
+  faMoon,
+  faPaintbrush,
+  faSquareFull,
+  faSun,
+} from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape, ToolKind } from '../tools';
@@ -32,19 +40,20 @@ type Props = {
   brushShape: BrushShape;
   onBrushShapeChange: (shape: BrushShape) => void;
   /**
-   * When `false`, the effects tool button is disabled and shows a
-   * tooltip explaining that a combat must be active to cast spells
-   * (the spell needs a caster — the active combatant — to record).
+   * When `false`, the effects tool button shows a "Iniciá un combate"
+   * toast on click and the aside shows a permanent banner. The button
+   * stays enabled so the GM can still pick the tool and read the banner.
    */
   combatActive: boolean;
 };
 
-// Shape iconography: circle uses a single-character glyph; square uses a small
-// rectangle made from box-drawing characters so the visual matches the geometric
-// footprint the brush will actually stamp.
-const SHAPE_GLYPHS: Record<BrushShape, string> = {
-  circle: '○',
-  square: '⬜',
+// Shape iconography: the icon picks come from FontAwesome so the toolbar stays
+// consistent with the rest of the editor (no Unicode glyph soup). `faCircle`
+// reads as the open circle; `faSquareFull` reads as a solid square brush
+// footprint — matches the geometric stamp the user will actually paint.
+const SHAPE_ICONS: Record<BrushShape, typeof faCircle> = {
+  circle: faCircle,
+  square: faSquareFull,
 };
 
 const SHAPE_LABELS: Record<BrushShape, string> = {
@@ -53,10 +62,13 @@ const SHAPE_LABELS: Record<BrushShape, string> = {
 };
 
 /**
- * Tool selector + brush size controls. The brush size is shown as a live
- * "NxN" footprint hint so the user sees the exact circle diameter they will
- * paint with. The preview indicator itself lives on the canvas (FloorCanvas);
- * this component only exposes the controls.
+ * Tool selector + brush size + brush shape controls. The brush size is shown
+ * as a live "NxN" footprint hint so the user sees the exact circle diameter
+ * they will paint with. The preview indicator itself lives on the canvas
+ * (FloorCanvas); this component only exposes the controls.
+ *
+ * The brush size + shape sections are hidden when `tool === 'effects'`: the
+ * spell template owns its own shape and size (see `SPELL_TEMPLATES`).
  */
 export function PaintToolbar({
   tool,
@@ -69,6 +81,7 @@ export function PaintToolbar({
   combatActive,
 }: Props) {
   const size = normalizeBrushSize(brushSize);
+  const showPaintBrushControls = tool !== 'effects';
 
   return (
     <div className={styles.toolbar}>
@@ -122,10 +135,9 @@ export function PaintToolbar({
           type="button"
           className={`${styles.tool} ${tool === 'effects' ? styles.active : ''}`}
           onClick={() => onChange('effects')}
-          disabled={!combatActive}
           title={
             combatActive
-              ? 'Hechizos (Shift+E) — elegir template y colocar en el canvas'
+              ? 'Hechizos (Q para rotar) — elegir template y colocar en el canvas'
               : 'Iniciá un combate para usar hechizos'
           }
           aria-label="Hechizos"
@@ -135,71 +147,77 @@ export function PaintToolbar({
         </button>
       </div>
 
-
-      <div className={styles.brushSection}>
-        <div className={styles.brushControls}>
-          <button
-            type="button"
-            className={styles.brushStep}
-            onClick={() => onBrushSizeChange(bumpBrushSizeDown(size))}
-            disabled={size <= MIN_BRUSH_SIZE}
-            title="Reducir pincel"
-            aria-label="Reducir pincel"
-          >
-            −
-          </button>
-          <span className={styles.brushValue} title="Tamaño en celdas de la subcapa activa">
-            {size}×{size}
-          </span>
-          <button
-            type="button"
-            className={styles.brushStep}
-            onClick={() => onBrushSizeChange(bumpBrushSizeUp(size))}
-            disabled={size >= MAX_BRUSH_SIZE}
-            title="Aumentar pincel"
-            aria-label="Aumentar pincel"
-          >
-            +
-          </button>
+      {showPaintBrushControls && (
+        <div className={styles.brushSection}>
+          <div className={styles.brushControls}>
+            <button
+              type="button"
+              className={styles.brushStep}
+              onClick={() => onBrushSizeChange(bumpBrushSizeDown(size))}
+              disabled={size <= MIN_BRUSH_SIZE}
+              title="Reducir pincel"
+              aria-label="Reducir pincel"
+            >
+              −
+            </button>
+            <span className={styles.brushValue} title="Tamaño en celdas de la subcapa activa">
+              {size}×{size}
+            </span>
+            <button
+              type="button"
+              className={styles.brushStep}
+              onClick={() => onBrushSizeChange(bumpBrushSizeUp(size))}
+              disabled={size >= MAX_BRUSH_SIZE}
+              title="Aumentar pincel"
+              aria-label="Aumentar pincel"
+            >
+              +
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Brush-shape segmented control. Mirrors the pattern of the tool
           selector above — two buttons in a flex row with an `active` state on
           the selected one. Source of truth for the shape options is
           `BRUSH_SHAPES` so a new shape only needs to extend that array (plus
-          the SHAPE_GLYPHS / SHAPE_LABELS maps and the CSS rules). */}
-      <fieldset className={styles.brushSection}>
-        <legend className={styles.brushLabel}>Forma</legend>
-        <div className={styles.shapeGroup}>
-          {BRUSH_SHAPES.map((shape) => {
-            const inputId = `brush-shape-${shape}`;
-            return (
-              <React.Fragment key={shape}>
-                <input
-                  id={inputId}
-                  type="radio"
-                  name="brush-shape"
-                  value={shape}
-                  checked={brushShape === shape}
-                  onChange={() => onBrushShapeChange(shape)}
-                  className={styles.shapeInput}
-                />
-                <label
-                  htmlFor={inputId}
-                  className={`${styles.shape} ${brushShape === shape ? styles.shapeActive : ''}`}
-                  title={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
-                  aria-label={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
-                >
-                  <span aria-hidden="true" className={styles.shapeGlyph}>
-                    {SHAPE_GLYPHS[shape]}
-                  </span>
-                </label>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </fieldset>
+          the SHAPE_ICONS / SHAPE_LABELS maps and the CSS rules). Hidden in
+          the effects tool (the spell template owns its own shape + size). */}
+      {showPaintBrushControls && (
+        <fieldset className={styles.brushSection}>
+          <legend className={styles.brushLabel}>Forma</legend>
+          <div className={styles.shapeGroup}>
+            {BRUSH_SHAPES.map((shape) => {
+              const inputId = `brush-shape-${shape}`;
+              return (
+                <React.Fragment key={shape}>
+                  <input
+                    id={inputId}
+                    type="radio"
+                    name="brush-shape"
+                    value={shape}
+                    checked={brushShape === shape}
+                    onChange={() => onBrushShapeChange(shape)}
+                    className={styles.shapeInput}
+                  />
+                  <label
+                    htmlFor={inputId}
+                    className={`${styles.shape} ${brushShape === shape ? styles.shapeActive : ''}`}
+                    title={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
+                    aria-label={`Pincel ${SHAPE_LABELS[shape].toLowerCase()}`}
+                  >
+                    <FontAwesomeIcon
+                      aria-hidden="true"
+                      className={styles.shapeGlyph}
+                      icon={SHAPE_ICONS[shape]}
+                    />
+                  </label>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
     </div>
   );
 }

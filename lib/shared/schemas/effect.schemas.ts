@@ -13,15 +13,20 @@ import { SPELL_TEMPLATES } from '@/canvas/effects/spell-templates';
  * `originCellX` / `originCellY` are integer cell coords in the active
  * subdivision's grid space (no Float — sub-cell anchors are out of scope).
  *
+ * `durationRounds` is the PF1e spell lifetime in world rounds: the server
+ * decrements it on every `nextTurn` / `advanceRound` op and deletes the row
+ * in the same TX when it hits zero. Capped at 1-99 so the SpellPalette
+ * input stays sane; default 1 preserves the legacy one-round behaviour.
+ *
  * `casterCombatantId` is nullable because removing a caster mid-spell cascades
  * the FK to SetNull rather than deleting the row (see `schema.prisma`). A
  * spell whose caster was removed is rendered as an orphan and cleaned up on
- * the next scenario load.
+ * the next scenario load. `casterCombatantId` is metadata only — the expiry
+ * rule is world-round-based and does not consult it.
  *
  * `castOnTurnIndex` / `castOnRoundNumber` are the combat cursor snapshot at
- * cast time. The expiry rule (server-side, `nextTurn`/`advanceRound`) reads
- * these to decide whether to delete the spell: the spell dies when the
- * cursor reaches its caster again on a later round.
+ * cast time. Still persisted (audit + orphan cleanup) but no longer read by
+ * the expiry rule.
  */
 
 const SPELL_TEMPLATE_IDS = SPELL_TEMPLATES.map((t) => t.id) as [
@@ -46,6 +51,7 @@ export const EffectInputSchema = z.object({
   originCellX: z.number().int(),
   originCellY: z.number().int(),
   rotationDeg: RotationDegSchema.default(0),
+  durationRounds: z.number().int().min(1).max(99).default(1),
   casterCombatantId: z.string().min(1).nullable(),
   castOnTurnIndex: z.number().int().min(0),
   castOnRoundNumber: z.number().int().min(1),

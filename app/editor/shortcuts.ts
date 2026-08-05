@@ -28,6 +28,8 @@ type Args = {
   advanceRound: () => void;
   /** Opens the combat modal in add-combatant mode. */
   addCombatant: () => void;
+  /** PR 3: cycles the currently-selected spell template rotation 90° cw. */
+  rotateSpell: () => void;
   /** Shared guard for modal-triggered shortcuts. */
   modalOpenRef?: { current: boolean };
   /** Wrapped save — the call site decides whether the autosave is currently
@@ -95,6 +97,11 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('addCombatant', () => {
       if (args.modalOpenRef?.current) return;
       args.addCombatant();
+    }),
+    bindShortcut('rotateSpell', () => {
+      // No modal-guard: rotating never opens a modal. The handler is
+      // a no-op when no template is selected (EditorClient guards).
+      args.rotateSpell();
     }),
     bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
     bindShortcut('save', () => args.save()),

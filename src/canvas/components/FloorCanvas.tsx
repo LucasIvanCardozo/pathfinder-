@@ -2,7 +2,7 @@
 
 import type Konva from 'konva';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Image as KonvaImage, Layer, Rect, Stage } from 'react-konva';
+import { Image as KonvaImage, Layer, Rect, Stage, Text } from 'react-konva';
 import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap, useSubdivisionMap } from '@/hooks';
 import type {
@@ -18,6 +18,7 @@ import { computeEffectFootprint } from '../effects/footprint';
 import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
+import { eraseFootprintFor } from '../tools/eraseFootprint';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
 import { depthToTier } from './floor-canvas/depthToTier';
 import { pointerToCell } from './floor-canvas/pointerToCell';
@@ -99,7 +100,6 @@ export type Props = {
    * Fired when the user clicks an effect marker. PR 2 surfaces this
    * so the tooltip can open; FloorStack forwards it. Optional.
    */
-  onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
   /**
    * Fired when the user clicks an empty cell with the effects tool
    * active AND a spell template selected. The parent translates this into
@@ -107,6 +107,13 @@ export type Props = {
    * is `null` the parent ignores the click.
    */
   onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
+  /**
+   * PR Y: fired by the context-menu handler when the user right-clicks
+   * the canvas with the `effects` tool and a cone selected. Rotates the
+   * spell preview 90° clockwise. The parent (`EditorClient`) owns the
+   * rotation state.
+   */
+  onRotateSpell?: () => void;
   /**
    * Currently-selected spell template id (when tool === 'effects') or
    * `null`. Drives the brush preview shape.
@@ -144,8 +151,8 @@ function FloorCanvasImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
-  onMarkerClick,
   onPlaceSpell,
+  onRotateSpell,
   selectedSpellTemplateId,
   spellRotationDeg,
 }: Props) {
@@ -303,19 +310,16 @@ function FloorCanvasImpl({
     // template + caster snapshot.
     tool,
     onPlaceSpell,
+    onRotateSpell,
+    // PR Y: forward the selected template id so the context-menu handler
+    // can rotate the preview 90° on right-click when a cone is selected.
+    selectedSpellTemplateId,
   });            {/*
               Spell markers (PR 2 of the spellcasting refactor). The Layer
               sits between the paintable subdivisions and `obscured` so a
               fireball is visible on top of walls/structures but hidden by
               a darkness overlay.
             */}
-            <EffectsLayer
-              markers={effectMarkers}
-              activeCellSize={activeCellSize}
-              onMarkerClick={onMarkerClick}
-            />
-
-
   // Cursor reflects the current interaction: default crosshair (paint),
   // grab when space is held, grabbing while a pan drag is in progress.
   const baseCursor = tool === 'erase' ? 'cell' : 'crosshair';
@@ -360,10 +364,17 @@ function FloorCanvasImpl({
   // same `computeEffectFootprint` walker the persistent marker uses
   // keeps the preview and the placed marker in sync.
   const spellPreview = useMemo(() => {
-    if (tool !== 'effects' || !selectedSpellTemplateId || !activeSubdivision) return null;
+    if (
+      tool !== 'effects' ||
+      !selectedSpellTemplateId ||
+      !activeSubdivision ||
+      !hoverCell
+    ) {
+      return null;
+    }
     const template = templateById(selectedSpellTemplateId);
-    const anchorX = hoverCell?.gridX ?? 0;
-    const anchorY = hoverCell?.gridY ?? 0;
+    const anchorX = hoverCell.gridX;
+    const anchorY = hoverCell.gridY;
     const synthetic = {
       id: '__preview__',
       floorId: floor.id,
@@ -372,15 +383,44 @@ function FloorCanvasImpl({
       originCellX: anchorX,
       originCellY: anchorY,
       rotationDeg: spellRotationDeg,
+      durationRounds: 1,
       casterCombatantId: null,
       castOnTurnIndex: 0,
       castOnRoundNumber: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const cells = computeEffectFootprint(synthetic, activeSubdivision.cellSizeRatio);
-    return { cells, color: template.color };
-  }, [tool, selectedSpellTemplateId, activeSubdivision, hoverCell, spellRotationDeg, floor.id]);
+    // Apply the same wall-aware BFS the persistent marker uses so the
+    // preview matches what will actually render after placement. Without
+    // this the GM sees cells behind a structure wall light up on hover,
+    // only for the placed marker to be hidden by the wall.
+    const footprintCells = computeEffectFootprint(
+      synthetic,
+      activeSubdivision.cellSizeRatio,
+    );
+    const wallKeys = new Set<string>();
+    for (const pc of cells) {
+      if (pc.subdivisionId === 'estructuras') {
+        wallKeys.add(`${pc.gridX}|${pc.gridY}`);
+      }
+    }
+    const isWall = (x: number, y: number) => wallKeys.has(`${x}|${y}`);
+    const visibleCells = eraseFootprintFor(
+      { gridX: anchorX, gridY: anchorY },
+      footprintCells,
+      isWall,
+    );
+    const blockedByWall = visibleCells.length === 0;
+    return { cells: visibleCells, color: template.color, blockedByWall };
+  }, [
+    tool,
+    selectedSpellTemplateId,
+    activeSubdivision,
+    hoverCell,
+    spellRotationDeg,
+    floor.id,
+    cells,
+  ]);
 
   return (
     <div className={className} style={isActive ? { cursor } : undefined}>
@@ -443,29 +483,26 @@ function FloorCanvasImpl({
               </Layer>
             );
           })}
+        {/*
+          Spell markers (PR 2 of the spellcasting refactor). The Layer sits
+          BETWEEN the paintable subdivisions (suelo/og/op/estructuras) and
+          `obscured` so a fireball is visible on top of walls/structures but
+          hidden by a darkness overlay. The Konva Group inside each effect
+          collapses to one draw call.
+        */}
+        <EffectsLayer markers={effectMarkers} activeCellSize={activeCellSize} />
         {cellsBySub
           .filter(({ sub }) => sub.id === 'obscured')
           .map(({ sub, cells: subCells }) => {
-            {/*
-              Spell markers (PR 2 of the spellcasting refactor). The Layer
-              sits between the paintable subdivisions and `obscured` so a
-              fireball is visible on top of walls/structures but hidden by
-              a darkness overlay. The hook resolved the per-cell geometry
-              already (wall-aware BFS) — the Layer is a pure renderer.
-            */}
-            <EffectsLayer
-              markers={effectMarkers}
-              activeCellSize={activeCellSize}
-              onMarkerClick={onMarkerClick}
-            />
             // Darkness overlay: solid black rects. No texture, no piece
             // lookup — the renderer dispatches on subdivisionId and
             // ignores `pieceId` (which holds the sentinel `DARKNESS_PIECE_ID`
             // string). `listening={false}` so darkness cells never block
-            // hit tests for the pieces underneath. Renders AFTER the
-            // effects Layer so a darkness spell hides any AoE marker it
-            // covers (the marker still exists in the state but is
-            // occluded by the black rect).
+            // hit tests for the pieces underneath. The Effects Layer
+            // (spell markers) is rendered as a sibling above this one
+            // (see the `<EffectsLayer />` between the two `.map`s below);
+            // rendering darkness after effects means a darkness cell
+            // hides any AoE marker it covers.
             const cellSize = cellSizeFor(sub);
             return (
               <Layer key={sub.id} listening={false}>
@@ -486,19 +523,34 @@ function FloorCanvasImpl({
         {showBrushPreview && (
           <Layer listening={false}>
             {spellPreview
-              ? spellPreview.cells.map((cell) => (
-                  <Rect
-                    key={`spell-preview-${cell.gridX}-${cell.gridY}`}
-                    x={cell.gridX * previewCellSize}
-                    y={cell.gridY * previewCellSize}
-                    width={previewCellSize}
-                    height={previewCellSize}
-                    fill={spellPreview.color}
-                    opacity={0.35}
-                    perfectDrawEnabled={false}
-                    listening={false}
-                  />
-                ))
+              ? spellPreview.blockedByWall
+                ? (
+                    <Text
+                      x={(hoverCell?.gridX ?? 0) * previewCellSize}
+                      y={(hoverCell?.gridY ?? 0) * previewCellSize}
+                      width={previewCellSize}
+                      height={previewCellSize}
+                      align="center"
+                      verticalAlign="middle"
+                      fontSize={Math.min(16, previewCellSize)}
+                      text="🕓"
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )
+                : spellPreview.cells.map((cell) => (
+                    <Rect
+                      key={`spell-preview-${cell.gridX}-${cell.gridY}`}
+                      x={cell.gridX * previewCellSize}
+                      y={cell.gridY * previewCellSize}
+                      width={previewCellSize}
+                      height={previewCellSize}
+                      fill={spellPreview.color}
+                      opacity={0.35}
+                      perfectDrawEnabled={false}
+                      listening={false}
+                    />
+                  ))
               : previewCells.map((cell) => (
                   <Rect
                     key={`preview-${cell.gridX}-${cell.gridY}`}

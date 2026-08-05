@@ -49,13 +49,20 @@ model Floor {
 ///   - `originCellX` / `originCellY`: anchor in integer **grid cell coords**
 ///     of the active subdivision.
 ///   - `rotationDeg`: 0/90/180/270. Cones use it; circles ignore it.
+///   - `durationRounds`: PF1e-style lifetime in world rounds. The server
+///     decrements it on every `nextTurn` / `advanceRound` op and deletes
+///     the row when it hits zero in the same TX (PF1e duration rule —
+///     a spell dies N rounds of the world after casting, not on the
+///     caster's next turn). Default 1 preserves the legacy one-round
+///     behaviour for existing rows.
 ///   - `casterCombatantId` + `castOnTurnIndex` + `castOnRoundNumber`:
-///     combat-cursor snapshot at cast time. The expiry rule (server-side
-///     inside `nextTurn` / `advanceRound`) deletes the row when the cursor
-///     reaches the caster again on a later round. `casterCombatantId` is
-///     nullable so removing the caster mid-spell cascades to SetNull rather
-///     than deleting the row (an orphan marker is shown until the GM
-///     removes it manually).
+///     combat-cursor snapshot at cast time. Now metadata only: the expiry
+///     rule does not consult `casterCombatantId` anymore. The snapshot
+///     is still persisted for the read-side orphan cleanup (`caster`
+///     SetNull semantics) and for future "who cast what" auditing.
+///     `casterCombatantId` is nullable so removing the caster mid-spell
+///     cascades to SetNull rather than deleting the row (an orphan
+///     marker is shown until the GM removes it manually).
 model ScenarioEffect {
   id                String   @id @default(cuid())
   scenarioId        String
@@ -64,6 +71,7 @@ model ScenarioEffect {
   originCellX       Int
   originCellY       Int
   rotationDeg       Int      @default(0)
+  durationRounds    Int      @default(1)
   casterCombatantId String?
   castOnTurnIndex   Int
   castOnRoundNumber Int

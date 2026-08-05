@@ -11,7 +11,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   applyEraseStroke,
   applyPaintStroke,
@@ -24,8 +25,10 @@ import {
   WeatherOverlay,
   WeatherPanel,
 } from '@/canvas';
-import { EffectTooltip } from '@/canvas/components/EffectTooltip';
+
 import { SpellPalette, rotateBy90 } from '@/canvas/components/SpellPalette';
+
+
 import type { RotationDeg, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
@@ -41,9 +44,6 @@ import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shar
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
 import type {
   CombatView,
-  Combatant,
-  CombatantInsert,
-  EffectInput,
   Floor,
   PaintedCell,
   Piece,
@@ -54,12 +54,14 @@ import { CombatModal, type CombatModalMode } from './components/CombatModal/Comb
 import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
+import { useCombatOps } from './hooks/use-combat-ops';
 import { useCombatSession } from './hooks/use-combat-session';
 import { useFloorHeuristics } from './hooks/use-floor-heuristics';
 import { useHistory } from './hooks/use-history';
 import { useOpsBuffer } from './hooks/use-ops-buffer';
 import { usePaintStrokeDiff } from './hooks/use-paint-stroke-diff';
 import { useScenarioAutosave } from './hooks/use-scenario-autosave';
+import { useSpellOps } from './hooks/use-spell-ops';
 import { useTraitMenu } from './hooks/use-trait-menu';
 import { useWeatherSession } from './hooks/use-weather-session';
 import { useZoomControl } from './hooks/use-zoom-control';
@@ -70,12 +72,6 @@ const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorSta
   loading: () => <div className={styles.canvasLoading}>Cargando canvas…</div>,
 });
 
-function sortCombatants(combatants: readonly Combatant[]): Combatant[] {
-  return [...combatants].sort((a, b) => {
-    if (b.initiative !== a.initiative) return b.initiative - a.initiative;
-    return a.id.localeCompare(b.id);
-  });
-}
 
 type InitialScenario = {
   id: string;
@@ -132,13 +128,24 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   // the EffectTooltip can render a "Quitar" action. `selectedSpellTemplateId`
   // + `spellRotationDeg` drive the brush preview when `tool === 'effects'`.
   const [effects, setEffects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
-  const [markerTooltip, setMarkerTooltip] = useState<{
-    effectId: string;
-    position: { x: number; y: number };
-  } | null>(null);
+  // Re-sync local `effects` whenever the server-rendered scenario reference
+  // changes. `useState` only reads its argument on mount; without this
+  // effect server-side mutations (e.g. `nextTurn` expiring a spell via
+  // `effectRepository.expireRoundInTx`) keep their old copy in client state until a hard
+  // reload. We compare against the array reference (not the serialized
+  // contents) so the rare case where the server ends with the same shape
+  // after a batched mutation still triggers reconciliation.
+  useEffect(() => {
+    setEffects(initialScenario?.effects ?? []);
+  }, [initialScenario?.effects]);
   const [selectedSpellTemplateId, setSelectedSpellTemplateId] =
     useState<SpellTemplateId | null>(null);
   const [spellRotationDeg, setSpellRotationDeg] = useState<RotationDeg>(0);
+  // PR 4: PF1e-style spell lifetime in world rounds. Defaults to 1
+  // (matches the previous "dies on the caster's next turn" behaviour).
+  // The SpellPalette `<select>` is fully controlled by this state —
+  // every change commits immediately, no buffer / debounce needed.
+  const [spellDurationRounds, setSpellDurationRounds] = useState<number>(1);
 
   /**
    * Snapshot of the user-visible state needed to roll back a mutation. The
@@ -277,127 +284,26 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     openCombatModal();
   }, [closeCombatModal, combatModalOpen, openCombatModal]);
 
-  const combatOps = {
-    startCombat: (combatants: CombatantInsert[]) => {
-      opsBuffer.pushStartCombat(combatants);
-      markDirty();
-      const combatId = newId('combat');
-      const localCombatants = sortCombatants(
-        combatants.map((combatant) => ({
-          ...combatant,
-          id: newId('combatant'),
-          combatId,
-        })),
-      );
-      combatSession.setCombat({
-        id: combatId,
-        scenarioId: scenarioId ?? 'pending-scenario',
-        roundNumber: 1,
-        currentTurnIndex: 0,
-        combatants: localCombatants,
-      });
-    },
-    endCombat: () => {
-      opsBuffer.pushEndCombat();
-      markDirty();
-      combatSession.setCombat(null);
-      closeCombatModal();
-    },
-    nextTurn: () => {
-      opsBuffer.pushNextTurn();
-      markDirty();
-      combatSession.setCombat((current) => {
-        if (!current || current.combatants.length === 0) return current;
-        const combatants = sortCombatants(current.combatants);
-        const currentIndex = Math.min(current.currentTurnIndex, combatants.length - 1);
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= combatants.length) {
-          return { ...current, combatants, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 };
-        }
-        return { ...current, combatants, currentTurnIndex: nextIndex };
-      });
-    },
-    previousTurn: () => {
-      opsBuffer.pushPreviousTurn();
-      markDirty();
-      combatSession.setCombat((current) => {
-        if (!current || current.combatants.length === 0) return current;
-        const combatants = sortCombatants(current.combatants);
-        const currentIndex = Math.min(current.currentTurnIndex, combatants.length - 1);
-        const previousIndex = currentIndex === 0 ? combatants.length - 1 : currentIndex - 1;
-        return { ...current, combatants, currentTurnIndex: previousIndex };
-      });
-    },
-    advanceRound: () => {
-      opsBuffer.pushAdvanceRound();
-      markDirty();
-      combatSession.setCombat((current) =>
-        current
-          ? { ...current, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 }
-          : current,
-      );
-    },
-    addCombatant: (combatant: CombatantInsert) => {
-      opsBuffer.pushAddCombatant(combatant);
-      markDirty();
-      combatSession.setCombat((current) => {
-        if (!current) return current;
-        const existing = sortCombatants(current.combatants);
-        const currentIndex = Math.min(
-          current.currentTurnIndex,
-          Math.max(existing.length - 1, 0),
-        );
-        const currentId = existing[currentIndex]?.id;
-        const added: Combatant = {
-          ...combatant,
-          id: newId('combatant'),
-          combatId: current.id,
-        };
-        const nextCombatants = sortCombatants([...existing, added]);
-        const nextIndex = currentId
-          ? Math.max(0, nextCombatants.findIndex((item) => item.id === currentId))
-          : 0;
-        return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
-      });
-    },
-    removeCombatant: (combatantId: string) => {
-      opsBuffer.pushRemoveCombatant(combatantId);
-      markDirty();
-      combatSession.setCombat((current) => {
-        if (!current) return current;
-        const existing = sortCombatants(current.combatants);
-        const removedIndex = existing.findIndex((item) => item.id === combatantId);
-        if (removedIndex < 0) return current;
-        const currentIndex = Math.min(
-          current.currentTurnIndex,
-          Math.max(existing.length - 1, 0),
-        );
-        const nextCombatants = existing.filter((item) => item.id !== combatantId);
-        const rebased = removedIndex <= currentIndex ? currentIndex - 1 : currentIndex;
-        const nextIndex = Math.max(0, Math.min(rebased, Math.max(nextCombatants.length - 1, 0)));
-        return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
-      });
-    },
-  };
+  const combatOps = useCombatOps({
+    scenarioId,
+    combatSession,
+    opsBuffer,
+    setEffects,
+    markDirty,
+    closeCombatModal,
+  });
 
   // PR 2 of the spellcasting refactor: spell wire. Pushes go through
   // the existing ops buffer + autosave; the local `effects` state mirrors
   // the persisted row so the marker renders on the next paint frame
   // (optimistic UI). The cast snapshot (casterCombatantId + castOnTurnIndex
   // + castOnRoundNumber) drives the server-side expiry rule.
-  const spellOps = {
-    pushAddEffect: (effect: EffectInput) => {
-      opsBuffer.pushAddEffect(effect);
-      markDirty();
-      setEffects((prev) => [...prev, { ...effect, scenarioId: scenarioId ?? '' }]);
-    },
-    pushRemoveEffect: (effectId: string) => {
-      opsBuffer.pushRemoveEffect(effectId);
-      markDirty();
-      setEffects((prev) => prev.filter((e) => e.id !== effectId));
-      setMarkerTooltip(null);
-    },
-  };
+  const spellOps = useSpellOps({
+    scenarioId,
+    opsBuffer,
+    setEffects,
+    markDirty,
+  });
 
   const handleSubdivisionChange = (id: string) => setActiveSubdivisionId(id);
 
@@ -525,6 +431,17 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       setDarknessMode('apply');
       return;
     }
+    // The hechizo tool requires an active combat (it needs a caster to
+    // attach the spell to). Shortcut here: toast + return. The current
+    // tool stays put so the aside keeps showing whatever palette was
+    // already mounted (paint → PiecePalette, erase/darkness → placeholder).
+    if (newTool === 'effects' && !combatSession.isActive) {
+      toast.error('Iniciá un combate para usar hechizos', {
+        id: 'spell-needs-combat',
+        duration: 3500,
+      });
+      return;
+    }
     // Any non-darkness tool leaves the current darkness mode unchanged.
     setTool(newTool);
   };
@@ -628,6 +545,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       previousTurn: combatOps.previousTurn,
       advanceRound: combatOps.advanceRound,
       addCombatant: () => openCombatModal({ mode: 'add' }),
+      rotateSpell: () => setSpellRotationDeg(rotateBy90(spellRotationDeg)),
       modalOpenRef,
       save: () => {
         if (isSaving) return;
@@ -676,14 +594,18 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             onSelect={setActivePieceId}
           />
         ) : null}
-        {tool === 'effects' ? (
+        {tool === 'effects' && combatSession.isActive && (
           <SpellPalette
             selectedId={selectedSpellTemplateId}
             rotation={spellRotationDeg}
-            onSelect={setSelectedSpellTemplateId}
+            onSelect={(id) =>
+                  setSelectedSpellTemplateId((prev) => (prev === id ? null : id))
+                }
             onRotate={() => setSpellRotationDeg(rotateBy90(spellRotationDeg))}
+            durationRounds={spellDurationRounds}
+            onDurationChange={setSpellDurationRounds}
           />
-        ) : null}
+        )}
         {tool === 'erase' || tool === 'darkness' ? (
           <p className={styles.helpText}>
             Esta herramienta no usa piezas ni hechizos.
@@ -744,7 +666,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
                   onClick={handleClearAll}
                   disabled={paintedCells.length === 0}
                 >
-                  🗑 Todo el scenario
+                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" /> Todo el scenario
                 </button>
                 <button
                   type="button"
@@ -752,7 +674,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
                   onClick={handleClearFloor}
                   disabled={paintedInFloor === 0}
                 >
-                  🗑 {activeFloor.name}
+                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" /> {activeFloor.name}
                 </button>
                 <button
                   type="button"
@@ -765,7 +687,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
                     ).length === 0
                   }
                 >
-                  🗑 {activeSubdivision?.name ?? 'Subcapa'}
+                  <FontAwesomeIcon icon={faTrash} aria-hidden="true" />{' '}
+                  {activeSubdivision?.name ?? 'Subcapa'}
                 </button>
               </div>
             )}
@@ -882,23 +805,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           {autosaveStatus === 'error' && '✗ Error al guardar'}
           {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
         </span>
-        {combatSession.isActive ? (
-          <span className={styles.combatIndicator}>
-            <span>
-              ● Combate · Ronda {combatSession.roundNumber} ·{' '}
-              {combatSession.currentCombatant?.name ?? '—'}
-            </span>
-            <Button
-              type="button"
-              size="mini"
-              variant="danger"
-              onClick={() => setConfirmEndCombat(true)}
-              title="Finalizar combate"
-            >
-              <FontAwesomeIcon icon={faTimes} /> Finalizar
-            </Button>
-          </span>
-        ) : null}
         <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
           {isSaving ? (
             <>
@@ -933,14 +839,41 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
-          onMarkerClick={(effectId, screenPos) => {
-            setMarkerTooltip({ effectId, position: screenPos });
-          }}
+          onRotateSpell={() => setSpellRotationDeg(rotateBy90(spellRotationDeg))}
           onPlaceSpell={(cell) => {
-            if (!selectedSpellTemplateId) return;
-            const sorted = sortCombatants(combatSession.combat?.combatants ?? []);
-            const caster = sorted[combatSession.combat?.currentTurnIndex ?? 0];
-            if (!caster) return;
+            if (!selectedSpellTemplateId) {
+              // Tool is `effects` but no template was picked from the
+              // SpellPalette. Tell the GM instead of failing silently.
+              toast.error('Elegí un hechizo del panel para colocar.', {
+                id: 'spell-no-template',
+              });
+              return;
+            }
+            const caster = combatSession.currentCombatant;
+            if (!caster) {
+              // The hechizo needs a caster for the expiry rule. The
+              // combat exists but has no combatants (or the cursor
+              // points out of range). Tell the GM instead of failing
+              // silently.
+              toast.error(
+                'Agregá un combatiente al combate antes de lanzar un hechizo.',
+                { id: 'spell-no-caster' },
+              );
+              return;
+            }
+            // Defensive: the caster picked from the sorted list must
+            // exist in the live combatant roster, otherwise the wire
+            // would carry a `casterCombatantId` that the server cannot
+            // satisfy and the save would 500. This branch is only
+            // reachable if the local state has drifted (e.g. an
+            // `addCombatant` op was queued but not yet flushed to the
+            // combatant list) — surface it instead of failing silently.
+            if (!combatSession.combat?.combatants.some((c) => c.id === caster.id)) {
+              toast.error('Estado de combate inconsistente. Recargá la página.', {
+                id: 'spell-stale-combat',
+              });
+              return;
+            }
             spellOps.pushAddEffect({
               id: newId('effect'),
               floorId: activeFloorId,
@@ -948,6 +881,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
               originCellX: cell.gridX,
               originCellY: cell.gridY,
               rotationDeg: spellRotationDeg,
+              durationRounds: spellDurationRounds,
               casterCombatantId: caster.id,
               castOnTurnIndex: combatSession.combat?.currentTurnIndex ?? 0,
               castOnRoundNumber: combatSession.combat?.roundNumber ?? 1,
@@ -965,7 +899,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       {traitMenu.render}
 
       <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
-      <RoundViewer combat={combatSession.combat} />
+      <RoundViewer combat={combatSession.combat} onEndCombat={() => setConfirmEndCombat(true)} />
       <CombatModal
         isOpen={combatModalOpen}
         mode={combatModalMode}
@@ -976,32 +910,16 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         onAddCombatant={combatOps.addCombatant}
         onRemoveCombatant={combatOps.removeCombatant}
       />
-      {markerTooltip
-        ? (() => {
-            const effect = effects.find((e) => e.id === markerTooltip.effectId);
-            if (!effect) return null;
-            return (
-              <EffectTooltip
-                effect={effect}
-                position={markerTooltip.position}
-                onRemove={() => {
-                  spellOps.pushRemoveEffect(effect.id);
-                  setMarkerTooltip(null);
-                }}
-              />
-            );
-          })()
-        : null}
       <Modal
         isOpen={confirmEndCombat}
         title="¿Finalizar el combate?"
         onClose={() => setConfirmEndCombat(false)}
       >
-        <p style={{ marginTop: 0 }}>
+        <p className={styles.confirmMessage}>
           Se borrarán todos los combatientes del combate actual y la ronda vuelve a 1 cuando
           inicies el próximo. Esta acción no se puede deshacer.
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+        <div className={styles.confirmActions}>
           <Button type="button" onClick={() => setConfirmEndCombat(false)} title="Cancelar">
             Cancelar
           </Button>

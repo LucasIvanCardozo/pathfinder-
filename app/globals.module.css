@@ -4,6 +4,10 @@
   --fg: #e6e7ea;
   --fg-muted: #8a8f99;
   --accent: #c9a86a;
+  /* Foreground colour for text sitting on top of `--accent` (e.g. the active tool
+     button, the active brush-shape label, the primary modal CTA). Picked to
+     preserve the contrast ratio that `#1a1206` provided inline. */
+  --on-accent: #1a1206;
   --border: #262a31;
   --grid: #3d4350;
   --aside-width: 168px;

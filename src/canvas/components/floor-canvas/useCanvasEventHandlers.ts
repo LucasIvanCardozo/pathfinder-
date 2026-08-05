@@ -5,6 +5,11 @@ import { useCallback } from 'react';
 import type { Piece, PaintedCell, SubdivisionConfig } from '@/lib/shared/types';
 import type { BrushCell, ToolKind } from '../../tools';
 import { findInteractiveCellAtPixel } from '../../traits';
+import {
+  templateById,
+  templateSupportsRotation,
+  type SpellTemplateId,
+} from '../../effects/spell-templates';
 
 export type FloorCanvasEvents = {
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -46,6 +51,14 @@ type UseCanvasEventHandlersArgs = {
   onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
   /** Current tool so the handler can dispatch on `tool === 'effects'`. */
   tool?: ToolKind;
+  /** PR Y: currently-selected spell template id (or `null`). Used by the
+   *  context-menu handler to rotate the preview 90° on right-click when
+   *  a cone is selected. */
+  selectedSpellTemplateId?: SpellTemplateId | null;
+  /** PR Y: callback fired by the context-menu handler when the user
+   *  right-clicks with the `effects` tool and a rotation-eligible
+   *  template selected. The parent rotates the rotation state. */
+  onRotateSpell?: () => void;
 };
 
 /**
@@ -87,6 +100,15 @@ export function useCanvasEventHandlers(
         // forward the active-subdivision cell to the parent so the modal
         // can pre-fill the anchor.
         if (args.tool === 'effects') {
+          // If the click landed on a marker Group, skip placement — the
+          // Group's onClick handler opens the tooltip. We don't rely on
+          // `e.cancelBubble` alone (racey with react-konva's listener
+          // registration) nor on `e.target === stage` (clicks on empty
+          // cells land on a Layer's canvas, not the Stage itself).
+          // Checking `getType() === 'Group'` is the precise path: every
+          // marker is wrapped in a Group inside EffectsLayer; Layers,
+          // Rects, and the Stage are not Groups so they fall through.
+          if (e.target.getType() === 'Group') return;
           const cell = args.pointerToCell(pointer);
           if (cell && args.onPlaceSpell) {
             args.onPlaceSpell(cell);
@@ -157,6 +179,19 @@ export function useCanvasEventHandlers(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!isActive) return;
       e.evt.preventDefault();
+      // PR Y: right-click rotates the spell preview 90° when the `effects`
+      // tool is active and a rotation-eligible template (cone) is selected.
+      // Fall through to the trait-menu flow when the gate doesn't match so
+      // piece clicks (doors, chests, etc.) keep working in any tool.
+      if (
+        args.tool === 'effects' &&
+        args.selectedSpellTemplateId &&
+        args.onRotateSpell &&
+        templateSupportsRotation(templateById(args.selectedSpellTemplateId))
+      ) {
+        args.onRotateSpell();
+        return;
+      }
       if (!onOpenTraitMenu) return;
       const pointer = getPointer();
       if (!pointer) return;

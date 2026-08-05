@@ -67,6 +67,26 @@ Server Action ('use server') → Use Case → Repository → Prisma
 
 Do not pass Prisma model instances across this boundary or keep mutable request state at module scope.
 
+### Op-merged mutations (combat + effects)
+
+`Combat` and `ScenarioEffect` mutations flow through `ScenarioOp` (`addCombatant`,
+`removeCombatant`, `startCombat`, `endCombat`, `nextTurn`, `previousTurn`,
+`advanceRound`, `addEffect`, `removeEffect`) and are replayed inside
+`scenario.repository.applyOpsInTx`. There is no independent Server Action for
+either entity because the autosave pipeline owns every mutation channel and
+adding a parallel write path would split the same row across two TXs.
+
+The pattern still holds for reads: `combatUseCases.findByScenario` is a read
+returned by `combat.repository.findByScenario`; `ScenarioEffect` rows travel
+inside `LoadScenarioResult.effects` from `scenarioUseCases.findById`. What is
+shared is the **write** layer: `applyOp` delegates combat mutations to
+`combatRepository` and effect mutations to `effectRepository` so each entity
+still owns its own Prisma queries.
+
+When to break the exception: if `Combat` or `ScenarioEffect` ever needs more
+than five mutations independent of `Scenario` state, extract a dedicated
+Server Action + use case per entity and stop routing through `ScenarioOp`.
+
 ## 7. Action results and control flow
 
 The canonical envelope (Carta QR target) is exactly:
@@ -110,4 +130,4 @@ Pathfinder has **no authentication, no multi-tenancy, no realtime (Soketi/pusher
 
 ## 12. Migration debt
 
-Known non-compliant areas: `src/app/actions/{scenarios,subdivisions}.ts` use direct Prisma + mixed result contracts (transitional; new work goes to TARGET `lib/server/actions/`, not `src/app/actions/`); `src/canvas/weather/WeatherPanel.tsx` uses whole-form `methods.watch`; `src/app/components/SubdivisionManager.tsx` uses inline `watch("pieceIds")`; ID generation was duplicated in `src/app/actions/scenarios.ts` and `src/app/editor/EditorClient.tsx` (now centralised in `lib/shared/utils/generateId.ts`); `src/db/client.ts` and `src/pieces/{types,schemas,traits}.ts` are transitional; the empty `src/components/` and `src/app/components/forms/` directories and unused `eslint.config.mjs` need cleanup; `README.md` describes an aspirational monorepo instead of the current single-app tree. The plain-CSS files (`src/app/*.css`, `src/canvas/**/*.css`) migrate to CSS Modules. Recent cleanups: `app/admin/pieces/page.tsx` now owns its own `page.module.css` (was borrowing from `app/page.module.css`); `src/canvas/components/FloorCanvas.tsx` and `app/editor/EditorClient.tsx` were extracted into smaller hooks and modules; `hooks/useStageViewport.ts` was split into `useViewportSize`, `useSpaceKey`, `usePanState`; the `@/canvas` barrel was pruned to the symbols actually consumed externally; the dead `components/Modal.tsx` and `hooks/useReload.ts` were deleted; `lib/shared/constants/catalog.ts` was renamed to `image-pipeline.ts` to match its contents. Do not turn this list into an unrelated refactor; when changing a listed area, migrate it toward the docs above before adding new behavior.
+Known non-compliant areas: `src/app/actions/{scenarios,subdivisions}.ts` use direct Prisma + mixed result contracts (transitional; new work goes to TARGET `lib/server/actions/`, not `src/app/actions/`); `src/canvas/weather/WeatherPanel.tsx` uses whole-form `methods.watch`; `src/app/components/SubdivisionManager.tsx` uses inline `watch("pieceIds")`; ID generation was duplicated in `src/app/actions/scenarios.ts` and `src/app/editor/EditorClient.tsx` (now centralised in `lib/shared/utils/generateId.ts`); `src/db/client.ts` and `src/pieces/{types,schemas,traits}.ts` are transitional; the empty `src/components/` and `src/app/components/forms/` directories and unused `eslint.config.mjs` need cleanup; `README.md` describes an aspirational monorepo instead of the current single-app tree. The plain-CSS files (`src/app/*.css`, `src/canvas/**/*.css`) migrate to CSS Modules. Recent cleanups: `app/admin/pieces/page.tsx` now owns its own `page.module.css` (was borrowing from `app/page.module.css`); `src/canvas/components/FloorCanvas.tsx` and `app/editor/EditorClient.tsx` were extracted into smaller hooks and modules; `hooks/useStageViewport.ts` was split into `useViewportSize`, `useSpaceKey`, `usePanState`; the `@/canvas` barrel was pruned to the symbols actually consumed externally; the dead `components/Modal.tsx` and `hooks/useReload.ts` were deleted; `lib/shared/constants/catalog.ts` was renamed to `image-pipeline.ts` to match its contents; the combat tracker + spellcasting refactor (PRs 1–4) split `effect` into its own five-file layer (`effect.{repository,usecases,action}.ts` — the last two are documented stubs because the entity is op-merged into `ScenarioOp`), extracted `app/editor/hooks/use-combat-ops.ts` + `use-spell-ops.ts` so the editor stays under ~1000 lines, and migrated `effectsWithBlockedFootprint` + `useEffectMarkers` onto a shared `src/canvas/effects/blocked.ts` helper. Do not turn this list into an unrelated refactor; when changing a listed area, migrate it toward the docs above before adding new behavior.

@@ -188,6 +188,20 @@ export const SHORTCUTS = {
     label: 'Agregar combatiente',
     category: 'combat',
   },
+  /**
+   * PR 3 of the spellcasting refactor: rotate the currently-selected
+   * spell template 90° clockwise. Bound to `Q` because the other
+   * common letter shortcuts are already taken by the combat tracker
+   * (C, N, J, R, K) and the brush (B, V). The shortcut is a no-op when
+   * the selected template is a circle (rotation is irrelevant) or
+   * when no template is selected.
+   */
+  rotateSpell: {
+    id: 'rotateSpell',
+    code: KEYS_BY_CODE.keyQ,
+    label: 'Rotar hechizo 90°',
+    category: 'combat',
+  },
   save: {
     id: 'save',
     code: KEYS_BY_CODE.keyS,

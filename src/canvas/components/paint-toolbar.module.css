@@ -36,7 +36,7 @@
 
 .tool.active {
   background: var(--accent);
-  color: #1a1206;
+  color: var(--on-accent);
   border-color: var(--accent);
   font-weight: 500;
 }
@@ -166,7 +166,7 @@
 
 .shapeActive {
   background: var(--accent);
-  color: #1a1206;
+  color: var(--on-accent);
   border-color: var(--accent);
   font-weight: 500;
 }

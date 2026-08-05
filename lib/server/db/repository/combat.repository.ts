@@ -17,7 +17,7 @@ import type { Combatant, CombatantInsert, CombatView } from '@/lib/shared/types/
  *     is NOT required to be gap-free.
  *   - `nextTurn` wraps past the last combatant → increments `roundNumber` and
  *     resets to 0; the caller is responsible for invoking
- *     `effectRepository(tx).tickRoundInTx` in the same TX on wrap.
+ *     `effectRepository(tx).expireRoundInTx` in the same TX on wrap.
  *   - `previousTurn` clamps at round 1 / turn 0 (asymmetric — rolling back
  *     from round 1 turn 0 stays put; it does NOT decrement `roundNumber`).
  */
@@ -71,23 +71,9 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
       combatants: readonly CombatantInsert[],
     ): Promise<CombatView> {
       const combatId = newId('combat');
-      // Insert combatants in wire order with sequential `position`s. Wire
-      // order is already initiative-desc per the modal's UI; assigning
-      // positions in that order keeps the column aligned with the read
-      // ordering at start-of-combat. Re-sorting here would be wasted work.
-      const created = await tx.combatant.createMany({
-        data: combatants.map((c, i) => ({
-          id: newId('combatant'),
-          combatId,
-          name: c.name,
-          initiative: c.initiative,
-          side: c.side,
-          position: i,
-        })),
-      });
-      // createMany doesn't return rows on Postgres; re-fetch to build the DTO.
-      // The combat row itself comes from the create below so the include is
-      // satisfied in one round-trip.
+      // The Combat row MUST be created before the Combatants — the
+      // `Combatant.combatId` FK references `Combat.id`. Inserting children
+      // before the parent violates `Combatant_combatId_fkey`.
       const combat = await tx.combat.create({
         data: { id: combatId, scenarioId },
         include: {
@@ -95,6 +81,24 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
             orderBy: [{ initiative: 'desc' }, { id: 'asc' }],
           },
         },
+      });
+      // Insert combatants in wire order with sequential `position`s. Wire
+      // order is already initiative-desc per the modal's UI; assigning
+      // positions in that order keeps the column aligned with the read
+      // ordering at start-of-combat. Re-sorting here would be wasted work.
+      const created = await tx.combatant.createMany({
+        data: combatants.map((c, i) => ({
+          // Honour the client-supplied id when present (the GM may have
+          // already referenced it via `casterCombatantId` on a spell
+          // casted before the autosave fired). Fall back to a fresh
+          // cuid otherwise.
+          id: c.id ?? newId('combatant'),
+          combatId,
+          name: c.name,
+          initiative: c.initiative,
+          side: c.side,
+          position: i,
+        })),
       });
       // `created.count` is informational; the rows live on the included
       // `combat.combatants` and are mapped via `toCombatView`.
@@ -116,7 +120,11 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
       const count = await tx.combatant.count({ where: { combatId } });
       const created = await tx.combatant.create({
         data: {
-          id: newId('combatant'),
+          // Honour the client-supplied id when present (the GM may have
+          // already referenced it via `casterCombatantId` on a spell
+          // casted before the autosave fired). See `createInTx` for the
+          // symmetric case at combat-start time.
+          id: input.id ?? newId('combatant'),
           combatId,
           name: input.name,
           initiative: input.initiative,
@@ -139,7 +147,7 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
     /**
      * Advance `currentTurnIndex` by +1. If it wraps past the last combatant,
      * increments `roundNumber` and resets to 0. The caller MUST invoke
-     * `effectRepository(tx).tickRoundInTx(tx, scenarioId)` inside the same
+     * `effectRepository(tx).expireRoundInTx(tx, scenarioId)` inside the same
      * TX on `wrapped === true` (locked decision — see design §11.5).
      */
     async nextTurnInTx(
@@ -191,7 +199,7 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
 
     /**
      * Force-increment `roundNumber` and reset `currentTurnIndex` to 0. The
-     * caller MUST invoke `effectRepository(tx).tickRoundInTx(tx, scenarioId)`
+     * caller MUST invoke `effectRepository(tx).expireRoundInTx(tx, scenarioId)`
      * inside the same TX (locked decision — manual advance also ticks).
      */
     async advanceRoundInTx(tx: Prisma.TransactionClient, combatId: string): Promise<void> {

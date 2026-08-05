@@ -7,6 +7,11 @@ export const SideSchema = z.enum(['players', 'enemies', 'neutral']);
 /** Wire shape for inserting a new combatant. Mirrors `Combatant` minus the
  *  server-stamped `id` and `combatId`. */
 export const CombatantInsertSchema = z.object({
+  // Client-supplied id is optional. When present, the server uses it so the
+  // locally-generated ids (which the GM has already linked to effects via
+  // `casterCombatantId`) match the persisted rows. When absent, the server
+  // falls back to its own `cuid()` default.
+  id: z.string().min(1).optional(),
   name: z.string().min(1).max(120),
   initiative: z.number().int().min(-10).max(40),
   side: SideSchema,

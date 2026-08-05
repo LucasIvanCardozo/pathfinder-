@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { PaintedCell, ScenarioEffect, SubdivisionConfig } from '@/lib/shared/types';
+import { isEffectBlockedByWall } from '../effects/blocked';
 import { templateById } from '../effects/spell-templates';
 import { computeEffectFootprint } from '../effects/footprint';
 import { eraseFootprintFor } from '../tools/eraseFootprint';
@@ -74,8 +75,7 @@ export type UseEffectMarkersArgs = {
  *                           cells).
  */
 export function useEffectMarkers({
-  // `floorId` accepted for API stability; unused in the body.
-  floorId: _floorId,
+  floorId,
   effects,
   paintedCells,
   subdivisions,
@@ -88,6 +88,11 @@ export function useEffectMarkers({
       subdivisions.find((s) => s.id !== 'obscured' && s.id !== 'estructuras') ?? subdivisions[0];
     if (!activeSub) return [];
 
+    // Filter to effects placed on THIS floor. Without this filter every
+    // FloorCanvas renders every effect in the scenario, so a fireball on
+    // Planta Baja appears identically on every floor above and below it.
+    const floorEffects = effects.filter((e) => e.floorId === floorId);
+
     // Pre-compute the wall set once per call. Lookups inside the per-cell
     // BFS use string keys so the closure stays side-effect free.
     const wallKeys = new Set<string>();
@@ -98,7 +103,7 @@ export function useEffectMarkers({
     }
     const isWall = (x: number, y: number) => wallKeys.has(`${x}|${y}`);
 
-    return effects.map<EffectMarker>((effect) => {
+    return floorEffects.map<EffectMarker>((effect) => {
       const template = templateById(effect.templateId);
       // Anchor is already a cell coord (the editor pre-fills with the
       // `gridX` / `gridY` of the cell the GM clicked). `Math.round` is a
@@ -117,8 +122,11 @@ export function useEffectMarkers({
         visibleCells,
         template,
         anchor,
-        blockedByWall: visibleCells.length === 0,
+        // Same wall-aware BFS as the renderer, routed through the shared
+        // helper so the `EffectTooltip` blocked-by-wall hint and the
+        // vignette marker can never diverge from the renderer's verdict.
+        blockedByWall: isEffectBlockedByWall(effect, paintedCells, subdivisions),
       };
     });
-  }, [effects, paintedCells, subdivisions]);
+  }, [effects, paintedCells, subdivisions, floorId]);
 }

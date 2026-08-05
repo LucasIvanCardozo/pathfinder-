@@ -273,7 +273,7 @@
 .primaryButton {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #1a1206;
+  color: var(--on-accent);
 }
 
 .secondaryButton {

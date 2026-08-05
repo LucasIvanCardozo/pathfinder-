@@ -59,13 +59,18 @@ export function cellsContentEqual(a: PaintedCell[], b: PaintedCell[]): boolean {
  *
  * When both sides are inactive, a number of props are decorative:
  * - `isPanDown`, `isPanning`, `beginPan`, and the callbacks (`onPaint`,
- *   `onDarknessErase`, `onOpenTraitMenu`): every event handler short-circuits
- *   on `!isActive`, and the cursor is only applied to the active container.
+ *   `onDarknessErase`, `onPlaceSpell`, `onOpenTraitMenu`): every event
+ *   handler short-circuits on `!isActive`, and the cursor is only applied
+ *   to the active container. `onPlaceSpell` is in the list so the FloorCanvas
+ *   re-renders when its closure changes (e.g. the spell duration state
+ *   mutates between renders — without the comparison the stale closure
+ *   reads the old duration and the spell is cast with the wrong value).
  * - `activeSubdivisionId`, `activePieceId`, `tool`, `darknessMode`,
- *   `brushSize`, `brushShape`, `showBrushPreview`: the brush preview's
- *   `hoverCell` is cleared when `isActive` flips to false (see the
- *   `setHoverCell(null)` effect in `FloorCanvas`), so `previewCells` is
- *   always `[]` for an inactive floor and none of these reach the output.
+ *   `brushSize`, `brushShape`, `showBrushPreview`, `selectedSpellTemplateId`,
+ *   `spellRotationDeg`: the brush and spell previews both clear `hoverCell`
+ *   when `isActive` flips to false (see the `setHoverCell(null)` effect in
+ *   `FloorCanvas`), so the preview memos are always `null`/`[]` for an
+ *   inactive floor and none of these reach the output.
  *
  * Skipping them prevents the inactive stack from re-rendering on every tool
  * change, brush size/shape toggle, subdivision/piece selection, pan-modifier
@@ -91,12 +96,18 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
       if (!inactiveBothSides && prev.brushShape !== next.brushShape) changes.push('brushShape');
       if (!inactiveBothSides && prev.showBrushPreview !== next.showBrushPreview)
         changes.push('showBrushPreview');
+      if (!inactiveBothSides && prev.selectedSpellTemplateId !== next.selectedSpellTemplateId)
+        changes.push('selectedSpellTemplateId');
+      if (!inactiveBothSides && prev.spellRotationDeg !== next.spellRotationDeg)
+        changes.push('spellRotationDeg');
       if (!inactiveBothSides && prev.beginPan !== next.beginPan) changes.push('beginPan');
       if (!inactiveBothSides && prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
       if (!inactiveBothSides && prev.isPanning !== next.isPanning) changes.push('isPanning');
       if (!inactiveBothSides && prev.onPaint !== next.onPaint) changes.push('onPaint');
       if (!inactiveBothSides && prev.onDarknessErase !== next.onDarknessErase)
         changes.push('onDarknessErase');
+      if (!inactiveBothSides && prev.onPlaceSpell !== next.onPlaceSpell)
+        changes.push('onPlaceSpell');
       if (!inactiveBothSides && prev.onOpenTraitMenu !== next.onOpenTraitMenu)
         changes.push('onOpenTraitMenu');
       if (changes.length > 0) {
@@ -123,6 +134,8 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     (inactiveBothSides || prev.brushSize === next.brushSize) &&
     (inactiveBothSides || prev.brushShape === next.brushShape) &&
     (inactiveBothSides || prev.showBrushPreview === next.showBrushPreview) &&
+    (inactiveBothSides || prev.selectedSpellTemplateId === next.selectedSpellTemplateId) &&
+    (inactiveBothSides || prev.spellRotationDeg === next.spellRotationDeg) &&
     prev.textureImages === next.textureImages &&
     prev.viewportSize === next.viewportSize &&
     prev.pan === next.pan &&
@@ -132,6 +145,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     (inactiveBothSides || prev.isPanning === next.isPanning) &&
     (inactiveBothSides || prev.onPaint === next.onPaint) &&
     (inactiveBothSides || prev.onDarknessErase === next.onDarknessErase) &&
+    (inactiveBothSides || prev.onPlaceSpell === next.onPlaceSpell) &&
     (inactiveBothSides || prev.onOpenTraitMenu === next.onOpenTraitMenu)
   );
 }

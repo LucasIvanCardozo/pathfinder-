@@ -151,3 +151,46 @@ export const MODIFIER_HELP = {
   ctrl: 'boolean — require Ctrl (or Cmd on Mac) at the time of the keypress',
   shift: 'boolean — require Shift at the time of the keypress',
 } as const;
+
+
+/**
+ * Display labels for `KeyboardEvent.code` values. We show the character the
+ * key *typically produces* on US/LATAM (the most common layouts for this app's
+ * users) rather than the raw `code` identifier. The binding itself is by
+ * `code`, so the shortcut still fires when the same physical key produces a
+ * different character on another layout.
+ *
+ * Server-component friendly (no React, no DOM) so the help page can render
+ * shortcuts without going through a `'use client'` boundary. Originally
+ * lived inline in `components/ShortcutsModal.tsx`; promoted to the constants
+ * module so the documentation page and the modal stay in sync.
+ */
+export const KEY_CODE_LABELS: Record<string, string> = {
+  KeyA: 'A', KeyB: 'B', KeyC: 'C', KeyD: 'D', KeyE: 'E', KeyF: 'F',
+  KeyG: 'G', KeyH: 'H', KeyI: 'I', KeyJ: 'J', KeyK: 'K', KeyL: 'L',
+  KeyM: 'M', KeyN: 'N', KeyO: 'O', KeyP: 'P', KeyQ: 'Q', KeyR: 'R',
+  KeyS: 'S', KeyT: 'T', KeyU: 'U', KeyV: 'V', KeyW: 'W', KeyX: 'X',
+  KeyY: 'Y', KeyZ: 'Z',
+  Digit0: '0', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4',
+  Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Equal: '=',
+  Minus: '-',
+  /**
+   * Slash shows as `?` because the toggle-shortcuts-modal shortcut is bound
+   * to the physical Slash key, which produces `?` with Shift on US/LATAM.
+   * On layouts where `?` is on a different physical key, this binding won't
+   * fire.
+   */
+  Slash: '?',
+  Backslash: '\\',
+  Space: 'Espacio',
+  Escape: 'Esc',
+  ControlLeft: 'Ctrl',
+  ControlRight: 'Ctrl',
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→',
+};

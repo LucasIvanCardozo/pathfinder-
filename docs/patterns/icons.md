@@ -52,8 +52,17 @@ Prefer CSS variables from `app/globals.module.css` for colour so theming stays c
 
 - Inline SVG paths from third-party sources. Wraps and steals focus incorrectly.
 - Importing the entire library: `import * as icons from '@fortawesome/free-solid-svg-icons'`. Always import the named icon you need.
-- Mixing emoji with FontAwesome. Pick one.
+- Mixing emoji with FontAwesome in DOM nodes. Pick one.
 - Adding new icon packages (`react-icons`, `lucide-react`, `heroicons`) without an explicit decision. Stick to FontAwesome.
+
+## Konva canvas exception
+
+Konva renderers (`src/canvas/components/**.tsx` that emit `<Layer>` / `<Group>`
+etc.) render glyphs through `<Text>` directly onto the HTML5 canvas. FontAwesome
+ships as SVG and is not addressable from Konva. Within those files, an emoji or
+Unicode glyph (e.g. `🕓` for a clock-strikethrough vignette) is the legitimate
+signal choice. The DOM above the canvas (popovers, tooltips, buttons) still
+follows the FontAwesome-only rule.
 
 ## CURRENT vs TARGET
 

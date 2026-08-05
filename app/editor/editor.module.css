@@ -189,18 +189,6 @@
   border-color: #2a5a2a;
 }
 
-.combatIndicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid #2a5a2a;
-  border-radius: 4px;
-  background: var(--bg);
-  color: #7adc7a;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
 
 /* Danger menu opened from the Popover. Mirrors the toolbar row look so the
    layout inside the popover feels native to the floating aside. */
@@ -250,4 +238,17 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
+}
+
+/* "Finalizar combate" confirm dialog. The danger-action row mirrors the
+   Confirm-cancel layout used by other modal flows (CombatModal's confirmEnd
+   block) so the chrome stays consistent. */
+.confirmMessage {
+  margin: 0;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }

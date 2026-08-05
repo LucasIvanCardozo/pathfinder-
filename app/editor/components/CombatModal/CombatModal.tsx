@@ -94,7 +94,7 @@ export function CombatModal({
 
   const handleRemove = (combatant: ListedCombatant) => {
     if (combat) {
-      if ('id' in combatant) {
+      if ('id' in combatant && combatant.id) {
         onRemoveCombatant(combatant.id);
         return;
       }

@@ -61,11 +61,6 @@ type Props = {
     screenPos: { x: number; y: number },
   ) => void;
   /**
-   * Fired when the user clicks a spell marker on the canvas. The parent
-   * (EditorClient) opens the EffectTooltip with a "Quitar" action.
-   */
-  onMarkerClick?: (effectId: string, screenPos: { x: number; y: number }) => void;
-  /**
    * Fired when the user clicks an empty cell with the effects tool active
    * AND a spell template selected. The parent translates this into a
    * `pushAddEffect` with the cast snapshot (casterCombatantId +
@@ -73,6 +68,10 @@ type Props = {
    * `null` the click is a no-op (the parent ignores it).
    */
   onPlaceSpell?: (cell: { gridX: number; gridY: number }) => void;
+  /** PR Y: callback fired when the user right-clicks the canvas with the
+   *  `effects` tool active and a cone selected. Rotates the spell preview
+   *  90° clockwise. Plumbed through to FloorCanvas → useCanvasEventHandlers. */
+  onRotateSpell?: () => void;
   /**
    * Currently-selected spell template id (when tool === 'effects') or
    * `null`. Propagated so FloorCanvas can draw the brush preview with the
@@ -113,8 +112,8 @@ function FloorStackImpl({
   onPaint,
   onDarknessErase,
   onOpenTraitMenu,
-  onMarkerClick,
   onPlaceSpell,
+  onRotateSpell,
   selectedSpellTemplateId,
   spellRotationDeg,
   overlay,
@@ -171,8 +170,8 @@ function FloorStackImpl({
             onPaint={onPaint}
             onDarknessErase={onDarknessErase}
             onOpenTraitMenu={onOpenTraitMenu}
-            onMarkerClick={onMarkerClick}
             onPlaceSpell={onPlaceSpell}
+            onRotateSpell={onRotateSpell}
             selectedSpellTemplateId={selectedSpellTemplateId}
             spellRotationDeg={spellRotationDeg}
           />

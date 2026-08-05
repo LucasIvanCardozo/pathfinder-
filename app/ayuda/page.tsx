@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { Fraunces } from 'next/font/google';
 import type { Metadata } from 'next';
+import {
+  KEY_CODE_LABELS,
+  listShortcuts,
+  type ShortcutCategory,
+  type ShortcutDef,
+} from '@/lib/shared/constants';
 import styles from './page.module.css';
 
 const display = Fraunces({
@@ -46,7 +52,9 @@ type IconName =
   | 'cloud'
   | 'trash'
   | 'alert'
-  | 'arrow';
+  | 'arrow'
+  | 'combat'
+  | 'spell';
 
 const ICON_LABELS: Record<IconName, string> = {
   paint: 'Pintar',
@@ -63,6 +71,8 @@ const ICON_LABELS: Record<IconName, string> = {
   trash: 'Limpiar',
   alert: 'Atención',
   arrow: 'Volver',
+  combat: 'Combate',
+  spell: 'Hechizos',
 };
 
 const ICONS: Record<IconName, React.ReactNode> = {
@@ -131,6 +141,18 @@ const ICONS: Record<IconName, React.ReactNode> = {
     </>
   ),
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  combat: (
+    <>
+      <path d="M12 3l8 5-8 5-8-5 8-5z" />
+      <path d="M12 13l3 8" />
+    </>
+  ),
+  spell: (
+    <>
+      <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
 };
 
 type Section = { id: string; number: string; title: string; lede?: string };
@@ -144,38 +166,72 @@ const SECTIONS: Section[] = [
   { id: 'subdivisiones', number: 'VI', title: 'Subdivisiones' },
   { id: 'pisos', number: 'VII', title: 'Pisos' },
   { id: 'estados', number: 'VIII', title: 'Estados de piezas' },
-  { id: 'atajos', number: 'IX', title: 'Atajos de teclado' },
-  { id: 'guardado', number: 'X', title: 'Guardado' },
-  { id: 'undo', number: 'XI', title: 'Deshacer y rehacer' },
-  { id: 'clima', number: 'XII', title: 'Clima y ambiente' },
-  { id: 'limpiar', number: 'XIII', title: 'Limpiar' },
-  { id: 'bugs', number: 'XIV', title: 'Cosas que pueden no funcionar bien' },
-  { id: 'reportar', number: 'XV', title: 'Si encontrás algo raro' },
+  { id: 'combate', number: 'IX', title: 'Combate' },
+  { id: 'hechizos', number: 'X', title: 'Hechizos' },
+  { id: 'atajos', number: 'XI', title: 'Atajos de teclado' },
+  { id: 'guardado', number: 'XII', title: 'Guardado' },
+  { id: 'undo', number: 'XIII', title: 'Deshacer y rehacer' },
+  { id: 'clima', number: 'XIV', title: 'Clima y ambiente' },
+  { id: 'limpiar', number: 'XV', title: 'Limpiar' },
+  { id: 'bugs', number: 'XVI', title: 'Cosas que pueden no funcionar bien' },
+  { id: 'reportar', number: 'XVII', title: 'Si encontrás algo raro' },
 ];
 
-// Shortcut list — duplicated from the editor's modal. The list is
-// canonical in `lib/shared/constants/shortcuts.ts`; this is a
-// hand-picked subset of the most common bindings, ordered for reading
-// flow rather than the registry's order.
-const SHORTCUTS: { keys: string[]; label: string }[] = [
-  { keys: ['B'], label: 'Pincel (pintar)' },
-  { keys: ['E'], label: 'Borrador' },
-  { keys: ['['], label: 'Reducir pincel' },
-  { keys: [']'], label: 'Aumentar pincel' },
-  { keys: ['⇧', 'B'], label: 'Cambiar forma del pincel' },
-  { keys: ['V'], label: 'Mostrar / ocultar preview del pincel' },
-  { keys: ['1', '2', '3', '4'], label: 'Cambiar subdivisión' },
-  { keys: ['⇧', '↑'], label: 'Subir de piso' },
-  { keys: ['⇧', '↓'], label: 'Bajar de piso' },
-  { keys: ['+'], label: 'Aumentar zoom' },
-  { keys: ['-'], label: 'Reducir zoom' },
-  { keys: ['Ctrl', 'Z'], label: 'Deshacer' },
-  { keys: ['Ctrl', '⇧', 'Z'], label: 'Rehacer' },
-  { keys: ['Ctrl', 'S'], label: 'Guardar manualmente' },
-  { keys: ['?'], label: 'Ver todos los atajos' },
-  { keys: ['H'], label: 'Mostrar / ocultar paneles' },
-  { keys: ['Esc'], label: 'Cerrar menú o modal' },
+// Shortcut list — derived from `lib/shared/constants/shortcuts.ts` so the
+// page can't drift from the editor's modal. Each shortcut is grouped by
+// category for reading flow; the order matches the in-editor `ShortcutsModal`
+// so a user who knows one screen can scan the other.
+const CATEGORY_LABELS: Record<ShortcutCategory, string> = {
+  tool: 'Herramientas',
+  brush: 'Pincel',
+  save: 'Guardado',
+  edit: 'Edición',
+  navigation: 'Navegación',
+  overlay: 'Paneles y overlays',
+  combat: 'Combate y hechizos',
+};
+
+// Display order; matches `ShortcutsModal.tsx::CATEGORY_ORDER`.
+const CATEGORY_DISPLAY_ORDER: ShortcutCategory[] = [
+  'tool',
+  'brush',
+  'navigation',
+  'edit',
+  'save',
+  'overlay',
+  'combat',
+];
+
+/** Format one binding as a list of key tokens for display. */
+function formatBindingKeys(def: ShortcutDef): string[] {
+  const tokens: string[] = [];
+  if (def.ctrl) tokens.push('Ctrl');
+  if (def.shift) tokens.push('⇧');
+  if (def.code) tokens.push(KEY_CODE_LABELS[def.code] ?? def.code);
+  return tokens;
+}
+
+/** Grouped shortcuts, derived from the registry. Excludes `panModifier` (it's a
+ *  press-and-hold modifier, not a discrete shortcut the GM presses) and the
+ *  subdivision template (no key of its own). `listShortcuts()` already filters
+ *  the latter. The pan modifier would render as `Ctrl + click + drag` which is
+ *  a UX pattern, not a key combo — we surface it separately below. */
+const SHORTCUTS_BY_CATEGORY: Record<ShortcutCategory, { keys: string[]; label: string }[]> =
+  (() => {
+    const out = {} as Record<ShortcutCategory, { keys: string[]; label: string }[]>;
+    for (const def of listShortcuts()) {
+      if (def.id === 'panModifier') continue; // handled separately
+      if (!out[def.category]) out[def.category] = [];
+      out[def.category].push({ keys: formatBindingKeys(def), label: def.label });
+    }
+    return out;
+  })();
+
+/** Modifier entries that aren't real keyboard shortcuts but the GM uses them. */
+const MODIFIER_SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ['Ctrl', 'click + drag'], label: 'Mover el mapa' },
+  { keys: ['Space', 'click + drag'], label: 'Mover el mapa (alternativo)' },
+  { keys: ['1', '2', '3', '4', '…'], label: 'Cambiar subdivisión (uno por capa)' },
 ];
 
 const SUBDIVISION_TABLE = [
@@ -238,26 +294,41 @@ export default function AyudaPage() {
               <li>Vas a entrar al editor con el piso <em>Planta Baja</em> activo.</li>
               <li>Cambiá el nombre del escenario desde el input de arriba a la izquierda. Se guarda solo.</li>
             </ol>
+            <Note>
+              Si el escenario ya tiene un combate guardado, vas a entrar con el
+              visor de combate activo abajo (mirá <a href="#combate">Combate</a>).
+              Para empezar de cero, finalizá el combate desde el botón del visor.
+            </Note>
           </Section>
 
           <Section id="layout" number="II" title="Layout del editor">
-            <p>El editor tiene tres zonas. Cada una cumple un rol distinto:</p>
+            <p>El editor tiene cuatro zonas. Cada una cumple un rol distinto:</p>
             <div className={styles.zoneGrid}>
               <ZoneCard
                 title="Panel izquierdo"
-                lede="Herramientas, piezas, clima, limpiar, atajos."
+                lede="Herramientas (pintar, borrar, oscuridad, hechizos) + paletas + botones de combate, atajos, clima y limpiar."
                 hint="Se oculta con H"
               />
               <ZoneCard
                 title="Barra superior"
-                lede="Nombre, navegación entre pisos, zoom, tabs de subdivisión, estado de guardado."
+                lede="Nombre, navegación entre pisos, zoom, tabs de subdivisión, estado de guardado, botón Guardar."
               />
               <ZoneCard
                 title="Lienzo central"
                 lede="El mapa en sí. Acá pintás con click y drag."
                 highlight
               />
+              <ZoneCard
+                title="Visor de combate (abajo)"
+                lede="Aparece cuando hay un combate activo: ronda actual, combatiente en turno, cola de iniciativa y botón Finalizar."
+              />
             </div>
+            <p>
+              El panel izquierdo cambia según la herramienta activa: muestra{' '}
+              <strong>Piezas</strong> cuando pintás, <strong>Hechizos</strong> cuando
+              lanzás spells (requiere combate activo). El visor de combate sólo
+              aparece si iniciaste un combate en el escenario actual.
+            </p>
           </Section>
 
           <Section id="pintar" number="III" title="Pintar" icon="paint">
@@ -351,14 +422,191 @@ export default function AyudaPage() {
             </Note>
           </Section>
 
-          <Section id="atajos" number="IX" title="Atajos de teclado" icon="keyboard">
+          <Section id="combate" number="IX" title="Combate" icon="combat">
+            <p>
+              El tracker de combate te deja manejar iniciativa, rondas y orden de turno
+              dentro del editor. Funciona como una sesión persistente: una vez que
+              iniciás un combate, queda activo hasta que lo finalices, aunque refresques
+              la página.
+            </p>
+            <ol className={styles.steps}>
+              <li>
+                Abrí el modal con el botón <strong>Combate</strong> del panel izquierdo
+                (ícono de escudo) o con el atajo <Kbd>C</Kbd>.
+              </li>
+              <li>
+                Agregá combatientes uno por uno: nombre, iniciativa (-10 a 40) y lado
+                (jugadores / enemigos / neutral). El orden de la cola se calcula por
+                iniciativa descendente, con el id del combatiente como desempate (el
+                primero insertado gana).
+              </li>
+              <li>
+                Hacé click en <strong>Iniciar combate</strong>. Se crea la ronda 1 y el
+                primer combatiente (initiative más alta) queda "up".
+              </li>
+              <li>
+                Desde el visor abajo o los atajos, avanzá el turno (<Kbd>N</Kbd>),
+                retrocedelo (<Kbd>J</Kbd>), forzá una ronda (<Kbd>R</Kbd>) o agregá un
+                combatiente al combate ya en curso (<Kbd>K</Kbd>).
+              </li>
+              <li>
+                Para finalizar, hacé click en <strong>Finalizar</strong> en el visor
+                (ícono de tacho rojo) y confirmá. Los combatientes se borran, los
+                hechizos lanzados por combatientes removidos también se limpian, y la
+                próxima vez que inicies un combate la ronda vuelve a 1.
+              </li>
+            </ol>
+            <Note>
+              Pasar al último combatiente de la cola <strong>incrementa la ronda</strong>{' '}
+              (regla PF1e): ese wrap es el límite del mundo. Es el mismo momento en el
+              que los hechizos con duración avanzan un round (ver{' '}
+              <a href="#hechizos">Hechizos</a>).
+            </Note>
+            <Note>
+              El id de cada combatiente se asigna en el cliente y el servidor lo honra
+              tal cual al persistir. Esto permite referenciar al combatiente desde
+              <code>casterCombatantId</code> en un hechizo <em>antes</em> de que el
+              autosave persista el combate — el hechizo ya queda linkeado al combatiente
+              correcto en el primer guardado.
+            </Note>
+          </Section>
+
+          <Section id="hechizos" number="X" title="Hechizos" icon="spell">
+            <p>
+              Los hechizos (AoE spells) son markers que colocás sobre el mapa durante un
+              combate activo. Tienen un color, una forma geométrica y una duración en
+              rondas del mundo. Hay 7 templates hardcodeados:
+            </p>
+            <div className={styles.subdivisionTable}>
+              <div className={styles.subdivisionRow}>
+                <div className={styles.subdivisionName}>Cono 15 pies</div>
+                <div className={styles.subdivisionPurpose}>
+                  Cono rojo. Dos puntos de inicio (NE y SW). Rota con <Kbd>Q</Kbd> o con
+                  click derecho sobre el canvas.
+                </div>
+              </div>
+              <div className={styles.subdivisionRow}>
+                <div className={styles.subdivisionName}>Cono 30 pies</div>
+                <div className={styles.subdivisionPurpose}>
+                  Cono naranja. Dos puntos de inicio (NE y SW). Rota con <Kbd>Q</Kbd> o
+                  con click derecho sobre el canvas.
+                </div>
+              </div>
+              <div className={styles.subdivisionRow}>
+                <div className={styles.subdivisionName}>Radio 5 pies</div>
+                <div className={styles.subdivisionPurpose}>Círculo azul. No rota.</div>
+              </div>
+              <div className={styles.subdivisionRow}>
+                <div className={styles.subdivisionName}>Radio 10 pies</div>
+                <div className={styles.subdivisionPurpose}>Círculo verde. No rota.</div>
+              </div>
+              <div className={styles.subdivisionRow}>
+                <div className={styles.subdivisionName}>Radio 20 pies</div>
+                <div className={styles.subdivisionPurpose}>Círculo violeta. No rota.</div>
+              </div>
+            </div>
+            <ol className={styles.steps}>
+              <li>
+                Activá la herramienta <strong>Hechizos</strong> del toolbar (ícono de
+                sombrero). Si no hay combate activo, sale un toast{' '}
+                <em>“Iniciá un combate para usar hechizos”</em>.
+              </li>
+              <li>
+                Elegí un template del <strong>SpellPalette</strong> en el panel
+                izquierdo. Si es un cono, podés rotarlo con <Kbd>Q</Kbd> o con
+                click derecho sobre el canvas (sobre celda vacía; el click derecho
+                sobre pieza sigue abriendo el menú de estados). Click sobre el mismo
+                card otra vez deselecciona el hechizo.
+              </li>
+              <li>
+                Elegí la duración en rondas (1–10 por default) con el dropdown del
+                SpellPalette. Un hechizo "muere" cuando el contador llega a 0.
+              </li>
+              <li>
+                Hacé click sobre una celda del mapa. Se coloca el marker con el color y
+                forma del template. El <code>casterCombatantId</code> queda asignado al
+                combatiente activo en ese momento.
+              </li>
+              <li>
+                El marker se queda fijo en el mapa con el color y la forma del
+                template. El click izquierdo sobre el marker no hace nada — no se
+                puede borrar manualmente.
+              </li>
+            </ol>
+            <p>
+              Los hechizos desaparecen del mapa de dos formas (ambas automáticas,
+              sin acción del GM):
+            </p>
+            <ul className={styles.bullets}>
+              <li>
+                <strong>Expiración por rondas</strong>: en el wrap de ronda (cuando el
+                cursor vuelve al primer combatiente) o en un{' '}
+                <Kbd>R</Kbd> (avanzar ronda manualmente), el server decrementa
+                <code>durationRounds</code> en cada marker y borra los que llegan a 0.
+              </li>
+              <li>
+                <strong>Cleanup al finalizar combate</strong>: al cerrar el combate
+                (botón Finalizar del visor), el server hace cascade delete de los
+                Combatants y borra <em>todos</em> los hechizos del escenario en la
+                misma TX (FK SetNull + <code>purgeOrphansInTx</code>). El mapa queda
+                limpio para el próximo combate.
+              </li>
+            </ul>
+            <Note>
+              <strong>Regla PF1e — cuándo tickean los hechizos</strong>: pasar al
+              último combatiente de la cola (lo que incrementa la ronda) es el{' '}
+              <em>único</em> momento en el que los hechizos envejecen. Avanzar un turno
+              intermedio no toca el contador. Si forzás una ronda con{' '}
+              <Kbd>R</Kbd>, también se tickea.
+            </Note>
+            <Note>
+              Si removés un combatiente mid-combate, sus hechizos se borran
+              preventivamente (pre-cascade) en la misma TX. No quedan markers
+              huérfanos flotando — ni durante el combate ni al finalizarlo.
+            </Note>
+          </Section>
+
+          <Section id="atajos" number="XI" title="Atajos de teclado" icon="keyboard">
             <p>
               Para ver la lista completa en el editor, presioná <Kbd>?</Kbd> (o el
-              botón de teclado en el panel izquierdo). Esta es una selección de los
-              más usados:
+              botón de teclado en el panel izquierdo). Esta es la tabla canónica del
+              editor, agrupada por categoría. Se genera directo del registro{' '}
+              <code>lib/shared/constants/shortcuts.ts</code>, así que cualquier atajo
+              nuevo que se sume al editor aparece acá automáticamente.
             </p>
+            <Note>
+              El atajo <Kbd>?</Kbd> está atado a la tecla física <code>/</code> (que
+              produce <Kbd>?</Kbd> con <Kbd>⇧</Kbd> en US/LATAM). En layouts donde{' '}
+              <Kbd>?</Kbd> está en otra tecla, este atajo no dispara — usá el botón
+              del panel izquierdo como alternativa.
+            </Note>
+            {CATEGORY_DISPLAY_ORDER.filter((c) => SHORTCUTS_BY_CATEGORY[c]?.length > 0).map(
+              (category) => (
+                <div key={category} className={styles.shortcutCategory}>
+                  <h3 className={styles.shortcutCategoryTitle}>
+                    {CATEGORY_LABELS[category]}
+                  </h3>
+                  <div className={styles.shortcutGrid}>
+                    {SHORTCUTS_BY_CATEGORY[category].map((s) => (
+                      <div key={s.label} className={styles.shortcutRow}>
+                        <div className={styles.shortcutKeys}>
+                          {s.keys.map((k, i) => (
+                            <span key={k} className={styles.shortcutKeyGroup}>
+                              {i > 0 && <span className={styles.shortcutPlus}>+</span>}
+                              <Kbd>{k}</Kbd>
+                            </span>
+                          ))}
+                        </div>
+                        <div className={styles.shortcutLabel}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ),
+            )}
+            <h3 className={styles.shortcutCategoryTitle}>Modificadores</h3>
             <div className={styles.shortcutGrid}>
-              {SHORTCUTS.map((s) => (
+              {MODIFIER_SHORTCUTS.map((s) => (
                 <div key={s.label} className={styles.shortcutRow}>
                   <div className={styles.shortcutKeys}>
                     {s.keys.map((k, i) => (
@@ -374,7 +622,7 @@ export default function AyudaPage() {
             </div>
           </Section>
 
-          <Section id="guardado" number="X" title="Guardado" icon="save">
+          <Section id="guardado" number="XII" title="Guardado" icon="save">
             <p>
               El editor guarda solo cada 60 segundos si hiciste cambios. Vas a ver el
               estado en la barra superior (<em>"Guardando…"</em>, <em>"Guardado hace 1 min"</em>,
@@ -386,7 +634,7 @@ export default function AyudaPage() {
             </Note>
           </Section>
 
-          <Section id="undo" number="XI" title="Deshacer y rehacer" icon="undo">
+          <Section id="undo" number="XIII" title="Deshacer y rehacer" icon="undo">
             <p>
               Si pintaste algo que no querías, <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> lo revierte.
               <Kbd>Ctrl</Kbd>+<Kbd>⇧</Kbd>+<Kbd>Z</Kbd> lo rehace.
@@ -399,11 +647,13 @@ export default function AyudaPage() {
             </p>
             <Note>
               No todo se puede deshacer todavía: agregar o quitar pisos, renombrar el
-              escenario y abrir/cerrar puertas todavía no entran en la pila de undo.
+              escenario, abrir/cerrar puertas, las acciones de combate
+              (iniciar/finalizar, pasar turno, agregar combatientes) y los hechizos
+              lanzados todavía no entran en la pila de undo.
             </Note>
           </Section>
 
-          <Section id="clima" number="XII" title="Clima y ambiente" icon="cloud">
+          <Section id="clima" number="XIV" title="Clima y ambiente" icon="cloud">
             <p>
               El botón de nube en el panel izquierdo abre un sub-menú para configurar
               clima visual (lluvia, niebla, etc.) y audio ambiente.
@@ -414,7 +664,7 @@ export default function AyudaPage() {
             </Note>
           </Section>
 
-          <Section id="limpiar" number="XIII" title="Limpiar" icon="trash">
+          <Section id="limpiar" number="XV" title="Limpiar" icon="trash">
             <p>
               El botón rojo de papelera abre un menú con tres opciones:
             </p>
@@ -427,9 +677,17 @@ export default function AyudaPage() {
               Las tres acciones se pueden deshacer con <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>{' '}
               (siempre que no hayas refrescado la página).
             </p>
+            <p>
+              Los hechizos no entran en este menú. Se limpian solos: expiran
+              cuando su contador de rondas llega a 0, y al finalizar el combate
+              el server borra <em>todos</em> los del escenario. Mirá{' '}
+              <a href="#hechizos">Hechizos</a> para el detalle. Para finalizar un
+              combate activo, usá el botón del visor de combate abajo o el atajo{' '}
+              <Kbd>C</Kbd>.
+            </p>
           </Section>
 
-          <Section id="bugs" number="XIV" title="Cosas que pueden no funcionar bien" icon="alert">
+          <Section id="bugs" number="XVI" title="Cosas que pueden no funcionar bien" icon="alert">
             <p>
               Pathfinder está en desarrollo activo. Algunas cosas que pueden fallar o
               comportarse raro:
@@ -442,8 +700,30 @@ export default function AyudaPage() {
               </li>
               <li>
                 <strong>Undo de algunas acciones</strong>: agregar/quitar pisos,
-                renombrar el escenario y cambiar estados de piezas (puerta
-                abierta/cerrada) todavía no entran en la pila de undo.
+                renombrar el escenario, cambiar estados de piezas (puerta
+                abierta/cerrada), iniciar/finalizar combate, pasar turno, agregar
+                combatientes y lanzar/quitar hechizos todavía no entran en la pila de
+                undo. Solo paint/erase/darkness/clear son reversibles con{' '}
+                <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>.
+              </li>
+              <li>
+                <strong>Refrescar mid-combate</strong>: el cliente mantiene el cursor
+                optimista en memoria. Si refrescás antes del próximo guardado, perdés
+                el cursor local y la próxima carga del servidor es la fuente de
+                verdad.
+              </li>
+              <li>
+                <strong>Hechizos requieren combate activo</strong>: si elegís la
+                herramienta <strong>Hechizos</strong> sin haber iniciado un combate,
+                sale un toast <em>“Iniciá un combate para usar hechizos”</em> y el
+                cambio no se aplica.
+              </li>
+              <li>
+                <strong>Atajo <Kbd>?</Kbd> en layouts no-US/LATAM</strong>: el binding
+                está atado a la tecla física <code>/</code>, que produce <Kbd>?</Kbd>{' '}
+                con Shift en US/LATAM. En layouts donde <Kbd>?</Kbd> está en otra tecla,
+                este atajo no dispara — usá el botón del panel izquierdo como
+                alternativa.
               </li>
               <li>
                 <strong>Clima y audio</strong>: no se guardan. Es local a la sesión.
@@ -460,7 +740,7 @@ export default function AyudaPage() {
             </ul>
           </Section>
 
-          <Section id="reportar" number="XV" title="Si encontrás algo raro">
+          <Section id="reportar" number="XVII" title="Si encontrás algo raro">
             <p>
               Anotámelo con la mayor cantidad de detalle posible y comunicámelo:
             </p>

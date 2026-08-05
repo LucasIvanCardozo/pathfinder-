@@ -15,7 +15,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--fg-muted);
 }
 
 .paletteGrid {
@@ -30,21 +30,21 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.5rem 0.25rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
   border-radius: 0.4rem;
-  color: var(--color-text, #f1f1f1);
+  color: var(--fg);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .card:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--bg-elevated) 70%, var(--fg) 4%);
 }
 
 .card.active {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  border-color: var(--accent);
 }
 
 .swatch {
@@ -67,12 +67,58 @@
   align-items: center;
   gap: 0.5rem;
   padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
   font-size: 0.75rem;
 }
 
+/* Duration row (PR 4 — PF1e spell lifetime in rounds). Same flex pattern
+   as `.rotationRow` so the chrome stays consistent; sits above the
+   rotation row so the rotate button keeps its rightmost action position
+   in its own row. */
+.durationRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+.durationLabel {
+  color: var(--fg-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+
+.durationInput {
+  margin-left: auto;
+  width: 3.5rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.durationInput:hover {
+  background: color-mix(in srgb, var(--bg) 80%, var(--fg-muted) 8%);
+}
+
+.durationInput:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 70%, var(--accent) 8%);
+}
+
 .rotationLabel {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--fg-muted);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -92,22 +138,22 @@
   padding: 0.3rem 0.5rem;
   font-size: 0.7rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text, #f1f1f1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
   border-radius: 0.3rem;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .rotateButton:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--bg) 70%, var(--accent) 8%);
 }
 
 .rotationHint {
   padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: color-mix(in srgb, var(--fg-muted) 80%, transparent);
   text-align: center;
 }
