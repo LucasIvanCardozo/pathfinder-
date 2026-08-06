@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback } from 'react';
 import type { Combatant, CombatantInsert, ScenarioEffect } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import type { useCombatSession } from './use-combat-session';
@@ -156,9 +156,7 @@ export function useCombatOps({
     opsBuffer.pushAdvanceRound();
     markDirty();
     combatSession.setCombat((current) =>
-      current
-        ? { ...current, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 }
-        : current,
+      current ? { ...current, currentTurnIndex: 0, roundNumber: current.roundNumber + 1 } : current,
     );
     // Optimistic expiry — see comment in `nextTurn`.
     setEffects((prev) =>
@@ -187,14 +185,14 @@ export function useCombatOps({
         if (!current) return current;
         const stamped: Combatant = { ...added, combatId: current.id };
         const existing = sortCombatants(current.combatants);
-        const currentIndex = Math.min(
-          current.currentTurnIndex,
-          Math.max(existing.length - 1, 0),
-        );
+        const currentIndex = Math.min(current.currentTurnIndex, Math.max(existing.length - 1, 0));
         const currentId = existing[currentIndex]?.id;
         const nextCombatants = sortCombatants([...existing, stamped]);
         const nextIndex = currentId
-          ? Math.max(0, nextCombatants.findIndex((item) => item.id === currentId))
+          ? Math.max(
+              0,
+              nextCombatants.findIndex((item) => item.id === currentId),
+            )
           : 0;
         return { ...current, combatants: nextCombatants, currentTurnIndex: nextIndex };
       });
@@ -211,10 +209,7 @@ export function useCombatOps({
         const existing = sortCombatants(current.combatants);
         const removedIndex = existing.findIndex((item) => item.id === combatantId);
         if (removedIndex < 0) return current;
-        const currentIndex = Math.min(
-          current.currentTurnIndex,
-          Math.max(existing.length - 1, 0),
-        );
+        const currentIndex = Math.min(current.currentTurnIndex, Math.max(existing.length - 1, 0));
         const nextCombatants = existing.filter((item) => item.id !== combatantId);
         const rebased = removedIndex <= currentIndex ? currentIndex - 1 : currentIndex;
         const nextIndex = Math.max(0, Math.min(rebased, Math.max(nextCombatants.length - 1, 0)));

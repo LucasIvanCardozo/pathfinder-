@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { Fraunces } from 'next/font/google';
 import type { Metadata } from 'next';
+import { Fraunces } from 'next/font/google';
+import Link from 'next/link';
 import {
   KEY_CODE_LABELS,
   listShortcuts,
@@ -30,7 +30,16 @@ export const metadata: Metadata = {
 function Icon({ name }: { name: IconName }) {
   return (
     <span className={styles.icon} aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <title>{ICON_LABELS[name]}</title>
         {ICONS[name]}
       </svg>
@@ -158,7 +167,12 @@ const ICONS: Record<IconName, React.ReactNode> = {
 type Section = { id: string; number: string; title: string; lede?: string };
 
 const SECTIONS: Section[] = [
-  { id: 'empezando', number: 'I', title: 'Empezando', lede: 'Abrí un escenario y empezá a pintar.' },
+  {
+    id: 'empezando',
+    number: 'I',
+    title: 'Empezando',
+    lede: 'Abrí un escenario y empezá a pintar.',
+  },
   { id: 'layout', number: 'II', title: 'Layout del editor' },
   { id: 'pintar', number: 'III', title: 'Pintar' },
   { id: 'borrar', number: 'IV', title: 'Borrar' },
@@ -257,8 +271,8 @@ export default function AyudaPage() {
           Guía del <em>editor</em>
         </h1>
         <p className={styles.heroLede}>
-          Una visita rápida al editor de mapas para la primera vez que lo abrís. Empezá
-          por arriba, saltá a lo que necesitás con el índice de la izquierda.
+          Una visita rápida al editor de mapas para la primera vez que lo abrís. Empezá por arriba,
+          saltá a lo que necesitás con el índice de la izquierda.
         </p>
       </header>
 
@@ -280,24 +294,28 @@ export default function AyudaPage() {
         <article className={styles.content}>
           <Section id="empezando" number="I" title="Empezando">
             <p>
-              Pathfinder es un editor de mapas para juegos de rol. Te deja pintar el
-              piso de un escenario pieza por pieza (mesas, sillas, paredes, etc.),
-              dividir el escenario en plantas (Subsuelo, Planta Baja, Piso 1, etc.) y
-              aplicar efectos como oscuridad.
+              Pathfinder es un editor de mapas para juegos de rol. Te deja pintar el piso de un
+              escenario pieza por pieza (mesas, sillas, paredes, etc.), dividir el escenario en
+              plantas (Subsuelo, Planta Baja, Piso 1, etc.) y aplicar efectos como oscuridad.
             </p>
             <p>
-              Tu trabajo como game master es preparar el mapa antes de la sesión. Los
-              jugadores lo ven en otra pantalla.
+              Tu trabajo como game master es preparar el mapa antes de la sesión. Los jugadores lo
+              ven en otra pantalla.
             </p>
             <ol className={styles.steps}>
               <li>En la lista de escenarios, hacé click en uno existente o creá uno nuevo.</li>
-              <li>Vas a entrar al editor con el piso <em>Planta Baja</em> activo.</li>
-              <li>Cambiá el nombre del escenario desde el input de arriba a la izquierda. Se guarda solo.</li>
+              <li>
+                Vas a entrar al editor con el piso <em>Planta Baja</em> activo.
+              </li>
+              <li>
+                Cambiá el nombre del escenario desde el input de arriba a la izquierda. Se guarda
+                solo.
+              </li>
             </ol>
             <Note>
-              Si el escenario ya tiene un combate guardado, vas a entrar con el
-              visor de combate activo abajo (mirá <a href="#combate">Combate</a>).
-              Para empezar de cero, finalizá el combate desde el botón del visor.
+              Si el escenario ya tiene un combate guardado, vas a entrar con el visor de combate
+              activo abajo (mirá <a href="#combate">Combate</a>). Para empezar de cero, finalizá el
+              combate desde el botón del visor.
             </Note>
           </Section>
 
@@ -324,54 +342,67 @@ export default function AyudaPage() {
               />
             </div>
             <p>
-              El panel izquierdo cambia según la herramienta activa: muestra{' '}
-              <strong>Piezas</strong> cuando pintás, <strong>Hechizos</strong> cuando
-              lanzás spells (requiere combate activo). El visor de combate sólo
-              aparece si iniciaste un combate en el escenario actual.
+              El panel izquierdo cambia según la herramienta activa: muestra <strong>Piezas</strong>{' '}
+              cuando pintás, <strong>Hechizos</strong> cuando lanzás spells (requiere combate
+              activo). El visor de combate sólo aparece si iniciaste un combate en el escenario
+              actual.
             </p>
           </Section>
 
           <Section id="pintar" number="III" title="Pintar" icon="paint">
             <ol className={styles.steps}>
               <li>Elegí una pieza del panel izquierdo (las cards de la paleta).</li>
-              <li>Asegurate de tener la herramienta <strong>Pintar</strong> activa (ícono de pincel, atajo <Kbd>B</Kbd>).</li>
+              <li>
+                Asegurate de tener la herramienta <strong>Pintar</strong> activa (ícono de pincel,
+                atajo <Kbd>B</Kbd>).
+              </li>
               <li>Elegí una subdivisión desde los tabs de arriba.</li>
               <li>Click y arrastrá sobre el lienzo para pintar.</li>
             </ol>
             <p>
-              El pincel pinta un cuadrado o círculo de celdas. Cambiá el tamaño con{' '}
-              <Kbd>[</Kbd> y <Kbd>]</Kbd>, o con los botones <Kbd>−</Kbd> / <Kbd>+</Kbd> del
-              panel. Cambiá la forma (circular o cuadrada) con <Kbd>⇧</Kbd>+<Kbd>B</Kbd>.
+              El pincel pinta un cuadrado o círculo de celdas. Cambiá el tamaño con <Kbd>[</Kbd> y{' '}
+              <Kbd>]</Kbd>, o con los botones <Kbd>−</Kbd> / <Kbd>+</Kbd> del panel. Cambiá la forma
+              (circular o cuadrada) con <Kbd>⇧</Kbd>+<Kbd>B</Kbd>.
             </p>
           </Section>
 
           <Section id="borrar" number="IV" title="Borrar" icon="eraser">
             <p>
-              Herramienta <strong>Borrar</strong> (ícono de goma, atajo <Kbd>E</Kbd>).
-              Click y arrastrá sobre la subdivisión activa. Solo borra la subdivisión
-              en la que estás parado, no toca las otras.
+              Herramienta <strong>Borrar</strong> (ícono de goma, atajo <Kbd>E</Kbd>). Click y
+              arrastrá sobre la subdivisión activa. Solo borra la subdivisión en la que estás
+              parado, no toca las otras.
             </p>
           </Section>
 
           <Section id="oscuridad" number="V" title="Oscuridad" icon="moon">
             <p>
-              La oscuridad pinta un tinte semitransparente sobre las celdas. Sirve
-              para revelar el mapa de a poco durante la sesión.
+              La oscuridad pinta un tinte semitransparente sobre las celdas. Sirve para revelar el
+              mapa de a poco durante la sesión.
             </p>
             <ol className={styles.steps}>
-              <li>Herramienta <strong>Oscuridad</strong> (ícono de luna).</li>
+              <li>
+                Herramienta <strong>Oscuridad</strong> (ícono de luna).
+              </li>
               <li>Click y arrastrá para aplicar oscuridad sobre una zona.</li>
-              <li>Click en la herramienta de nuevo para alternar a "borrar oscuridad" (ícono de sol).</li>
-              <li>No se ve como tab en las subdivisiones porque es una capa especial, no una capa de piezas.</li>
+              <li>
+                Click en la herramienta de nuevo para alternar a "borrar oscuridad" (ícono de sol).
+              </li>
+              <li>
+                No se ve como tab en las subdivisiones porque es una capa especial, no una capa de
+                piezas.
+              </li>
             </ol>
-            <Note>La oscuridad es independiente de las subdivisions: podés oscurecer una zona de Suelo aunque la subdivisión activa sea Objetos grandes.</Note>
+            <Note>
+              La oscuridad es independiente de las subdivisions: podés oscurecer una zona de Suelo
+              aunque la subdivisión activa sea Objetos grandes.
+            </Note>
           </Section>
 
           <Section id="subdivisiones" number="VI" title="Subdivisiones" icon="layers">
             <p>
-              El escenario se divide en cuatro capas independientes. Cada capa tiene
-              su propia grilla y solo pintás en la activa. Cambiá con los tabs o con
-              las teclas <Kbd>1</Kbd>..<Kbd>4</Kbd>.
+              El escenario se divide en cuatro capas independientes. Cada capa tiene su propia
+              grilla y solo pintás en la activa. Cambiá con los tabs o con las teclas <Kbd>1</Kbd>..
+              <Kbd>4</Kbd>.
             </p>
             <div className={styles.subdivisionTable}>
               {SUBDIVISION_TABLE.map((row) => (
@@ -388,217 +419,207 @@ export default function AyudaPage() {
 
           <Section id="pisos" number="VII" title="Pisos" icon="stairs">
             <p>
-              Un escenario puede tener varios pisos apilados (Subsuelo, Planta Baja,
-              Piso 1, etc.). Por defecto tenés solo Planta Baja.
+              Un escenario puede tener varios pisos apilados (Subsuelo, Planta Baja, Piso 1, etc.).
+              Por defecto tenés solo Planta Baja.
             </p>
             <ul className={styles.bullets}>
               <li>
-                <strong>Subir / bajar de piso</strong>: <Kbd>⇧</Kbd>+<Kbd>↑</Kbd> / <Kbd>⇧</Kbd>+<Kbd>↓</Kbd>.
+                <strong>Subir / bajar de piso</strong>: <Kbd>⇧</Kbd>+<Kbd>↑</Kbd> / <Kbd>⇧</Kbd>+
+                <Kbd>↓</Kbd>.
               </li>
               <li>
                 <strong>Agregar piso arriba / abajo</strong>: botones en el switcher de pisos.
               </li>
             </ul>
             <Note>
-              Solo se ven renderizados los pisos hasta el activo (no se renderizan los
-              de arriba). Si estás en Planta Baja, no querés ver el Piso 1 flotando
-              arriba tapando todo.
+              Solo se ven renderizados los pisos hasta el activo (no se renderizan los de arriba).
+              Si estás en Planta Baja, no querés ver el Piso 1 flotando arriba tapando todo.
             </Note>
           </Section>
 
           <Section id="estados" number="VIII" title="Estados de piezas" icon="door">
             <p>
-              Ciertas piezas tienen <strong>estados</strong> que podés cambiar. El caso
-              más común es la puerta: abierta, cerrada, con llave.
+              Ciertas piezas tienen <strong>estados</strong> que podés cambiar. El caso más común es
+              la puerta: abierta, cerrada, con llave.
             </p>
             <ol className={styles.steps}>
-              <li><strong>Click derecho</strong> sobre una cell pintada con una pieza con estados.</li>
+              <li>
+                <strong>Click derecho</strong> sobre una cell pintada con una pieza con estados.
+              </li>
               <li>Aparece un menú con los estados disponibles. Elegí el que quieras.</li>
               <li>El estado se guarda como parte de la pieza.</li>
             </ol>
             <Note>
-              Todavía no se puede deshacer un cambio de estado de pieza con{' '}
-              <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>. Está previsto para la próxima versión.
+              Todavía no se puede deshacer un cambio de estado de pieza con <Kbd>Ctrl</Kbd>+
+              <Kbd>Z</Kbd>. Está previsto para la próxima versión.
             </Note>
           </Section>
 
           <Section id="combate" number="IX" title="Combate" icon="combat">
             <p>
-              El tracker de combate te deja manejar iniciativa, rondas y orden de turno
-              dentro del editor. Funciona como una sesión persistente: una vez que
-              iniciás un combate, queda activo hasta que lo finalices, aunque refresques
-              la página.
+              El tracker de combate te deja manejar iniciativa, rondas y orden de turno dentro del
+              editor. Funciona como una sesión persistente: una vez que iniciás un combate, queda
+              activo hasta que lo finalices, aunque refresques la página.
             </p>
             <ol className={styles.steps}>
               <li>
-                Abrí el modal con el botón <strong>Combate</strong> del panel izquierdo
-                (ícono de escudo) o con el atajo <Kbd>C</Kbd>.
+                Abrí el modal con el botón <strong>Combate</strong> del panel izquierdo (ícono de
+                escudo) o con el atajo <Kbd>C</Kbd>.
               </li>
               <li>
-                Agregá combatientes uno por uno: nombre, iniciativa (-10 a 40) y lado
-                (jugadores / enemigos / neutral). El orden de la cola se calcula por
-                iniciativa descendente, con el id del combatiente como desempate (el
-                primero insertado gana).
+                Agregá combatientes uno por uno: nombre, iniciativa (-10 a 40) y lado (jugadores /
+                enemigos / neutral). El orden de la cola se calcula por iniciativa descendente, con
+                el id del combatiente como desempate (el primero insertado gana).
               </li>
               <li>
-                Hacé click en <strong>Iniciar combate</strong>. Se crea la ronda 1 y el
-                primer combatiente (initiative más alta) queda "up".
+                Hacé click en <strong>Iniciar combate</strong>. Se crea la ronda 1 y el primer
+                combatiente (initiative más alta) queda "up".
               </li>
               <li>
-                Desde el visor abajo o los atajos, avanzá el turno (<Kbd>N</Kbd>),
-                retrocedelo (<Kbd>J</Kbd>), forzá una ronda (<Kbd>R</Kbd>) o abrí el
-                modal de combate (<Kbd>C</Kbd>) para agregar combatientes
-                al combate en curso.
+                Desde el visor abajo o los atajos, avanzá el turno (<Kbd>N</Kbd>), retrocedelo (
+                <Kbd>J</Kbd>), forzá una ronda (<Kbd>R</Kbd>) o abrí el modal de combate (
+                <Kbd>C</Kbd>) para agregar combatientes al combate en curso.
               </li>
               <li>
-                Para finalizar, hacé click en <strong>Finalizar</strong> en el visor
-                (ícono de tacho rojo) y confirmá. Los combatientes se borran, los
-                hechizos lanzados por combatientes removidos también se limpian, y la
-                próxima vez que inicies un combate la ronda vuelve a 1.
+                Para finalizar, hacé click en <strong>Finalizar</strong> en el visor (ícono de tacho
+                rojo) y confirmá. Los combatientes se borran, los hechizos lanzados por combatientes
+                removidos también se limpian, y la próxima vez que inicies un combate la ronda
+                vuelve a 1.
               </li>
             </ol>
             <Note>
-              Pasar al último combatiente de la cola <strong>incrementa la ronda</strong>{' '}
-              (regla PF1e): ese wrap es el límite del mundo. Es el mismo momento en el
-              que los hechizos con duración avanzan un round (ver{' '}
-              <a href="#hechizos">Hechizos</a>).
+              Pasar al último combatiente de la cola <strong>incrementa la ronda</strong> (regla
+              PF1e): ese wrap es el límite del mundo. Es el mismo momento en el que los hechizos con
+              duración avanzan un round (ver <a href="#hechizos">Hechizos</a>).
             </Note>
             <Note>
-              El id de cada combatiente se asigna en el cliente y el servidor lo honra
-              tal cual al persistir. Esto permite referenciar al combatiente desde
-              <code>casterCombatantId</code> en un hechizo <em>antes</em> de que el
-              autosave persista el combate — el hechizo ya queda linkeado al combatiente
-              correcto en el primer guardado.
+              El id de cada combatiente se asigna en el cliente y el servidor lo honra tal cual al
+              persistir. Esto permite referenciar al combatiente desde
+              <code>casterCombatantId</code> en un hechizo <em>antes</em> de que el autosave
+              persista el combate — el hechizo ya queda linkeado al combatiente correcto en el
+              primer guardado.
             </Note>
           </Section>
 
           <Section id="hechizos" number="X" title="Hechizos" icon="spell">
             <p>
-              Los hechizos (AoE spells) son markers que colocás sobre el mapa durante un
-              combate activo. Tienen un color, una forma geométrica y una duración en
-              rondas del mundo. Hay 5 templates hardcodeados:
+              Los hechizos (AoE spells) son markers que colocás sobre el mapa durante un combate
+              activo. Tienen un color, una forma geométrica y una duración en rondas del mundo. Hay
+              5 templates hardcodeados:
             </p>
             <div className={styles.subdivisionTable}>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Cono 15 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                  Cono rojo. Cicla 8 estados de rotación (alternando cardinal y
-                  diagonal) con <Kbd>Q</Kbd> o con click derecho sobre el canvas.
+                  Cono rojo. Cicla 8 estados de rotación (alternando cardinal y diagonal) con{' '}
+                  <Kbd>Q</Kbd> o con click derecho sobre el canvas.
                 </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Cono 30 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                  Cono naranja. Cicla 8 estados de rotación (alternando cardinal y
-                  diagonal) con <Kbd>Q</Kbd> o con click derecho sobre el canvas.
+                  Cono naranja. Cicla 8 estados de rotación (alternando cardinal y diagonal) con{' '}
+                  <Kbd>Q</Kbd> o con click derecho sobre el canvas.
                 </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 5 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                      Círculo azul. El clic derecho cicla la rotación pero no cambia la
-                      celda visible (cardinal y diagonal comparten la misma matriz).
-                    </div>
+                  Círculo azul. El clic derecho cicla la rotación pero no cambia la celda visible
+                  (cardinal y diagonal comparten la misma matriz).
+                </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 10 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                      Círculo verde. El clic derecho cicla la rotación pero no cambia la
-                      celda visible (cardinal y diagonal comparten la misma matriz).
-                    </div>
+                  Círculo verde. El clic derecho cicla la rotación pero no cambia la celda visible
+                  (cardinal y diagonal comparten la misma matriz).
+                </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 20 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                      Círculo violeta. El clic derecho cicla la rotación pero no cambia la
-                      celda visible (cardinal y diagonal comparten la misma matriz).
-                    </div>
+                  Círculo violeta. El clic derecho cicla la rotación pero no cambia la celda visible
+                  (cardinal y diagonal comparten la misma matriz).
+                </div>
               </div>
             </div>
             <ol className={styles.steps}>
               <li>
-                Activá la herramienta <strong>Hechizos</strong> del toolbar (ícono de
-                sombrero). Si no hay combate activo, sale un toast{' '}
-                <em>“Iniciá un combate para usar hechizos”</em>.
+                Activá la herramienta <strong>Hechizos</strong> del toolbar (ícono de sombrero). Si
+                no hay combate activo, sale un toast <em>“Iniciá un combate para usar hechizos”</em>
+                .
               </li>
               <li>
-                Elegí un template del <strong>SpellPalette</strong> en el panel
-                izquierdo. La rotación vive en el lienzo, no en el panel: con un cono
-                seleccionado, hacé click derecho sobre el canvas (sobre celda vacía; el
-                click derecho sobre pieza sigue abriendo el menú de estados) o usá el
-                atajo <Kbd>Q</Kbd> para ciclar 8 estados que alternan entre cardinal y
-                diagonal (0°, 45°, 90°, 135°, …, 315°). Click sobre el mismo card otra
-                vez deselecciona el hechizo. Cambiar de template vuelve la rotación al
-                estado inicial.
+                Elegí un template del <strong>SpellPalette</strong> en el panel izquierdo. La
+                rotación vive en el lienzo, no en el panel: con un cono seleccionado, hacé click
+                derecho sobre el canvas (sobre celda vacía; el click derecho sobre pieza sigue
+                abriendo el menú de estados) o usá el atajo <Kbd>Q</Kbd> para ciclar 8 estados que
+                alternan entre cardinal y diagonal (0°, 45°, 90°, 135°, …, 315°). Click sobre el
+                mismo card otra vez deselecciona el hechizo. Cambiar de template vuelve la rotación
+                al estado inicial.
               </li>
               <li>
-                Elegí la duración en rondas (1–10 por default) con el dropdown del
-                SpellPalette. Un hechizo "muere" cuando el contador llega a 0.
+                Elegí la duración en rondas (1–10 por default) con el dropdown del SpellPalette. Un
+                hechizo "muere" cuando el contador llega a 0.
               </li>
               <li>
-                Hacé click sobre una celda del mapa. Se coloca el marker con el color y
-                forma del template. El <code>casterCombatantId</code> queda asignado al
-                combatiente activo en ese momento.
+                Hacé click sobre una celda del mapa. Se coloca el marker con el color y forma del
+                template. El <code>casterCombatantId</code> queda asignado al combatiente activo en
+                ese momento.
               </li>
               <li>
-                El marker se queda fijo en el mapa con el color y la forma del
-                template. El click izquierdo sobre el marker no hace nada — no se
-                puede borrar manualmente.
+                El marker se queda fijo en el mapa con el color y la forma del template. El click
+                izquierdo sobre el marker no hace nada — no se puede borrar manualmente.
               </li>
             </ol>
             <p>
-              Los hechizos desaparecen del mapa de dos formas (ambas automáticas,
-              sin acción del GM):
+              Los hechizos desaparecen del mapa de dos formas (ambas automáticas, sin acción del
+              GM):
             </p>
             <ul className={styles.bullets}>
               <li>
-                <strong>Expiración por rondas</strong>: en el wrap de ronda (cuando el
-                cursor vuelve al primer combatiente) o en un{' '}
-                <Kbd>R</Kbd> (avanzar ronda manualmente), el server decrementa
+                <strong>Expiración por rondas</strong>: en el wrap de ronda (cuando el cursor vuelve
+                al primer combatiente) o en un <Kbd>R</Kbd> (avanzar ronda manualmente), el server
+                decrementa
                 <code>durationRounds</code> en cada marker y borra los que llegan a 0.
               </li>
               <li>
-                <strong>Cleanup al finalizar combate</strong>: al cerrar el combate
-                (botón Finalizar del visor), el server hace cascade delete de los
-                Combatants y borra <em>todos</em> los hechizos del escenario en la
-                misma TX (FK SetNull + <code>purgeOrphansInTx</code>). El mapa queda
-                limpio para el próximo combate.
+                <strong>Cleanup al finalizar combate</strong>: al cerrar el combate (botón Finalizar
+                del visor), el server hace cascade delete de los Combatants y borra <em>todos</em>{' '}
+                los hechizos del escenario en la misma TX (FK SetNull +{' '}
+                <code>purgeOrphansInTx</code>). El mapa queda limpio para el próximo combate.
               </li>
             </ul>
             <Note>
-              <strong>Regla PF1e — cuándo tickean los hechizos</strong>: pasar al
-              último combatiente de la cola (lo que incrementa la ronda) es el{' '}
-              <em>único</em> momento en el que los hechizos envejecen. Avanzar un turno
-              intermedio no toca el contador. Si forzás una ronda con{' '}
-              <Kbd>R</Kbd>, también se tickea.
+              <strong>Regla PF1e — cuándo tickean los hechizos</strong>: pasar al último combatiente
+              de la cola (lo que incrementa la ronda) es el <em>único</em> momento en el que los
+              hechizos envejecen. Avanzar un turno intermedio no toca el contador. Si forzás una
+              ronda con <Kbd>R</Kbd>, también se tickea.
             </Note>
             <Note>
-              Si removés un combatiente mid-combate, sus hechizos se borran
-              preventivamente (pre-cascade) en la misma TX. No quedan markers
-              huérfanos flotando — ni durante el combate ni al finalizarlo.
+              Si removés un combatiente mid-combate, sus hechizos se borran preventivamente
+              (pre-cascade) en la misma TX. No quedan markers huérfanos flotando — ni durante el
+              combate ni al finalizarlo.
             </Note>
           </Section>
 
           <Section id="atajos" number="XI" title="Atajos de teclado" icon="keyboard">
             <p>
-              Para ver la lista completa en el editor, presioná <Kbd>?</Kbd> (o el
-              botón de teclado en el panel izquierdo). Esta es la tabla canónica del
-              editor, agrupada por categoría. Se genera directo del registro{' '}
-              <code>lib/shared/constants/shortcuts.ts</code>, así que cualquier atajo
-              nuevo que se sume al editor aparece acá automáticamente.
+              Para ver la lista completa en el editor, presioná <Kbd>?</Kbd> (o el botón de teclado
+              en el panel izquierdo). Esta es la tabla canónica del editor, agrupada por categoría.
+              Se genera directo del registro <code>lib/shared/constants/shortcuts.ts</code>, así que
+              cualquier atajo nuevo que se sume al editor aparece acá automáticamente.
             </p>
             <Note>
-              El atajo <Kbd>?</Kbd> está atado a la tecla física <code>/</code> (que
-              produce <Kbd>?</Kbd> con <Kbd>⇧</Kbd> en US/LATAM). En layouts donde{' '}
-              <Kbd>?</Kbd> está en otra tecla, este atajo no dispara — usá el botón
-              del panel izquierdo como alternativa.
+              El atajo <Kbd>?</Kbd> está atado a la tecla física <code>/</code> (que produce{' '}
+              <Kbd>?</Kbd> con <Kbd>⇧</Kbd> en US/LATAM). En layouts donde <Kbd>?</Kbd> está en otra
+              tecla, este atajo no dispara — usá el botón del panel izquierdo como alternativa.
             </Note>
             {CATEGORY_DISPLAY_ORDER.filter((c) => SHORTCUTS_BY_CATEGORY[c]?.length > 0).map(
               (category) => (
                 <div key={category} className={styles.shortcutCategory}>
-                  <h3 className={styles.shortcutCategoryTitle}>
-                    {CATEGORY_LABELS[category]}
-                  </h3>
+                  <h3 className={styles.shortcutCategoryTitle}>{CATEGORY_LABELS[category]}</h3>
                   <div className={styles.shortcutGrid}>
                     {SHORTCUTS_BY_CATEGORY[category].map((s) => (
                       <div key={s.label} className={styles.shortcutRow}>
@@ -637,13 +658,13 @@ export default function AyudaPage() {
 
           <Section id="guardado" number="XII" title="Guardado" icon="save">
             <p>
-              El editor guarda solo cada 60 segundos si hiciste cambios. Vas a ver el
-              estado en la barra superior (<em>"Guardando…"</em>, <em>"Guardado hace 1 min"</em>,
-              etc.). También podés guardar manualmente con <Kbd>Ctrl</Kbd>+<Kbd>S</Kbd>.
+              El editor guarda solo cada 60 segundos si hiciste cambios. Vas a ver el estado en la
+              barra superior (<em>"Guardando…"</em>, <em>"Guardado hace 1 min"</em>, etc.). También
+              podés guardar manualmente con <Kbd>Ctrl</Kbd>+<Kbd>S</Kbd>.
             </p>
             <Note>
-              Si cerrás la pestaña sin guardar, perdés hasta 60 segundos de trabajo.
-              Conviene <Kbd>Ctrl</Kbd>+<Kbd>S</Kbd> antes de cerrar.
+              Si cerrás la pestaña sin guardar, perdés hasta 60 segundos de trabajo. Conviene{' '}
+              <Kbd>Ctrl</Kbd>+<Kbd>S</Kbd> antes de cerrar.
             </Note>
           </Section>
 
@@ -653,136 +674,126 @@ export default function AyudaPage() {
               <Kbd>Ctrl</Kbd>+<Kbd>⇧</Kbd>+<Kbd>Z</Kbd> lo rehace.
             </p>
             <p>
-              <strong>Importante</strong>: el historial de undo es en memoria. Si
-              refrescás la página <em>antes del primer guardado</em> (los 60 s),
-              perdés el historial. Después del primer guardado, el mapa persistido es
-              la fuente de verdad.
+              <strong>Importante</strong>: el historial de undo es en memoria. Si refrescás la
+              página <em>antes del primer guardado</em> (los 60 s), perdés el historial. Después del
+              primer guardado, el mapa persistido es la fuente de verdad.
             </p>
             <Note>
-              No todo se puede deshacer todavía: agregar o quitar pisos, renombrar el
-              escenario, abrir/cerrar puertas, las acciones de combate
-              (iniciar/finalizar, pasar turno) y los hechizos
-              lanzados todavía no entran en la pila de undo.
+              No todo se puede deshacer todavía: agregar o quitar pisos, renombrar el escenario,
+              abrir/cerrar puertas, las acciones de combate (iniciar/finalizar, pasar turno) y los
+              hechizos lanzados todavía no entran en la pila de undo.
             </Note>
           </Section>
 
           <Section id="clima" number="XIV" title="Clima y ambiente" icon="cloud">
             <p>
-              El botón de nube en el panel izquierdo abre un sub-menú para configurar
-              clima visual (lluvia, niebla, etc.) y audio ambiente.
+              El botón de nube en el panel izquierdo abre un sub-menú para configurar clima visual
+              (lluvia, niebla, etc.) y audio ambiente.
             </p>
             <Note>
-              <strong>Esto no se guarda todavía</strong> — es local a la sesión. Si
-              recargás, perdés el clima.
+              <strong>Esto no se guarda todavía</strong> — es local a la sesión. Si recargás, perdés
+              el clima.
             </Note>
           </Section>
 
           <Section id="limpiar" number="XV" title="Limpiar" icon="trash">
-            <p>
-              El botón rojo de papelera abre un menú con tres opciones:
-            </p>
+            <p>El botón rojo de papelera abre un menú con tres opciones:</p>
             <ul className={styles.bullets}>
-              <li><strong>Todo el scenario</strong>: borra todas las cells de todos los pisos.</li>
-              <li><strong>Este piso</strong>: borra solo las cells del piso activo.</li>
-              <li><strong>Esta subdivisión</strong>: borra solo las cells de la subdivisión activa en el piso activo.</li>
+              <li>
+                <strong>Todo el scenario</strong>: borra todas las cells de todos los pisos.
+              </li>
+              <li>
+                <strong>Este piso</strong>: borra solo las cells del piso activo.
+              </li>
+              <li>
+                <strong>Esta subdivisión</strong>: borra solo las cells de la subdivisión activa en
+                el piso activo.
+              </li>
             </ul>
             <p>
-              Las tres acciones se pueden deshacer con <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>{' '}
-              (siempre que no hayas refrescado la página).
+              Las tres acciones se pueden deshacer con <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> (siempre que no
+              hayas refrescado la página).
             </p>
             <p>
-              Los hechizos no entran en este menú. Se limpian solos: expiran
-              cuando su contador de rondas llega a 0, y al finalizar el combate
-              el server borra <em>todos</em> los del escenario. Mirá{' '}
-              <a href="#hechizos">Hechizos</a> para el detalle. Para finalizar un
-              combate activo, usá el botón del visor de combate abajo o el atajo{' '}
-              <Kbd>C</Kbd>.
+              Los hechizos no entran en este menú. Se limpian solos: expiran cuando su contador de
+              rondas llega a 0, y al finalizar el combate el server borra <em>todos</em> los del
+              escenario. Mirá <a href="#hechizos">Hechizos</a> para el detalle. Para finalizar un
+              combate activo, usá el botón del visor de combate abajo o el atajo <Kbd>C</Kbd>.
             </p>
           </Section>
 
           <Section id="bugs" number="XVI" title="Cosas que pueden no funcionar bien" icon="alert">
             <p>
-              Pathfinder está en desarrollo activo. Algunas cosas que pueden fallar o
-              comportarse raro:
+              Pathfinder está en desarrollo activo. Algunas cosas que pueden fallar o comportarse
+              raro:
             </p>
             <ul className={styles.bullets}>
               <li>
-                <strong>Dos pestañas abiertas a la vez</strong>: los cambios de una
-                pisan a la otra. No hay protección contra esto todavía. Si trabajás
-                en serio, usá una sola pestaña.
+                <strong>Dos pestañas abiertas a la vez</strong>: los cambios de una pisan a la otra.
+                No hay protección contra esto todavía. Si trabajás en serio, usá una sola pestaña.
               </li>
               <li>
-                <strong>Undo de algunas acciones</strong>: agregar/quitar pisos,
-                renombrar el escenario, cambiar estados de piezas (puerta
-                abierta/cerrada), iniciar/finalizar combate, pasar turno, agregar
-                combatientes y lanzar/quitar hechizos todavía no entran en la pila de
-                undo. Solo paint/erase/darkness/clear son reversibles con{' '}
+                <strong>Undo de algunas acciones</strong>: agregar/quitar pisos, renombrar el
+                escenario, cambiar estados de piezas (puerta abierta/cerrada), iniciar/finalizar
+                combate, pasar turno, agregar combatientes y lanzar/quitar hechizos todavía no
+                entran en la pila de undo. Solo paint/erase/darkness/clear son reversibles con{' '}
                 <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd>.
               </li>
               <li>
-                <strong>Refrescar mid-combate</strong>: el cliente mantiene el cursor
-                optimista en memoria. Si refrescás antes del próximo guardado, perdés
-                el cursor local y la próxima carga del servidor es la fuente de
-                verdad.
+                <strong>Refrescar mid-combate</strong>: el cliente mantiene el cursor optimista en
+                memoria. Si refrescás antes del próximo guardado, perdés el cursor local y la
+                próxima carga del servidor es la fuente de verdad.
               </li>
               <li>
-                <strong>Hechizos requieren combate activo</strong>: si elegís la
-                herramienta <strong>Hechizos</strong> sin haber iniciado un combate,
-                sale un toast <em>“Iniciá un combate para usar hechizos”</em> y el
-                cambio no se aplica.
+                <strong>Hechizos requieren combate activo</strong>: si elegís la herramienta{' '}
+                <strong>Hechizos</strong> sin haber iniciado un combate, sale un toast{' '}
+                <em>“Iniciá un combate para usar hechizos”</em> y el cambio no se aplica.
               </li>
               <li>
-                <strong>Atajo <Kbd>?</Kbd> en layouts no-US/LATAM</strong>: el binding
-                está atado a la tecla física <code>/</code>, que produce <Kbd>?</Kbd>{' '}
-                con Shift en US/LATAM. En layouts donde <Kbd>?</Kbd> está en otra tecla,
-                este atajo no dispara — usá el botón del panel izquierdo como
-                alternativa.
+                <strong>
+                  Atajo <Kbd>?</Kbd> en layouts no-US/LATAM
+                </strong>
+                : el binding está atado a la tecla física <code>/</code>, que produce <Kbd>?</Kbd>{' '}
+                con Shift en US/LATAM. En layouts donde <Kbd>?</Kbd> está en otra tecla, este atajo
+                no dispara — usá el botón del panel izquierdo como alternativa.
               </li>
               <li>
                 <strong>Clima y audio</strong>: no se guardan. Es local a la sesión.
               </li>
               <li>
-                <strong>Refrescar antes del primer guardado</strong>: el historial de
-                undo se pierde.
+                <strong>Refrescar antes del primer guardado</strong>: el historial de undo se
+                pierde.
               </li>
               <li>
-                <strong>Pincel muy grande con subdivisions densas</strong>: el
-                rendimiento puede bajar si pintás miles de cells de una. Si sentís
-                lag, achicá el pincel o recargá.
+                <strong>Pincel muy grande con subdivisions densas</strong>: el rendimiento puede
+                bajar si pintás miles de cells de una. Si sentís lag, achicá el pincel o recargá.
               </li>
             </ul>
           </Section>
 
           <Section id="reportar" number="XVII" title="Si encontrás algo raro">
-            <p>
-              Anotámelo con la mayor cantidad de detalle posible y comunicámelo:
-            </p>
+            <p>Anotámelo con la mayor cantidad de detalle posible y comunicámelo:</p>
             <ul className={styles.bullets}>
               <li>
-                <strong>Qué estabas haciendo</strong> (pintando, borrando, cambiando de
-                piso, etc.).
+                <strong>Qué estabas haciendo</strong> (pintando, borrando, cambiando de piso, etc.).
               </li>
               <li>
-                <strong>Qué pasó</strong> (lo que viste en pantalla, error si hubo,
-                comportamiento inesperado).
+                <strong>Qué pasó</strong> (lo que viste en pantalla, error si hubo, comportamiento
+                inesperado).
               </li>
               <li>
-                <strong>Qué esperabas que pase</strong> (cómo creés que debería
-                funcionar).
+                <strong>Qué esperabas que pase</strong> (cómo creés que debería funcionar).
               </li>
             </ul>
             <Note>
-              <strong>Tip final</strong>: si el editor se siente lento, abrí la
-              consola del navegador (<Kbd>F12</Kbd>) y avisame si hay errores en rojo.
-              Eso me ayuda a encontrar bugs rápido.
+              <strong>Tip final</strong>: si el editor se siente lento, abrí la consola del
+              navegador (<Kbd>F12</Kbd>) y avisame si hay errores en rojo. Eso me ayuda a encontrar
+              bugs rápido.
             </Note>
           </Section>
 
           <footer className={styles.footer}>
-            <p>
-              Pathfinder está en desarrollo. Esta guía se actualiza con cada cambio
-              importante.
-            </p>
+            <p>Pathfinder está en desarrollo. Esta guía se actualiza con cada cambio importante.</p>
             <Link href="/" className={styles.footerLink}>
               <Icon name="arrow" />
               Volver a la lista de escenarios

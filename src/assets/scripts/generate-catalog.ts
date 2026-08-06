@@ -26,7 +26,6 @@ const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
 const TEXTURES_DIR = join(REPO_ROOT, 'public/pieces/textures');
 const CATALOG_PATH = join(REPO_ROOT, 'src/assets/catalog.ts');
 
-
 const VALID_CATEGORIES = ['floor', 'wall', 'water', 'lava', 'decoration', 'door', 'other'] as const;
 
 const IMAGE_EXTS = ['svg', 'png', 'jpg', 'jpeg', 'webp'] as const;

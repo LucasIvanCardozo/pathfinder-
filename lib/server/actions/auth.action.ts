@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import createAction from '@/lib/server/actions/createAction';
 import {
+  buildSessionCookieValue,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
-  buildSessionCookieValue,
 } from '@/lib/server/auth/session';
 
 const ENCODER = new TextEncoder();

@@ -1,10 +1,20 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import overlayStyles from './weather-effect.module.css';
 import { useCanvasOverlay } from './useCanvasOverlay';
+import overlayStyles from './weather-effect.module.css';
 
-type Wisp = { x: number; baseY: number; r: number; vx: number; ampY: number; freqY: number; phaseY: number; alpha: number; y: number };
+type Wisp = {
+  x: number;
+  baseY: number;
+  r: number;
+  vx: number;
+  ampY: number;
+  freqY: number;
+  phaseY: number;
+  alpha: number;
+  y: number;
+};
 
 /** Translucent fog. Far wisps (~40%): large, slow, sparse. Near wisps
  *  (~60%): smaller, faster, denser. Vertical bob is sinusoidal around
@@ -13,7 +23,17 @@ type Wisp = { x: number; baseY: number; r: number; vx: number; ampY: number; fre
 export function FogEffect() {
   const stateRef = useRef<{ wisps: Wisp[]; w: number }>({ wisps: [], w: -1 });
   const draw = useCallback(
-    ({ ctx, width, height, time }: { ctx: CanvasRenderingContext2D; width: number; height: number; time: number }) => {
+    ({
+      ctx,
+      width,
+      height,
+      time,
+    }: {
+      ctx: CanvasRenderingContext2D;
+      width: number;
+      height: number;
+      time: number;
+    }) => {
       const state = stateRef.current;
       if (state.w !== width) {
         state.wisps = seedWisps(width, height);
@@ -24,7 +44,9 @@ export function FogEffect() {
     [],
   );
   const canvasRef = useCanvasOverlay({ draw });
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }
 
 function seedWisps(width: number, height: number): Wisp[] {
@@ -33,11 +55,27 @@ function seedWisps(width: number, height: number): Wisp[] {
     const isFar = i % 5 < 2; // ~40% far, 60% near
     const baseY = Math.random() * height;
     const r = isFar ? 180 + Math.random() * 140 : 80 + Math.random() * 100;
-    return { x: Math.random() * width, baseY, r, vx: isFar ? 0.08 + Math.random() * 0.18 : 0.25 + Math.random() * 0.5, ampY: isFar ? 6 + Math.random() * 10 : 12 + Math.random() * 20, freqY: 0.002 + Math.random() * 0.004, phaseY: Math.random() * Math.PI * 2, alpha: isFar ? 0.08 + Math.random() * 0.1 : 0.18 + Math.random() * 0.18, y: baseY };
+    return {
+      x: Math.random() * width,
+      baseY,
+      r,
+      vx: isFar ? 0.08 + Math.random() * 0.18 : 0.25 + Math.random() * 0.5,
+      ampY: isFar ? 6 + Math.random() * 10 : 12 + Math.random() * 20,
+      freqY: 0.002 + Math.random() * 0.004,
+      phaseY: Math.random() * Math.PI * 2,
+      alpha: isFar ? 0.08 + Math.random() * 0.1 : 0.18 + Math.random() * 0.18,
+      y: baseY,
+    };
   });
 }
 
-function drawFog(ctx: CanvasRenderingContext2D, width: number, height: number, wisps: Wisp[], time: number): void {
+function drawFog(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  wisps: Wisp[],
+  time: number,
+): void {
   ctx.clearRect(0, 0, width, height);
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < wisps.length; i++) {

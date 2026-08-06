@@ -8,7 +8,7 @@ import { FormProvider, type UseFormReturn, useForm } from 'react-hook-form';
 import { Modal } from '@/components/Modal';
 import { SIDE_LABEL } from '@/lib/shared/constants';
 import { CombatantInsertSchema } from '@/lib/shared/schemas/combat.schemas';
-import type { CombatView, Combatant, CombatantInsert, Side } from '@/lib/shared/types';
+import type { Combatant, CombatantInsert, CombatView, Side } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './CombatModal.module.css';
 

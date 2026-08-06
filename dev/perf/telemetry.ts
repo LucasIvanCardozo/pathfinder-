@@ -76,6 +76,7 @@ function createEmptyState(): State {
 
 let state: State = createEmptyState();
 let cachedSnapshot: PerfSnapshot | null = null;
+
 /**
  * Set to `true` by every `record*` function, cleared by `pushToSubscribers`.
  * The push timer fires every PERF.SUBSCRIBE_INTERVAL_MS regardless of activity;
@@ -222,7 +223,6 @@ function recordFps(fps: number): void {
 
 /** Drives the FPS sampler via requestAnimationFrame. Returns a stop function. */
 function startSamplingFps(): () => void {
-
   let stopped = false;
   let lastTime = performance.now();
   let rafId = 0;
@@ -246,7 +246,6 @@ function startSamplingFps(): () => void {
  * Firefox without flags, etc.).
  */
 function startSamplingMemory(): () => void {
-
   type PerfMem = { usedJSHeapSize: number };
   const perfMem = (performance as unknown as { memory?: PerfMem }).memory;
   if (!perfMem) return () => {};
@@ -284,7 +283,6 @@ function reset(): void {
 
 /** Subscribes to snapshot pushes (every ~250ms). Returns an unsubscribe fn. */
 function subscribe(fn: (snap: PerfSnapshot) => void): () => void {
-
   subscribers.add(fn);
   ensurePushTimer();
   // Push the current snapshot immediately so the UI does not flash an empty
@@ -295,7 +293,6 @@ function subscribe(fn: (snap: PerfSnapshot) => void): () => void {
     if (subscribers.size === 0) clearPushTimer();
   };
 }
-
 
 export const telemetry = {
   recordRender,

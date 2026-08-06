@@ -19,8 +19,7 @@ export function isEffectBlockedByWall(
   subdivisions: readonly SubdivisionConfig[],
 ): boolean {
   const activeSub =
-    subdivisions.find((s) => s.id !== 'obscured' && s.id !== 'estructuras') ??
-    subdivisions[0];
+    subdivisions.find((s) => s.id !== 'obscured' && s.id !== 'estructuras') ?? subdivisions[0];
   if (!activeSub) return false;
 
   const wallKeys = new Set<string>();

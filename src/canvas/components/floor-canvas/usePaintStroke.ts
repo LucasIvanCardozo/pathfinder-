@@ -2,13 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { DARKNESS_PIECE_ID } from '@/lib/shared/constants';
-import type {
-  BrushCell,
-  BrushShape,
-  BrushSize,
-  StrokeFootprint,
-  ToolKind,
-} from '../../tools';
+import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../../tools';
 import { computeStrokeCells, computeStrokeFootprints } from '../../tools';
 
 type ApplyArgs = {
@@ -87,23 +81,11 @@ export function usePaintStroke(): UsePaintStrokeResult {
       if (darknessMode === 'erase') {
         // Per-centre footprints so the owner can apply wall-aware BFS per
         // stamp; the union is reconstructed downstream if needed.
-        const footprints = computeStrokeFootprints(
-          start,
-          target,
-          brushSize,
-          bounds,
-          brushShape,
-        );
+        const footprints = computeStrokeFootprints(start, target, brushSize, bounds, brushShape);
         onDarknessErase(floorId, footprints);
       } else {
         // Apply mode uses the fixed subdivision and sentinel pieceId.
-        const cells = computeStrokeCells(
-          start,
-          target,
-          brushSize,
-          bounds,
-          brushShape,
-        );
+        const cells = computeStrokeCells(start, target, brushSize, bounds, brushShape);
         onPaint(floorId, 'obscured', cells, DARKNESS_PIECE_ID);
       }
     } else {

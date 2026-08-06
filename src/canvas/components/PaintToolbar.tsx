@@ -1,6 +1,5 @@
 'use client';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCircle,
   faEraser,
@@ -10,6 +9,7 @@ import {
   faSquareFull,
   faSun,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import React from 'react';
 import { BRUSH_SHAPES } from '@/lib/shared/constants';
 import type { BrushShape, ToolKind } from '../tools';

@@ -5,9 +5,9 @@ import { useTransition } from 'react';
 import { FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/Button';
-import { Modal } from '@/components/Modal';
 import controlStyles from '@/components/form/control.module.css';
 import { FormField } from '@/components/form/FormField';
+import { Modal } from '@/components/Modal';
 import { unlockEditor } from '@/lib/server/actions/auth.action';
 import styles from './_components/unlock-modal.module.css';
 

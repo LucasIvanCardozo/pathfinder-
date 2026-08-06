@@ -1,5 +1,9 @@
 import type { z } from 'zod';
-import type { EffectInputSchema, ScenarioEffectSchema, SpellTemplateIdSchema } from '@/lib/shared/schemas/effect.schemas';
+import type {
+  EffectInputSchema,
+  ScenarioEffectSchema,
+  SpellTemplateIdSchema,
+} from '@/lib/shared/schemas/effect.schemas';
 
 /** Closed enum of the seven hardcoded template ids. */
 export type SpellTemplateId = z.infer<typeof SpellTemplateIdSchema>;

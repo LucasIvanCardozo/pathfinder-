@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AUTOSAVE_INTERVAL_MS, SAVE_TIMEOUT_MS } from '@/lib/shared/constants';
 import { saveScenarioOps } from '@/lib/server/actions/scenario.action';
+import { AUTOSAVE_INTERVAL_MS, SAVE_TIMEOUT_MS } from '@/lib/shared/constants';
 import type { Floor, PaintedCell, ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
 import type { useOpsBuffer } from './use-ops-buffer';
 
@@ -147,16 +147,7 @@ export function useScenarioAutosave({
         }
       })();
     },
-    [
-      isDirty,
-      scenarioId,
-      scenarioName,
-      mapDims,
-      baselineVersion,
-      onSaved,
-      drainOps,
-      restoreOps,
-    ],
+    [isDirty, scenarioId, scenarioName, mapDims, baselineVersion, onSaved, drainOps, restoreOps],
   );
 
   useEffect(() => {

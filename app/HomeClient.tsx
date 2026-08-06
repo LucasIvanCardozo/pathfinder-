@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useState, useTransition } from 'react';
 import type { MouseEvent } from 'react';
+import { useCallback, useRef, useState, useTransition } from 'react';
 import { Button } from '@/components/Button';
 import { Empty } from '@/components/Empty';
 import { lockEditor } from '@/lib/server/actions/auth.action';
@@ -154,8 +154,8 @@ export function HomeClient({ scenarios, unlocked }: Props) {
                 >
                   <span className={styles.scenarioName}>{s.name}</span>
                   <span className={styles.scenarioMeta}>
-                    {s.floorCount} {s.floorCount === 1 ? 'piso' : 'pisos'} ·{' '}
-                    {s.paintedCellCount} celdas pintadas
+                    {s.floorCount} {s.floorCount === 1 ? 'piso' : 'pisos'} · {s.paintedCellCount}{' '}
+                    celdas pintadas
                   </span>
                   <span className={styles.scenarioDate}>
                     {new Date(s.updatedAt).toLocaleString('es')}

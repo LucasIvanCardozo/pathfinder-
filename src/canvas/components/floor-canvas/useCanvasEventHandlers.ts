@@ -2,10 +2,10 @@
 
 import type Konva from 'konva';
 import { useCallback } from 'react';
-import type { Piece, PaintedCell, SubdivisionConfig } from '@/lib/shared/types';
+import type { PaintedCell, Piece, SubdivisionConfig } from '@/lib/shared/types';
+import type { SpellTemplateId } from '../../effects/spell-templates';
 import type { BrushCell, ToolKind } from '../../tools';
 import { findInteractiveCellAtPixel } from '../../traits';
-import type { SpellTemplateId } from '../../effects/spell-templates';
 
 export type FloorCanvasEvents = {
   onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -63,9 +63,7 @@ type UseCanvasEventHandlersArgs = {
  * target. The `findInteractiveCellAtPixel` lookup is inlined here so the
  * cell/trait plumbing doesn't leak into the render component.
  */
-export function useCanvasEventHandlers(
-  args: UseCanvasEventHandlersArgs,
-): FloorCanvasEvents {
+export function useCanvasEventHandlers(args: UseCanvasEventHandlersArgs): FloorCanvasEvents {
   const { isActive, isPanDown, isPanning, floorId, cells, onOpenTraitMenu } = args;
 
   const getPointer = useCallback((): { x: number; y: number } | null => {

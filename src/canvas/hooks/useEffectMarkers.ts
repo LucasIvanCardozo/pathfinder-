@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { PaintedCell, ScenarioEffect, SubdivisionConfig } from '@/lib/shared/types';
 import { isEffectBlockedByWall } from '../effects/blocked';
-import { templateById } from '../effects/spell-templates';
 import { computeEffectFootprint } from '../effects/footprint';
+import { templateById } from '../effects/spell-templates';
 import { eraseFootprintFor } from '../tools/eraseFootprint';
 
 /**

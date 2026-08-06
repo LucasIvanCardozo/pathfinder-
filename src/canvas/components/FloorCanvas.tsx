@@ -12,13 +12,14 @@ import type {
   ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
-import { templateById } from '../effects/spell-templates';
-import type { RotationIndex, SpellTemplateId } from '../effects/spell-templates';
 import { computeEffectFootprint } from '../effects/footprint';
+import type { RotationIndex, SpellTemplateId } from '../effects/spell-templates';
+import { templateById } from '../effects/spell-templates';
 import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { brushCellsAt } from '../tools';
 import { eraseFootprintFor } from '../tools/eraseFootprint';
+import { EffectsLayer } from './EffectsLayer';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
 import { depthToTier } from './floor-canvas/depthToTier';
 import { pointerToCell } from './floor-canvas/pointerToCell';
@@ -26,7 +27,6 @@ import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
-import { EffectsLayer } from './EffectsLayer';
 import styles from './floor-canvas.module.css';
 
 type MapDims = { baseCellSize: number; width: number; height: number };
@@ -315,12 +315,15 @@ function FloorCanvasImpl({
     // PR Y: forward the selected template id so the context-menu handler
     // can rotate the preview 90° on right-click when a cone is selected.
     selectedSpellTemplateId,
-  });            {/*
+  });
+  {
+    /*
               Spell markers (PR 2 of the spellcasting refactor). The Layer
               sits between the paintable subdivisions and `obscured` so a
               fireball is visible on top of walls/structures but hidden by
               a darkness overlay.
-            */}
+            */
+  }
   // Cursor reflects the current interaction: default crosshair (paint),
   // grab when space is held, grabbing while a pan drag is in progress.
   const baseCursor = tool === 'erase' ? 'cell' : 'crosshair';
@@ -365,12 +368,7 @@ function FloorCanvasImpl({
   // same `computeEffectFootprint` walker the persistent marker uses
   // keeps the preview and the placed marker in sync.
   const spellPreview = useMemo(() => {
-    if (
-      tool !== 'effects' ||
-      !selectedSpellTemplateId ||
-      !activeSubdivision ||
-      !hoverCell
-    ) {
+    if (tool !== 'effects' || !selectedSpellTemplateId || !activeSubdivision || !hoverCell) {
       return null;
     }
     const template = templateById(selectedSpellTemplateId);
@@ -395,10 +393,7 @@ function FloorCanvasImpl({
     // preview matches what will actually render after placement. Without
     // this the GM sees cells behind a structure wall light up on hover,
     // only for the placed marker to be hidden by the wall.
-    const footprintCells = computeEffectFootprint(
-      synthetic,
-      activeSubdivision.cellSizeRatio,
-    );
+    const footprintCells = computeEffectFootprint(synthetic, activeSubdivision.cellSizeRatio);
     const wallKeys = new Set<string>();
     for (const pc of cells) {
       if (pc.subdivisionId === 'estructuras') {
@@ -464,7 +459,8 @@ function FloorCanvasImpl({
               <Layer key={sub.id} listening={false}>
                 {subCells.map((cell) => {
                   const piece = pieceById.get(cell.pieceId);
-                  const def = piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
+                  const def =
+                    piece?.visualStates.find((v) => v.isDefault) ?? piece?.visualStates[0];
                   const fallbackPath = def?.imagePath ?? '';
                   const imagePath = resolveRenderImagePath(cell, fallbackPath, pieceById);
                   const img = textureImages.get(imagePath);
@@ -523,47 +519,49 @@ function FloorCanvasImpl({
           })}
         {showBrushPreview && (
           <Layer listening={false}>
-            {spellPreview
-              ? spellPreview.blockedByWall
-                ? (
-                    <Text
-                      x={(hoverCell?.gridX ?? 0) * previewCellSize}
-                      y={(hoverCell?.gridY ?? 0) * previewCellSize}
-                      width={previewCellSize}
-                      height={previewCellSize}
-                      align="center"
-                      verticalAlign="middle"
-                      fontSize={Math.min(16, previewCellSize)}
-                      text="🕓"
-                      opacity={0.6}
-                      listening={false}
-                    />
-                  )
-                : spellPreview.cells.map((cell) => (
-                    <Rect
-                      key={`spell-preview-${cell.gridX}-${cell.gridY}`}
-                      x={cell.gridX * previewCellSize}
-                      y={cell.gridY * previewCellSize}
-                      width={previewCellSize}
-                      height={previewCellSize}
-                      fill={spellPreview.color}
-                      opacity={0.35}
-                      perfectDrawEnabled={false}
-                      listening={false}
-                    />
-                  ))
-              : previewCells.map((cell) => (
+            {spellPreview ? (
+              spellPreview.blockedByWall ? (
+                <Text
+                  x={(hoverCell?.gridX ?? 0) * previewCellSize}
+                  y={(hoverCell?.gridY ?? 0) * previewCellSize}
+                  width={previewCellSize}
+                  height={previewCellSize}
+                  align="center"
+                  verticalAlign="middle"
+                  fontSize={Math.min(16, previewCellSize)}
+                  text="🕓"
+                  opacity={0.6}
+                  listening={false}
+                />
+              ) : (
+                spellPreview.cells.map((cell) => (
                   <Rect
-                    key={`preview-${cell.gridX}-${cell.gridY}`}
+                    key={`spell-preview-${cell.gridX}-${cell.gridY}`}
                     x={cell.gridX * previewCellSize}
                     y={cell.gridY * previewCellSize}
                     width={previewCellSize}
                     height={previewCellSize}
-                    fill={previewStyle.fill}
+                    fill={spellPreview.color}
+                    opacity={0.35}
                     perfectDrawEnabled={false}
                     listening={false}
                   />
-                ))}
+                ))
+              )
+            ) : (
+              previewCells.map((cell) => (
+                <Rect
+                  key={`preview-${cell.gridX}-${cell.gridY}`}
+                  x={cell.gridX * previewCellSize}
+                  y={cell.gridY * previewCellSize}
+                  width={previewCellSize}
+                  height={previewCellSize}
+                  fill={previewStyle.fill}
+                  perfectDrawEnabled={false}
+                  listening={false}
+                />
+              ))
+            )}
           </Layer>
         )}
       </Stage>

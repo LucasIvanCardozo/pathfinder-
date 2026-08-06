@@ -5,13 +5,13 @@ import { effectRepository } from '@/lib/server/db/repository/effect.repository';
 import { floorRepository } from '@/lib/server/db/repository/floor.repository';
 import { paintedCellRepository } from '@/lib/server/db/repository/paintedCell.repository';
 import { runInTx } from '@/lib/server/utils/runInTx';
-import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
-import type { SaveScenarioInput } from '@/lib/shared/types/scenario.types';
-import type { ScenarioEffect } from '@/lib/shared/types/effect.types';
 import { isPlantaBajaName } from '@/lib/shared/floors/naming';
+import type { ScenarioOp, ScenarioSaveRequest } from '@/lib/shared/types';
+import type { ScenarioEffect } from '@/lib/shared/types/effect.types';
 import { DEFAULT_FLOORS } from '@/lib/shared/types/floor.types';
 import type {
   LoadScenarioResult,
+  SaveScenarioInput,
   ScenarioSummary,
 } from '@/lib/shared/types/scenario.types';
 
@@ -70,7 +70,7 @@ export function scenarioRepository(db: PrismaClient | Prisma.TransactionClient) 
             orderBy: { order: 'asc' },
             include: { paintedCells: true },
           },
-            effects: true,
+          effects: true,
         },
       });
       if (!scenario) return null;
@@ -356,9 +356,8 @@ async function applyOp(
       await tx.paintedCell.update({
         where: { id: op.cellId },
         data: {
-          entityState: op.entityState === null
-            ? Prisma.JsonNull
-            : (op.entityState as Prisma.InputJsonValue),
+          entityState:
+            op.entityState === null ? Prisma.JsonNull : (op.entityState as Prisma.InputJsonValue),
         },
       });
       return;

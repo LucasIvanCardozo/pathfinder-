@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback } from 'react';
 import type { EffectInput, ScenarioEffect } from '@/lib/shared/types';
 import type { useOpsBuffer } from './use-ops-buffer';
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useMemo } from 'react';
+import type { RotationIndex, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import { useStageViewport } from '@/hooks/useStageViewport';
 import type {
   Floor,
@@ -9,7 +10,6 @@ import type {
   ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
-import type { RotationIndex, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
 import { useVisibleFloors } from '../hooks/useVisibleFloors';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';

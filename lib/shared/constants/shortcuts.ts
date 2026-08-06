@@ -320,10 +320,7 @@ export type ShortcutId = keyof typeof SHORTCUTS;
  *     bindShortcut('save', () => save(false)),
  *   ]);
  */
-export function bindShortcut(
-  id: Exclude<ShortcutId, 'subdivisionTemplate'>,
-  handler: () => void,
-) {
+export function bindShortcut(id: Exclude<ShortcutId, 'subdivisionTemplate'>, handler: () => void) {
   const def = SHORTCUTS[id] as ShortcutBinding;
   return {
     // Prefer `code` (layout-independent physical key); fall back to `key`

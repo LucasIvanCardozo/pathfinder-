@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { useCallback } from 'react';
 import type { Floor, PaintedCell } from '@/lib/shared/types';
 
 type UseClearHandlersArgs = {
@@ -57,7 +57,11 @@ export function useClearHandlers({
 }: UseClearHandlersArgs): UseClearHandlers {
   const handleClearAll = useCallback(() => {
     if (paintedCellsRef.current.length === 0) return;
-    if (!confirm('¿Borrar TODO el scenario (pintadas de todos los pisos)? Esta acción se puede deshacer con Ctrl+Z.'))
+    if (
+      !confirm(
+        '¿Borrar TODO el scenario (pintadas de todos los pisos)? Esta acción se puede deshacer con Ctrl+Z.',
+      )
+    )
       return;
     if (paintedCellsRef.current.length === 0) return; // re-check after confirm (raced with another tab)
     recordHistory();
@@ -71,7 +75,9 @@ export function useClearHandlers({
     const hasCells = paintedCellsRef.current.some((c) => c.floorId === fid);
     if (!hasCells) return;
     if (
-      !confirm(`¿Borrar todas las celdas pintadas de "${activeFloor.name}"? Esta acción se puede deshacer con Ctrl+Z.`)
+      !confirm(
+        `¿Borrar todas las celdas pintadas de "${activeFloor.name}"? Esta acción se puede deshacer con Ctrl+Z.`,
+      )
     )
       return;
     const stillHasCells = paintedCellsRef.current.some((c) => c.floorId === fid);
@@ -80,7 +86,15 @@ export function useClearHandlers({
     setPaintedCells((prev) => prev.filter((c) => c.floorId !== fid));
     opsBuffer.pushClearFloor(fid);
     markDirty();
-  }, [activeFloor.id, activeFloor.name, opsBuffer, markDirty, setPaintedCells, paintedCellsRef, recordHistory]);
+  }, [
+    activeFloor.id,
+    activeFloor.name,
+    opsBuffer,
+    markDirty,
+    setPaintedCells,
+    paintedCellsRef,
+    recordHistory,
+  ]);
 
   const handleClearSubdivision = useCallback(() => {
     if (!activeSubdivisionId) return;

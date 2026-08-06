@@ -5,7 +5,7 @@
 export type { SubdivisionConfig } from '@/lib/shared/types';
 export { PaintToolbar } from './components/PaintToolbar';
 export { PiecePalette } from './components/PiecePalette';
-export { SpellPalette, cycleRotationIndex } from './components/SpellPalette';
+export { cycleRotationIndex, SpellPalette } from './components/SpellPalette';
 export { SubdivisionTabs } from './components/SubdivisionTabs';
 export type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from './tools';
 export {
@@ -17,7 +17,7 @@ export {
   normalizeBrushSize,
 } from './tools';
 export { defaultEntityStateFor, getInteractiveTrait } from './traits';
-export { useKeyboardShortcuts, type Shortcut } from './useKeyboardShortcuts';
+export { type Shortcut, useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { useTextureImages } from './useTextureImages';
 export { getWeather } from './weather/registry';
 export { useWeatherAudio } from './weather/useWeatherAudio';

@@ -71,9 +71,7 @@ export function useTraitMenu({
       }
       if (!mergedState) return;
       setPaintedCells((previous) =>
-        previous.map((cell) =>
-          cell.id === cellId ? { ...cell, entityState: mergedState } : cell,
-        ),
+        previous.map((cell) => (cell.id === cellId ? { ...cell, entityState: mergedState } : cell)),
       );
       pushEntityState(cellId, mergedState);
       markDirty();

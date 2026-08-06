@@ -1,16 +1,16 @@
 'use client';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRotateBackward,
   faCompass,
+  faFistRaised,
   faFloppyDisk,
   faPaintbrush,
-  faFistRaised,
   faToolbox,
   faWindowMaximize,
   type IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   KEY_CODE_LABELS,
   listShortcuts,
@@ -65,13 +65,7 @@ function prettifyKey(key: string): string {
  * Help modal listing every registered shortcut grouped by category. Single
  * source of truth: the `SHORTCUTS` registry in `lib/shared/constants/shortcuts.ts`.
  */
-export function ShortcutsModal({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
+export function ShortcutsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const grouped = new Map<ShortcutCategory, ShortcutDef[]>();
   for (const def of listShortcuts()) {
     const bucket = grouped.get(def.category) ?? [];

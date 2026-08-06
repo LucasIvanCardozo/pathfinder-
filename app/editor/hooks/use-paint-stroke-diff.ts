@@ -91,9 +91,7 @@ export function usePaintStrokeDiff() {
       }) => `${c.floorId}|${c.subdivisionId}|${c.gridX}|${c.gridY}`;
       const strokeKey = (gx: number, gy: number) =>
         `${stroke.floorId}|${stroke.subdivisionId}|${gx}|${gy}`;
-      const prevByKey = new Map(
-        currentPaintedCells.map((c) => [existingKey(c), c]),
-      );
+      const prevByKey = new Map(currentPaintedCells.map((c) => [existingKey(c), c]));
       const removedIds: string[] = [];
       for (const cell of stroke.cells) {
         const existing = prevByKey.get(strokeKey(cell.gridX, cell.gridY));

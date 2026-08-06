@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { STORM_TIMING } from '@/lib/shared/constants';
-import overlayStyles from './weather-effect.module.css';
 import { useCanvasOverlay } from './useCanvasOverlay';
+import overlayStyles from './weather-effect.module.css';
 
 type Drop = { x: number; y: number; speed: number; length: number };
 
@@ -39,7 +39,9 @@ export function StormEffect({ thunderAt }: Props) {
     flashStartRef.current = performance.now();
   }, [thunderAt]);
 
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }
 
 function seedDrops(width: number, height: number): Drop[] {
@@ -48,10 +50,21 @@ function seedDrops(width: number, height: number): Drop[] {
 }
 
 function makeDrop(w: number, h: number, initial = false): Drop {
-  return { x: Math.random() * w, y: initial ? Math.random() * h : -10, speed: 9 + Math.random() * 11, length: 12 + Math.random() * 14 };
+  return {
+    x: Math.random() * w,
+    y: initial ? Math.random() * h : -10,
+    speed: 9 + Math.random() * 11,
+    length: 12 + Math.random() * 14,
+  };
 }
 
-function drawStorm(ctx: CanvasRenderingContext2D, width: number, height: number, drops: Drop[], flashStartRef: React.MutableRefObject<number | null>): void {
+function drawStorm(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  drops: Drop[],
+  flashStartRef: React.MutableRefObject<number | null>,
+): void {
   ctx.clearRect(0, 0, width, height);
 
   // Drops

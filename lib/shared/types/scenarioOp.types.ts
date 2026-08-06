@@ -1,5 +1,8 @@
 import type { z } from 'zod';
-import type { ScenarioOpSchema, ScenarioSaveRequestSchema } from '@/lib/shared/schemas/scenarioOp.schemas';
+import type {
+  ScenarioOpSchema,
+  ScenarioSaveRequestSchema,
+} from '@/lib/shared/schemas/scenarioOp.schemas';
 import type { Floor } from '@/lib/shared/types/floor.types';
 
 /**

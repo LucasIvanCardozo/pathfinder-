@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react';
 import {
+  type BrushShape,
   bumpBrushSizeDown,
   bumpBrushSizeUp,
   normalizeBrushSize,
-  type BrushShape,
   type Shortcut,
 } from '@/canvas';
 import {

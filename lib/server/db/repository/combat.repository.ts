@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
-import { newId } from '@/lib/shared/utils/generateId';
 import type { Combatant, CombatantInsert, CombatView } from '@/lib/shared/types/combat.types';
+import { newId } from '@/lib/shared/utils/generateId';
 
 /**
  * Combat repository. Pure Prisma. Returns DTOs only; never exposes a Prisma
@@ -235,7 +235,13 @@ export function combatRepository(db: PrismaClient | Prisma.TransactionClient) {
 /** Strip Prisma-only fields and shape into the `CombatView` DTO. */
 function toCombatView(
   combat: { id: string; scenarioId: string; roundNumber: number; currentTurnIndex: number },
-  combatants: Array<{ id: string; combatId: string; name: string; initiative: number; side: string }>,
+  combatants: Array<{
+    id: string;
+    combatId: string;
+    name: string;
+    initiative: number;
+    side: string;
+  }>,
 ): CombatView {
   return {
     id: combat.id,

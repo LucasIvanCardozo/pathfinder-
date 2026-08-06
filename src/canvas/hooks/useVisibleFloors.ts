@@ -25,12 +25,12 @@ export type VisibleFloors = {
  * with no matching id renders the first floor instead of an empty stack).
  */
 export function useVisibleFloors(floors: Floor[], activeFloorId: string): VisibleFloors {
-  const activeIndex = Math.max(0, floors.findIndex((f) => f.id === activeFloorId));
-
-  const visibleFloors = useMemo(
-    () => floors.slice(0, activeIndex + 1),
-    [floors, activeIndex],
+  const activeIndex = Math.max(
+    0,
+    floors.findIndex((f) => f.id === activeFloorId),
   );
+
+  const visibleFloors = useMemo(() => floors.slice(0, activeIndex + 1), [floors, activeIndex]);
 
   const depths = useMemo(
     () => visibleFloors.map((_, idx) => activeIndex - idx),

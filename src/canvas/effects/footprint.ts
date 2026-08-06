@@ -45,10 +45,7 @@ import { SPELL_TEMPLATES } from './spell-templates';
  * `useEffectMarkers` post-filters them via `eraseFootprintFor` so cells
  * behind a structure wall are dropped.
  */
-export function computeEffectFootprint(
-  effect: ScenarioEffect,
-  cellSizeRatio: number,
-): BrushCell[] {
+export function computeEffectFootprint(effect: ScenarioEffect, cellSizeRatio: number): BrushCell[] {
   if (cellSizeRatio <= 0) return [];
   const template = SPELL_TEMPLATES.find((t) => t.id === effect.templateId);
   if (!template) return [];

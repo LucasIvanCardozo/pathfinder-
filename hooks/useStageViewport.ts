@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { usePanState } from './usePanState';
 import { usePanModifier } from './usePanModifier';
+import { usePanState } from './usePanState';
 import { useViewportSize } from './useViewportSize';
 
 type MapDims = { baseCellSize: number; width: number; height: number };

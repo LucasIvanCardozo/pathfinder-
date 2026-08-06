@@ -95,10 +95,7 @@ export function effectRepository() {
      * Used after `endCombat`'s cascade leaves a wave of orphan rows behind.
      * Idempotent (zero rows match a scenario with no orphans).
      */
-    async purgeOrphansInTx(
-      tx: Prisma.TransactionClient,
-      scenarioId: string,
-    ): Promise<void> {
+    async purgeOrphansInTx(tx: Prisma.TransactionClient, scenarioId: string): Promise<void> {
       await tx.scenarioEffect.deleteMany({
         where: { scenarioId, casterCombatantId: null },
       });
@@ -111,10 +108,7 @@ export function effectRepository() {
      * non-positive counter (the marker either lives or it doesn't; no
      * "ticking down" intermediate state).
      */
-    async expireRoundInTx(
-      tx: Prisma.TransactionClient,
-      scenarioId: string,
-    ): Promise<void> {
+    async expireRoundInTx(tx: Prisma.TransactionClient, scenarioId: string): Promise<void> {
       await tx.scenarioEffect.updateMany({
         where: { scenarioId, durationRounds: { gt: 0 } },
         data: { durationRounds: { decrement: 1 } },

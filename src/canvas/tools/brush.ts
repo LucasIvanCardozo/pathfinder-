@@ -6,7 +6,6 @@ import type { BrushBounds, BrushCell, BrushShape, BrushSize } from './types';
 
 export { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE };
 
-
 /**
  * Round an arbitrary number up to the nearest odd value within the supported
  * range. Negative or non-finite inputs clamp to `MIN_BRUSH_SIZE`; values
@@ -53,7 +52,10 @@ const offsetCache = new Map<string, ReadonlyArray<Offset>>();
  * Default shape is `'circle'` so existing callers (and tests that don't
  * pass a shape) keep the historical behaviour.
  */
-export function brushOffsets(size: BrushSize, shape: BrushShape = DEFAULT_BRUSH_SHAPE): ReadonlyArray<Offset> {
+export function brushOffsets(
+  size: BrushSize,
+  shape: BrushShape = DEFAULT_BRUSH_SHAPE,
+): ReadonlyArray<Offset> {
   const normalized = normalizeBrushSize(size);
   const key = `${normalized}|${shape}`;
   const cached = offsetCache.get(key);
@@ -63,8 +65,7 @@ export function brushOffsets(size: BrushSize, shape: BrushShape = DEFAULT_BRUSH_
   const out: Offset[] = [];
   for (let dy = -radius; dy <= radius; dy++) {
     for (let dx = -radius; dx <= radius; dx++) {
-      const inside =
-        shape === 'circle' ? dx * dx + dy * dy <= r2 : dx * dx <= r2 && dy * dy <= r2;
+      const inside = shape === 'circle' ? dx * dx + dy * dy <= r2 : dx * dx <= r2 && dy * dy <= r2;
       if (inside) out.push({ dx, dy });
     }
   }

@@ -95,21 +95,18 @@ export function useOpsBuffer() {
     [syncPush],
   );
 
-  const pushScenarioName = useCallback(
-    (name: string) => {
-      // Coalesce: if the previous op was also `setScenarioName`, replace it.
-      // Every-keystroke saves would otherwise generate one op per character.
-      const current = opsRef.current;
-      const last = current[current.length - 1];
-      const next: ScenarioOp[] =
-        last?.type === 'setScenarioName'
-          ? [...current.slice(0, -1), { type: 'setScenarioName', name }]
-          : [...current, { type: 'setScenarioName', name }];
-      opsRef.current = next;
-      setOps(next);
-    },
-    [],
-  );
+  const pushScenarioName = useCallback((name: string) => {
+    // Coalesce: if the previous op was also `setScenarioName`, replace it.
+    // Every-keystroke saves would otherwise generate one op per character.
+    const current = opsRef.current;
+    const last = current[current.length - 1];
+    const next: ScenarioOp[] =
+      last?.type === 'setScenarioName'
+        ? [...current.slice(0, -1), { type: 'setScenarioName', name }]
+        : [...current, { type: 'setScenarioName', name }];
+    opsRef.current = next;
+    setOps(next);
+  }, []);
 
   // Spellcasting ops (PR 1 of the spellcasting refactor). Two helpers route
   // through the existing op buffer so the autosave hook drains them in one

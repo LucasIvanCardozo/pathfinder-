@@ -9,9 +9,7 @@ import type { PaintedCell } from '@/lib/shared/types';
  * on every paint), which is the success case — the FloorCanvas memo
  * comparator does the field-level diff to skip inactive floors.
  */
-export function useFloorCellsByFloor(
-  paintedCells: PaintedCell[],
-): Map<string, PaintedCell[]> {
+export function useFloorCellsByFloor(paintedCells: PaintedCell[]): Map<string, PaintedCell[]> {
   return useMemo(() => {
     const m = new Map<string, PaintedCell[]>();
     for (const cell of paintedCells) {

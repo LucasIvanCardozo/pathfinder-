@@ -133,33 +133,47 @@ export const MAX_CYCLE_SIZE = 8 as const;
  * symmetry).
  */
 export const SPELL_TEMPLATES = [
-  { id: 'cone-15', label: 'Cono 15 pies', color: '#e74c3c',
+  {
+    id: 'cone-15',
+    label: 'Cono 15 pies',
+    color: '#e74c3c',
     figures: [
       { matrix: CONE_15_CARDINAL, pivot: { row: 2, col: 1 } },
       { matrix: CONE_15_DIAGONAL, pivot: { row: 2, col: 0 } },
     ],
-    defaultRotationIndex: 0 },
-  { id: 'cone-30', label: 'Cono 30 pies', color: '#e67e22',
+    defaultRotationIndex: 0,
+  },
+  {
+    id: 'cone-30',
+    label: 'Cono 30 pies',
+    color: '#e67e22',
     figures: [
       { matrix: CONE_30_CARDINAL, pivot: { row: 5, col: 3 } },
       { matrix: CONE_30_DIAGONAL, pivot: { row: 5, col: 0 } },
     ],
-    defaultRotationIndex: 0 },
-  { id: 'radius-5', label: 'Radio 5 pies', color: '#3498db',
-    figures: [
-      { matrix: RADIUS_5_MATRIX, pivot: { row: 0, col: 0 } },
-    ],
-    defaultRotationIndex: 0 },
-  { id: 'radius-10', label: 'Radio 10 pies', color: '#2ecc71',
-    figures: [
-      { matrix: RADIUS_10_MATRIX, pivot: { row: 1, col: 1 } },
-    ],
-    defaultRotationIndex: 0 },
-  { id: 'radius-20', label: 'Radio 20 pies', color: '#9b59b6',
-    figures: [
-      { matrix: RADIUS_20_MATRIX, pivot: { row: 3, col: 3 } },
-    ],
-    defaultRotationIndex: 0 },
+    defaultRotationIndex: 0,
+  },
+  {
+    id: 'radius-5',
+    label: 'Radio 5 pies',
+    color: '#3498db',
+    figures: [{ matrix: RADIUS_5_MATRIX, pivot: { row: 0, col: 0 } }],
+    defaultRotationIndex: 0,
+  },
+  {
+    id: 'radius-10',
+    label: 'Radio 10 pies',
+    color: '#2ecc71',
+    figures: [{ matrix: RADIUS_10_MATRIX, pivot: { row: 1, col: 1 } }],
+    defaultRotationIndex: 0,
+  },
+  {
+    id: 'radius-20',
+    label: 'Radio 20 pies',
+    color: '#9b59b6',
+    figures: [{ matrix: RADIUS_20_MATRIX, pivot: { row: 3, col: 3 } }],
+    defaultRotationIndex: 0,
+  },
 ] as const satisfies readonly SpellTemplate[];
 
 /** Convenience union of the five template ids — the closed enum on the schema. */
@@ -176,10 +190,7 @@ export function cycleSizeFor(template: SpellTemplate): number {
  * `cycleSizeFor(template)` so the same helper works for cones (8) and
  * circles (4) alike without special-casing the constant 8 anywhere.
  */
-export function cycleRotationIndex(
-  idx: RotationIndex,
-  cycleSize: number,
-): RotationIndex {
+export function cycleRotationIndex(idx: RotationIndex, cycleSize: number): RotationIndex {
   return ((idx + 1) % cycleSize) as RotationIndex;
 }
 
@@ -188,8 +199,10 @@ export function cycleRotationIndex(
  * unknown (defensive — the closed enum should prevent this in practice).
  */
 export function templateById(id: string): SpellTemplate {
-  return (SPELL_TEMPLATES as readonly SpellTemplate[]).find((t) => t.id === id)
-    ?? (SPELL_TEMPLATES[0] as unknown as SpellTemplate);
+  return (
+    (SPELL_TEMPLATES as readonly SpellTemplate[]).find((t) => t.id === id) ??
+    (SPELL_TEMPLATES[0] as unknown as SpellTemplate)
+  );
 }
 
 /**
@@ -199,4 +212,3 @@ export function templateById(id: string): SpellTemplate {
  * template-id rename.
  */
 export const MAX_ROTATION_INDEX = MAX_CYCLE_SIZE - 1;
-

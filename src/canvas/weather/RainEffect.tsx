@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import overlayStyles from './weather-effect.module.css';
 import { useCanvasOverlay } from './useCanvasOverlay';
+import overlayStyles from './weather-effect.module.css';
 
 type Drop = { x: number; y: number; speed: number; length: number };
 
@@ -22,7 +22,9 @@ export function RainEffect() {
     [],
   );
   const canvasRef = useCanvasOverlay({ draw });
-  return <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />;
+  return (
+    <canvas ref={canvasRef} className={overlayStyles.overlay} tabIndex={-1} aria-hidden="true" />
+  );
 }
 
 function seedDrops(width: number, height: number): Drop[] {
@@ -31,10 +33,20 @@ function seedDrops(width: number, height: number): Drop[] {
 }
 
 function makeDrop(w: number, h: number, initial = false): Drop {
-  return { x: Math.random() * w, y: initial ? Math.random() * h : -10, speed: 8 + Math.random() * 10, length: 10 + Math.random() * 14 };
+  return {
+    x: Math.random() * w,
+    y: initial ? Math.random() * h : -10,
+    speed: 8 + Math.random() * 10,
+    length: 10 + Math.random() * 14,
+  };
 }
 
-function drawRain(ctx: CanvasRenderingContext2D, width: number, height: number, drops: Drop[]): void {
+function drawRain(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  drops: Drop[],
+): void {
   ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = 'rgba(180, 200, 220, 0.55)';
   ctx.lineWidth = 1;

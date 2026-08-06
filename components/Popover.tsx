@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SHORTCUTS } from '@/lib/shared/constants';
 import styles from './Popover.module.css';
@@ -217,12 +217,7 @@ export function Popover({
         keyboard activation on the Button inside bubbles a click here, so
         the wrapper doesn't need its own onKeyDown.
       */}
-      <span
-        ref={triggerRef}
-        data-popover-trigger
-        className={styles.trigger}
-        onClick={toggle}
-      >
+      <span ref={triggerRef} data-popover-trigger className={styles.trigger} onClick={toggle}>
         {trigger}
       </span>
       {isOpen && typeof document !== 'undefined'

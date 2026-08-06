@@ -46,12 +46,7 @@ function clampRounds(n: number): number {
  * — that's the parent's responsibility when it wires the click into the
  * ops buffer.
  */
-export function SpellPalette({
-  selectedId,
-  onSelect,
-  durationRounds,
-  onDurationChange,
-}: Props) {
+export function SpellPalette({ selectedId, onSelect, durationRounds, onDurationChange }: Props) {
   const selectedTemplate = SPELL_TEMPLATES.find((t) => (t.id as string) === selectedId);
 
   return (
@@ -121,11 +116,7 @@ function SpellCard({ template, active, onSelect }: SpellCardProps) {
       aria-label={template.label}
       aria-pressed={active}
     >
-      <span
-        className={styles.swatch}
-        style={{ background: template.color }}
-        aria-hidden="true"
-      />
+      <span className={styles.swatch} style={{ background: template.color }} aria-hidden="true" />
       <span className={styles.label}>{template.label}</span>
     </button>
   );

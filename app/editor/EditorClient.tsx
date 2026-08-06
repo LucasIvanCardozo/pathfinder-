@@ -28,14 +28,13 @@ import {
 
 import { SpellPalette } from '@/canvas/components/SpellPalette';
 
-
 import {
   cycleRotationIndex,
   cycleSizeFor,
   MAX_CYCLE_SIZE,
   type RotationIndex,
-  templateById,
   type SpellTemplateId,
+  templateById,
 } from '@/canvas/effects/spell-templates';
 import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
@@ -49,13 +48,7 @@ import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap } from '@/hooks';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
-import type {
-  CombatView,
-  Floor,
-  PaintedCell,
-  Piece,
-  ScenarioEffect,
-} from '@/lib/shared/types';
+import type { CombatView, Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import { CombatModal } from './components/CombatModal/CombatModal';
 import { RoundViewer } from './components/RoundViewer';
@@ -78,7 +71,6 @@ const FloorStack = dynamic(() => import('@/canvas/konva').then((m) => m.FloorSta
   ssr: false,
   loading: () => <div className={styles.canvasLoading}>Cargando canvas…</div>,
 });
-
 
 type InitialScenario = {
   id: string;
@@ -144,8 +136,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   useEffect(() => {
     setEffects(initialScenario?.effects ?? []);
   }, [initialScenario?.effects]);
-  const [selectedSpellTemplateId, setSelectedSpellTemplateId] =
-    useState<SpellTemplateId | null>(null);
+  const [selectedSpellTemplateId, setSelectedSpellTemplateId] = useState<SpellTemplateId | null>(
+    null,
+  );
   const [spellRotationIndex, setSpellRotationIndex] = useState<RotationIndex>(0);
   // Cycle length depends on the active template: cones have 2 figures (8
   // states), circles have 1 figure (4 states, visually invariant due to
@@ -706,19 +699,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         {tool === 'effects' && combatSession.isActive && (
           <SpellPalette
             selectedId={selectedSpellTemplateId}
-            onSelect={(id) =>
-                  setSelectedSpellTemplateId((prev) => (prev === id ? null : id))
-                }
+            onSelect={(id) => setSelectedSpellTemplateId((prev) => (prev === id ? null : id))}
             durationRounds={spellDurationRounds}
             onDurationChange={setSpellDurationRounds}
           />
         )}
         {tool === 'erase' || tool === 'darkness' ? (
-          <p className={styles.helpText}>
-            Esta herramienta no usa piezas ni hechizos.
-          </p>
+          <p className={styles.helpText}>Esta herramienta no usa piezas ni hechizos.</p>
         ) : null}
-
       </FloatingPanel>
 
       <FloatingPanel
@@ -880,10 +868,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
               // combat exists but has no combatants (or the cursor
               // points out of range). Tell the GM instead of failing
               // silently.
-              toast.error(
-                'Agregá un combatiente al combate antes de lanzar un hechizo.',
-                { id: 'spell-no-caster' },
-              );
+              toast.error('Agregá un combatiente al combate antes de lanzar un hechizo.', {
+                id: 'spell-no-caster',
+              });
               return;
             }
             // Defensive: the caster picked from the sorted list must
@@ -940,8 +927,8 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         onClose={() => setConfirmEndCombat(false)}
       >
         <p className={styles.confirmMessage}>
-          Se borrarán todos los combatientes del combate actual y la ronda vuelve a 1 cuando
-          inicies el próximo. Esta acción no se puede deshacer.
+          Se borrarán todos los combatientes del combate actual y la ronda vuelve a 1 cuando inicies
+          el próximo. Esta acción no se puede deshacer.
         </p>
         <div className={styles.confirmActions}>
           <Button type="button" onClick={() => setConfirmEndCombat(false)} title="Cancelar">

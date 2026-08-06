@@ -1,9 +1,9 @@
 import type { z } from 'zod';
 import type { ScenarioInputSchema, ScenarioSchema } from '@/lib/shared/schemas/scenario.schemas';
-import type { CombatView } from './combat.types';
-import type { ScenarioEffect } from './effect.types';
 import type { Floor } from '@/lib/shared/types/floor.types';
 import type { PaintedCell } from '@/lib/shared/types/paintedCell.types';
+import type { CombatView } from './combat.types';
+import type { ScenarioEffect } from './effect.types';
 
 /** Full scenario as the editor sees it. */
 export type Scenario = z.infer<typeof ScenarioSchema>;

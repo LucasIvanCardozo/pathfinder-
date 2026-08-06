@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FLOOR_LIMITS, SCENARIO_LIMITS } from '@/lib/shared/constants';
+import { EffectInputSchema } from '@/lib/shared/schemas/effect.schemas';
 import {
   AddCombatantOpSchema,
   AdvanceRoundOpSchema,
@@ -9,7 +10,6 @@ import {
   RemoveCombatantOpSchema,
   StartCombatOpSchema,
 } from './combat.schemas';
-import { EffectInputSchema } from '@/lib/shared/schemas/effect.schemas';
 
 /**
  * Discriminated union of editor mutations. Each variant maps to one server
@@ -95,7 +95,7 @@ export const ScenarioOpSchema = z.discriminatedUnion('type', [
     effectId: z.string().min(1),
   }),
 
-StartCombatOpSchema,
+  StartCombatOpSchema,
   EndCombatOpSchema,
   NextTurnOpSchema,
   PreviousTurnOpSchema,

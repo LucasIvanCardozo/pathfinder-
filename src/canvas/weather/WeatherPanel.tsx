@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { type Control, FormProvider, useForm, useWatch } from 'react-hook-form';
-import { WEATHER_DEFAULT } from '@/lib/shared/constants';
 import { FormField, FormSelect, FormSlider } from '@/components/form';
+import { WEATHER_DEFAULT } from '@/lib/shared/constants';
 import { WEATHERS, type WeatherDef } from './registry';
 import styles from './weather-panel.module.css';
 
