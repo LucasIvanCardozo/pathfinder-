@@ -67,7 +67,7 @@ export function cellsContentEqual(a: PaintedCell[], b: PaintedCell[]): boolean {
  *   reads the old duration and the spell is cast with the wrong value).
  * - `activeSubdivisionId`, `activePieceId`, `tool`, `darknessMode`,
  *   `brushSize`, `brushShape`, `showBrushPreview`, `selectedSpellTemplateId`,
- *   `spellRotationDeg`: the brush and spell previews both clear `hoverCell`
+ *   `spellRotationIndex`: the brush and spell previews both clear `hoverCell`
  *   when `isActive` flips to false (see the `setHoverCell(null)` effect in
  *   `FloorCanvas`), so the preview memos are always `null`/`[]` for an
  *   inactive floor and none of these reach the output.
@@ -98,8 +98,8 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
         changes.push('showBrushPreview');
       if (!inactiveBothSides && prev.selectedSpellTemplateId !== next.selectedSpellTemplateId)
         changes.push('selectedSpellTemplateId');
-      if (!inactiveBothSides && prev.spellRotationDeg !== next.spellRotationDeg)
-        changes.push('spellRotationDeg');
+      if (!inactiveBothSides && prev.spellRotationIndex !== next.spellRotationIndex)
+        changes.push('spellRotationIndex');
       if (!inactiveBothSides && prev.beginPan !== next.beginPan) changes.push('beginPan');
       if (!inactiveBothSides && prev.isPanDown !== next.isPanDown) changes.push('isPanDown');
       if (!inactiveBothSides && prev.isPanning !== next.isPanning) changes.push('isPanning');
@@ -135,7 +135,7 @@ export function floorCanvasPropsAreEqual(prev: Readonly<Props>, next: Readonly<P
     (inactiveBothSides || prev.brushShape === next.brushShape) &&
     (inactiveBothSides || prev.showBrushPreview === next.showBrushPreview) &&
     (inactiveBothSides || prev.selectedSpellTemplateId === next.selectedSpellTemplateId) &&
-    (inactiveBothSides || prev.spellRotationDeg === next.spellRotationDeg) &&
+    (inactiveBothSides || prev.spellRotationIndex === next.spellRotationIndex) &&
     prev.textureImages === next.textureImages &&
     prev.viewportSize === next.viewportSize &&
     prev.pan === next.pan &&

@@ -45,10 +45,14 @@ model Floor {
 /// keyed by `templateId`; the row stores only the *instance* data the GM
 /// chose when casting:
 ///
-///   - `templateId`: which of the seven hardcoded spells (e.g. `cone-15-ne`).
+///   - `templateId`: which of the five hardcoded spells (e.g. `cone-15`,
+///     `radius-10`).
 ///   - `originCellX` / `originCellY`: anchor in integer **grid cell coords**
 ///     of the active subdivision.
-///   - `rotationDeg`: 0/90/180/270. Cones use it; circles ignore it.
+///   - `rotationIndex`: 0..7. Even indices pick the cardinal matrix, odd
+///     indices pick the diagonal matrix; `Math.floor(rotationIndex / 2)` is the
+///     quarter-turn within each orientation. Cones use it; circles repeat
+///     the same matrix on both slots so the index is a visual no-op for them.
 ///   - `durationRounds`: PF1e-style lifetime in world rounds. The server
 ///     decrements it on every `nextTurn` / `advanceRound` op and deletes
 ///     the row when it hits zero in the same TX (PF1e duration rule —
@@ -70,7 +74,7 @@ model ScenarioEffect {
   templateId        String
   originCellX       Int
   originCellY       Int
-  rotationDeg       Int      @default(0)
+  rotationIndex     Int      @default(0)
   durationRounds    Int      @default(1)
   casterCombatantId String?
   castOnTurnIndex   Int

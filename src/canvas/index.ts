@@ -5,7 +5,7 @@
 export type { SubdivisionConfig } from '@/lib/shared/types';
 export { PaintToolbar } from './components/PaintToolbar';
 export { PiecePalette } from './components/PiecePalette';
-export { SpellPalette, rotateBy90 } from './components/SpellPalette';
+export { SpellPalette, cycleRotationIndex } from './components/SpellPalette';
 export { SubdivisionTabs } from './components/SubdivisionTabs';
 export type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from './tools';
 export {

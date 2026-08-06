@@ -6,9 +6,19 @@ import { SPELL_TEMPLATES } from './spell-templates';
 // Spell footprint geometry (PR 1 of the spellcasting refactor).
 //
 // Each `effect.templateId` resolves to a template in `spell-templates.ts`
-// carrying a 1/0 matrix and an explicit pivot cell. The walker enumerates
-// every `1` cell, rotates its offset around the pivot by `effect.rotationDeg`
-// (snapped to 0/90/180/270, 90° clockwise in screen coords), and applies
+// carrying TWO 1/0 matrices (cardinal and diagonal) plus their pivot cells.
+// `effect.rotationIndex` (0..7) drives the runtime selection: even indices
+// pick the cardinal matrix, odd indices pick the diagonal one (the
+// `rotationIndex % 2 === 1` parity gate), and `Math.floor(rotationIndex / 2)`
+// is the quarter-turn count within the chosen parity (0/1/2/3 → 0/90/180/270,
+// 90° clockwise in screen coords). This pairs the two matrices without
+// authoring eight separate shapes — the cardinal and diagonal cells aren't
+// reachable by a 90° rotation of one matrix around the other's pivot, so we
+// keep both literal. Circles repeat the same matrix on both slots, so cycling
+// the index is a no-op for them.
+//
+// The walker enumerates every `1` cell, rotates its offset around the pivot
+// by `Math.floor(rotationIndex / 2)` quarter-turns, and applies
 // `cellSizeRatio` as an affine scale around the anchor.
 //
 // For `cellSizeRatio = 1` (the active subdivision is `suelo`, the common case)
@@ -21,9 +31,11 @@ import { SPELL_TEMPLATES } from './spell-templates';
 
 /**
  * Compute the per-cell footprint for one spell. Resolves `effect.templateId`
- * to a template (matrix + pivot), rotates every cell's offset around the
- * pivot by `effect.rotationDeg`, and applies `cellSizeRatio` as an affine
- * scale around the anchor cell.
+ * to a template (cardinal + diagonal matrices + pivots), selects the active
+ * shape via `effect.rotationIndex` (parity picks the orientation,
+ * `Math.floor(idx / 2)` picks the quarter-turn within that parity), rotates
+ * every cell's offset around the pivot, and applies `cellSizeRatio` as an
+ * affine scale around the anchor cell.
  *
  * `cellSizeRatio` is the active subdivision's `base cells per
  * active-subdivision cell` (e.g. 1 for `suelo`, 2 for `objetos-grandes`).
@@ -39,18 +51,25 @@ export function computeEffectFootprint(
   if (cellSizeRatio <= 0) return [];
   const template = SPELL_TEMPLATES.find((t) => t.id === effect.templateId);
   if (!template) return [];
+  const rotationIndex = Math.max(0, Math.min(7, Math.round(effect.rotationIndex)));
+  // Parity picks the orientation (0/2/4/6 → cardinal, 1/3/5/7 → diagonal).
+  // `Math.floor(idx / 2)` is the quarter-turn count within the chosen
+  // parity: cardinal: 0→0°, 2→90°, 4→180°, 6→270°; diagonal: 1→0°,
+  // 3→90°, 5→180°, 7→270° in NE-diag matrix coords. Each adjacent state
+  // pair is a ~45° visual step.
+  const shape = rotationIndex % 2 === 1 ? template.diagonal : template.cardinal;
+  const times = Math.floor(rotationIndex / 2);
   const cells: BrushCell[] = [];
-  const times = ((Math.round(effect.rotationDeg / 90) % 4) + 4) % 4;
   const originX = Math.round(effect.originCellX);
   const originY = Math.round(effect.originCellY);
-  for (let row = 0; row < template.matrix.length; row++) {
-    const rowCells = template.matrix[row];
+  for (let row = 0; row < shape.matrix.length; row++) {
+    const rowCells = shape.matrix[row];
     if (!rowCells) continue;
     for (let col = 0; col < rowCells.length; col++) {
       if (rowCells[col] !== 1) continue;
       // Offset from pivot, in matrix coordinates.
-      const offsetCol = col - template.pivot.col;
-      const offsetRow = row - template.pivot.row;
+      const offsetCol = col - shape.pivot.col;
+      const offsetRow = row - shape.pivot.row;
       // Rotate 90° clockwise in screen coords (Y grows downward).
       // (offsetCol, offsetRow) → (-offsetRow, offsetCol)
       let rc = offsetCol;

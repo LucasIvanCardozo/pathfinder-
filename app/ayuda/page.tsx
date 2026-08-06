@@ -475,34 +475,43 @@ export default function AyudaPage() {
             <p>
               Los hechizos (AoE spells) son markers que colocás sobre el mapa durante un
               combate activo. Tienen un color, una forma geométrica y una duración en
-              rondas del mundo. Hay 7 templates hardcodeados:
+              rondas del mundo. Hay 5 templates hardcodeados:
             </p>
             <div className={styles.subdivisionTable}>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Cono 15 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                  Cono rojo. Dos puntos de inicio (NE y SW). Rota con <Kbd>Q</Kbd> o con
-                  click derecho sobre el canvas.
+                  Cono rojo. Cicla 8 estados de rotación (alternando cardinal y
+                  diagonal) con <Kbd>Q</Kbd> o con click derecho sobre el canvas.
                 </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Cono 30 pies</div>
                 <div className={styles.subdivisionPurpose}>
-                  Cono naranja. Dos puntos de inicio (NE y SW). Rota con <Kbd>Q</Kbd> o
-                  con click derecho sobre el canvas.
+                  Cono naranja. Cicla 8 estados de rotación (alternando cardinal y
+                  diagonal) con <Kbd>Q</Kbd> o con click derecho sobre el canvas.
                 </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 5 pies</div>
-                <div className={styles.subdivisionPurpose}>Círculo azul. No rota.</div>
+                <div className={styles.subdivisionPurpose}>
+                      Círculo azul. El clic derecho cicla la rotación pero no cambia la
+                      celda visible (cardinal y diagonal comparten la misma matriz).
+                    </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 10 pies</div>
-                <div className={styles.subdivisionPurpose}>Círculo verde. No rota.</div>
+                <div className={styles.subdivisionPurpose}>
+                      Círculo verde. El clic derecho cicla la rotación pero no cambia la
+                      celda visible (cardinal y diagonal comparten la misma matriz).
+                    </div>
               </div>
               <div className={styles.subdivisionRow}>
                 <div className={styles.subdivisionName}>Radio 20 pies</div>
-                <div className={styles.subdivisionPurpose}>Círculo violeta. No rota.</div>
+                <div className={styles.subdivisionPurpose}>
+                      Círculo violeta. El clic derecho cicla la rotación pero no cambia la
+                      celda visible (cardinal y diagonal comparten la misma matriz).
+                    </div>
               </div>
             </div>
             <ol className={styles.steps}>
@@ -513,10 +522,13 @@ export default function AyudaPage() {
               </li>
               <li>
                 Elegí un template del <strong>SpellPalette</strong> en el panel
-                izquierdo. Si es un cono, podés rotarlo con <Kbd>Q</Kbd> o con
-                click derecho sobre el canvas (sobre celda vacía; el click derecho
-                sobre pieza sigue abriendo el menú de estados). Click sobre el mismo
-                card otra vez deselecciona el hechizo.
+                izquierdo. La rotación vive en el lienzo, no en el panel: con un cono
+                seleccionado, hacé click derecho sobre el canvas (sobre celda vacía; el
+                click derecho sobre pieza sigue abriendo el menú de estados) o usá el
+                atajo <Kbd>Q</Kbd> para ciclar 8 estados que alternan entre cardinal y
+                diagonal (0°, 45°, 90°, 135°, …, 315°). Click sobre el mismo card otra
+                vez deselecciona el hechizo. Cambiar de template vuelve la rotación al
+                estado inicial.
               </li>
               <li>
                 Elegí la duración en rondas (1–10 por default) con el dropdown del

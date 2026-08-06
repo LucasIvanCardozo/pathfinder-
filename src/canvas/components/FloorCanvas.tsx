@@ -13,7 +13,7 @@ import type {
   SubdivisionConfig,
 } from '@/lib/shared/types';
 import { templateById } from '../effects/spell-templates';
-import type { RotationDeg, SpellTemplateId } from '../effects/spell-templates';
+import type { RotationIndex, SpellTemplateId } from '../effects/spell-templates';
 import { computeEffectFootprint } from '../effects/footprint';
 import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
@@ -123,7 +123,7 @@ export type Props = {
   /**
    * Currently-selected rotation for the spell preview (cones only).
    */
-  spellRotationDeg: RotationDeg;
+  spellRotationIndex: RotationIndex;
 };
 
 function FloorCanvasImpl({
@@ -155,7 +155,7 @@ function FloorCanvasImpl({
   onPlaceSpell,
   onRotateSpell,
   selectedSpellTemplateId,
-  spellRotationDeg,
+  spellRotationIndex,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
   const isDrawingRef = useRef(false);
@@ -383,7 +383,7 @@ function FloorCanvasImpl({
       templateId: selectedSpellTemplateId,
       originCellX: anchorX,
       originCellY: anchorY,
-      rotationDeg: spellRotationDeg,
+      rotationIndex: spellRotationIndex,
       durationRounds: 1,
       casterCombatantId: null,
       castOnTurnIndex: 0,
@@ -418,7 +418,7 @@ function FloorCanvasImpl({
     selectedSpellTemplateId,
     activeSubdivision,
     hoverCell,
-    spellRotationDeg,
+    spellRotationIndex,
     floor.id,
     cells,
   ]);

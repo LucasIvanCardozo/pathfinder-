@@ -6,9 +6,12 @@ import { SPELL_TEMPLATES } from '@/canvas/effects/spell-templates';
  * spellcasting refactor).
  *
  * Shape is resolved from `templateId` against `SPELL_TEMPLATES` at read time;
- * the schema is closed over the seven hardcoded ids so an unknown id fails
- * validation before it can poison the read side. `rotationDeg` is discrete
- * (0/90/180/270); the walker snaps to the nearest cardinal before walking.
+ * the schema is closed over the five hardcoded ids so an unknown id fails
+ * validation before it can poison the read side. `rotationIndex` is an
+ * integer in 0..7 — even indices pick the cardinal matrix, odd indices pick
+ * the diagonal matrix; `Math.floor(rotationIndex / 2)` is the quarter-turn within each
+ * orientation. The walker snaps with `Math.round` + clamp as a safety net
+ * for legacy rows outside the range.
  *
  * `originCellX` / `originCellY` are integer cell coords in the active
  * subdivision's grid space (no Float — sub-cell anchors are out of scope).
@@ -36,8 +39,7 @@ const SPELL_TEMPLATE_IDS = SPELL_TEMPLATES.map((t) => t.id) as [
 
 export const SpellTemplateIdSchema = z.enum(SPELL_TEMPLATE_IDS);
 
-export const ROTATIONS = [0, 90, 180, 270] as const;
-export const RotationDegSchema = z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]);
+export const RotationIndexSchema = z.number().int().min(0).max(7);
 
 /**
  * Wire shape sent by the client in an `addEffect` op. Mirrors the columns of
@@ -50,7 +52,7 @@ export const EffectInputSchema = z.object({
   templateId: SpellTemplateIdSchema,
   originCellX: z.number().int(),
   originCellY: z.number().int(),
-  rotationDeg: RotationDegSchema.default(0),
+  rotationIndex: RotationIndexSchema.default(0),
   durationRounds: z.number().int().min(1).max(99).default(1),
   casterCombatantId: z.string().min(1).nullable(),
   castOnTurnIndex: z.number().int().min(0),

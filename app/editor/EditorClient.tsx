@@ -26,10 +26,15 @@ import {
   WeatherPanel,
 } from '@/canvas';
 
-import { SpellPalette, rotateBy90 } from '@/canvas/components/SpellPalette';
+import { SpellPalette } from '@/canvas/components/SpellPalette';
 
 
-import type { RotationDeg, SpellTemplateId } from '@/canvas/effects/spell-templates';
+import {
+  cycleRotationIndex,
+  type RotationIndex,
+  templateById,
+  type SpellTemplateId,
+} from '@/canvas/effects/spell-templates';
 import type { ToolKind } from '@/canvas/tools';
 import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
@@ -125,7 +130,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   // mirrors the persisted rows (write-side goes through the ops buffer
   // + autosave); `markerTooltip` holds the marker the canvas clicked so
   // the EffectTooltip can render a "Quitar" action. `selectedSpellTemplateId`
-  // + `spellRotationDeg` drive the brush preview when `tool === 'effects'`.
+  // + `spellRotationIndex` drive the brush preview when `tool === 'effects'`.
   const [effects, setEffects] = useState<ScenarioEffect[]>(initialScenario?.effects ?? []);
   // Re-sync local `effects` whenever the server-rendered scenario reference
   // changes. `useState` only reads its argument on mount; without this
@@ -139,7 +144,21 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   }, [initialScenario?.effects]);
   const [selectedSpellTemplateId, setSelectedSpellTemplateId] =
     useState<SpellTemplateId | null>(null);
-  const [spellRotationDeg, setSpellRotationDeg] = useState<RotationDeg>(0);
+  const [spellRotationIndex, setSpellRotationIndex] = useState<RotationIndex>(0);
+  // Reset the rotation cycle when the GM picks a different template. Each
+  // template carries its own `defaultRotationIndex` (always 0 today, but the
+  // hook makes the contract explicit so a future template can open at a
+  // non-zero state). Without this, switching from cone-30 rotated to SE
+  // back to cone-15 would carry the diagonal state over and the GM would
+  // have to cycle back to cardinal manually.
+  useEffect(() => {
+    if (!selectedSpellTemplateId) {
+      setSpellRotationIndex(0);
+      return;
+    }
+    const template = templateById(selectedSpellTemplateId);
+    setSpellRotationIndex(template.defaultRotationIndex);
+  }, [selectedSpellTemplateId]);
   // PR 4: PF1e-style spell lifetime in world rounds. Defaults to 1
   // (matches the previous "dies on the caster's next turn" behaviour).
   // The SpellPalette `<select>` is fully controlled by this state —
@@ -543,7 +562,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       previousTurn: combatOps.previousTurn,
       advanceRound: combatOps.advanceRound,
       addCombatant: () => openCombatModal({ mode: 'add' }),
-      rotateSpell: () => setSpellRotationDeg(rotateBy90(spellRotationDeg)),
+      rotateSpell: () => setSpellRotationIndex(cycleRotationIndex(spellRotationIndex)),
       modalOpenRef,
       save: () => {
         if (isSaving) return;
@@ -595,11 +614,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         {tool === 'effects' && combatSession.isActive && (
           <SpellPalette
             selectedId={selectedSpellTemplateId}
-            rotation={spellRotationDeg}
             onSelect={(id) =>
                   setSelectedSpellTemplateId((prev) => (prev === id ? null : id))
                 }
-            onRotate={() => setSpellRotationDeg(rotateBy90(spellRotationDeg))}
             durationRounds={spellDurationRounds}
             onDurationChange={setSpellDurationRounds}
           />
@@ -837,7 +854,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
-          onRotateSpell={() => setSpellRotationDeg(rotateBy90(spellRotationDeg))}
+          onRotateSpell={() => setSpellRotationIndex(cycleRotationIndex(spellRotationIndex))}
           onPlaceSpell={(cell) => {
             if (!selectedSpellTemplateId) {
               // Tool is `effects` but no template was picked from the
@@ -878,7 +895,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
               templateId: selectedSpellTemplateId,
               originCellX: cell.gridX,
               originCellY: cell.gridY,
-              rotationDeg: spellRotationDeg,
+              rotationIndex: spellRotationIndex,
               durationRounds: spellDurationRounds,
               casterCombatantId: caster.id,
               castOnTurnIndex: combatSession.combat?.currentTurnIndex ?? 0,
@@ -889,7 +906,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             setSelectedSpellTemplateId(null);
           }}
           selectedSpellTemplateId={selectedSpellTemplateId}
-          spellRotationDeg={spellRotationDeg}
+          spellRotationIndex={spellRotationIndex}
           overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
         />
       </div>

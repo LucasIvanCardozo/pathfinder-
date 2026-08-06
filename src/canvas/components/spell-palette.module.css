@@ -1,7 +1,8 @@
 /* SpellPalette chrome. Mirrors piece-palette.module.css for visual parity:
-   vertical list of cards in a 168px-wide aside. The only additions are the
-   rotation row at the bottom (cones only) and a hint label when no
-   rotation-eligible template is selected. */
+   vertical list of cards in a 168px-wide aside. Rotation has moved out of
+   this panel — the GM cycles it via right-click on the canvas (or the `Q`
+   shortcut) — so the picker is now just template cards + a duration
+   dropdown. */
 
 .palette {
   display: flex;
@@ -62,19 +63,7 @@
   font-weight: 500;
 }
 
-.rotationRow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.75rem;
-}
-
-/* Duration row (PR 4 — PF1e spell lifetime in rounds). Same flex pattern
-   as `.rotationRow` so the chrome stays consistent; sits above the
-   rotation row so the rotate button keeps its rightmost action position
-   in its own row. */
+/* Duration row (PF1e spell lifetime in rounds). */
 .durationRow {
   display: flex;
   align-items: center;
@@ -115,45 +104,4 @@
 .durationInput:focus-visible {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--bg) 70%, var(--accent) 8%);
-}
-
-.rotationLabel {
-  color: var(--fg-muted);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.7rem;
-}
-
-.rotationValue {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.rotateButton {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: var(--bg);
-  color: var(--fg);
-  border: 1px solid var(--border);
-  border-radius: 0.3rem;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.rotateButton:hover {
-  background: color-mix(in srgb, var(--bg) 70%, var(--accent) 8%);
-}
-
-.rotationHint {
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.7rem;
-  color: color-mix(in srgb, var(--fg-muted) 80%, transparent);
-  text-align: center;
 }

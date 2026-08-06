@@ -57,7 +57,7 @@ export function effectRepository() {
           templateId: effect.templateId,
           originCellX: effect.originCellX,
           originCellY: effect.originCellY,
-          rotationDeg: effect.rotationDeg,
+          rotationIndex: effect.rotationIndex,
           durationRounds: effect.durationRounds,
           casterCombatantId: effect.casterCombatantId,
           castOnTurnIndex: effect.castOnTurnIndex,

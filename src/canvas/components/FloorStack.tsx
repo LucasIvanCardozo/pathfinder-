@@ -9,7 +9,7 @@ import type {
   ScenarioEffect,
   SubdivisionConfig,
 } from '@/lib/shared/types';
-import type { RotationDeg, SpellTemplateId } from '@/canvas/effects/spell-templates';
+import type { RotationIndex, SpellTemplateId } from '@/canvas/effects/spell-templates';
 import { useFloorCellsByFloor } from '../hooks/useFloorCellsByFloor';
 import { useVisibleFloors } from '../hooks/useVisibleFloors';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
@@ -84,7 +84,7 @@ type Props = {
    * ignore it). Co-located with the template id so the preview stays in
    * sync when the GM cycles the rotate button in the SpellPalette.
    */
-  spellRotationDeg: RotationDeg;
+  spellRotationIndex: RotationIndex;
   /** Optional overlay (e.g. WeatherOverlay) rendered above the WorldGrid. */
   overlay?: React.ReactNode;
 };
@@ -116,7 +116,7 @@ function FloorStackImpl({
   onPlaceSpell,
   onRotateSpell,
   selectedSpellTemplateId,
-  spellRotationDeg,
+  spellRotationIndex,
   overlay,
 }: Props) {
   const { containerRef, viewportSize, pan, beginPan, isPanDown, isPanning, worldBounds } =
@@ -174,7 +174,7 @@ function FloorStackImpl({
             onPlaceSpell={onPlaceSpell}
             onRotateSpell={onRotateSpell}
             selectedSpellTemplateId={selectedSpellTemplateId}
-            spellRotationDeg={spellRotationDeg}
+            spellRotationIndex={spellRotationIndex}
           />
         );
       })}
