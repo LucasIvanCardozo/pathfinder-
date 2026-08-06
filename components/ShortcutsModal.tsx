@@ -27,15 +27,15 @@ const CATEGORY_META: Record<ShortcutCategory, { label: string; icon: IconDefinit
   navigation: { label: 'Navegación', icon: faCompass },
   overlay: { label: 'Overlay', icon: faWindowMaximize },
   edit: { label: 'Edición', icon: faArrowRotateBackward },
-  combat: { label: 'Combate', icon: faFistRaised },
+  combat: { label: 'Combate y hechizos', icon: faFistRaised },
 };
 
 const CATEGORY_ORDER: ShortcutCategory[] = [
   'tool',
   'brush',
-  'save',
-  'edit',
   'navigation',
+  'edit',
+  'save',
   'overlay',
   'combat',
 ];

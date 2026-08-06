@@ -176,17 +176,11 @@ export const SHORTCUTS = {
     label: 'Avanzar ronda',
     category: 'combat',
   },
-  addCombatant: {
-    id: 'addCombatant',
-    code: KEYS_BY_CODE.keyK,
-    label: 'Agregar combatiente',
-    category: 'combat',
-  },
   /**
    * PR 3 of the spellcasting refactor: rotate the currently-selected
    * spell template 90° clockwise. Bound to `Q` because the other
    * common letter shortcuts are already taken by the combat tracker
-   * (C, N, J, R, K) and the brush (B, V). The shortcut is a no-op when
+   * (C, N, J, R) and the brush (B, V). The shortcut is a no-op when
    * the selected template is a circle (rotation is irrelevant) or
    * when no template is selected.
    */
@@ -221,7 +215,7 @@ export const SHORTCUTS = {
   closeOverlay: {
     id: 'closeOverlay',
     code: KEYS_BY_CODE.escape,
-    label: 'Cerrar menú o modal de atajos',
+    label: 'Cerrar menú o modal activo (ESC)',
     category: 'overlay',
   },
   toggleChrome: {

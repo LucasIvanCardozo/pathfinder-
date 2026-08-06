@@ -25,8 +25,9 @@ type Args = {
   nextTurn: () => void;
   previousTurn: () => void;
   advanceRound: () => void;
-  /** Opens the combat modal in add-combatant mode. */
-  addCombatant: () => void;
+  /** Closes the combat modal. Called by the global Escape handler so ESC
+   *  works the same across every modal that reuses `components/Modal.tsx`. */
+  closeCombatModal: () => void;
   /** Cycles the currently-selected spell template rotation one step
    *  forward. Cycle length is `figures.length × 4` per template;
    *  the cycle interleaves figures by parity. */
@@ -61,8 +62,12 @@ type SubdivisionEntry = ShortcutTemplate & {
  * in one place. Consumers wrap the result with `useKeyboardShortcuts`.
  *
  * On Escape, the trait menu closes first (the menu is the first thing the
- * user backs out of when it's open) and then the shortcuts modal is also
- * closed, if open.
+ * user backs out of when it's open), then the shortcuts modal if open, then
+ * the combat modal. Order matters: each consumer calls its own `close()`
+ * unconditionally, so a single Escape cascades through every open overlay.
+ * The `useKeyboardShortcuts` listener runs in capture phase and calls
+ * `e.stopPropagation()`, so the `Modal` component's bubble-phase Escape
+ * listener never fires while a shortcut is bound here — we own the close.
  */
 export function buildEditorShortcuts(args: Args): Shortcut[] {
   return [
@@ -94,10 +99,6 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
       if (args.modalOpenRef?.current) return;
       args.advanceRound();
     }),
-    bindShortcut('addCombatant', () => {
-      if (args.modalOpenRef?.current) return;
-      args.addCombatant();
-    }),
     bindShortcut('rotateSpell', () => {
       // No modal-guard: rotating never opens a modal. The handler is
       // a no-op when no template is selected (EditorClient guards).
@@ -112,6 +113,7 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('closeOverlay', () => {
       args.traitMenu.close();
       args.setShowShortcuts(false);
+      args.closeCombatModal();
     }),
     // Subdivision switches generated dynamically (one per subdivision, bound
     // to keys '1'..'9'). Spread the template entry and override key per item;

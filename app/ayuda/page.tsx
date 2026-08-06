@@ -446,8 +446,9 @@ export default function AyudaPage() {
               </li>
               <li>
                 Desde el visor abajo o los atajos, avanzá el turno (<Kbd>N</Kbd>),
-                retrocedelo (<Kbd>J</Kbd>), forzá una ronda (<Kbd>R</Kbd>) o agregá un
-                combatiente al combate ya en curso (<Kbd>K</Kbd>).
+                retrocedelo (<Kbd>J</Kbd>), forzá una ronda (<Kbd>R</Kbd>) o abrí el
+                modal de combate (<Kbd>C</Kbd>) para agregar combatientes
+                al combate en curso.
               </li>
               <li>
                 Para finalizar, hacé click en <strong>Finalizar</strong> en el visor
@@ -660,7 +661,7 @@ export default function AyudaPage() {
             <Note>
               No todo se puede deshacer todavía: agregar o quitar pisos, renombrar el
               escenario, abrir/cerrar puertas, las acciones de combate
-              (iniciar/finalizar, pasar turno, agregar combatientes) y los hechizos
+              (iniciar/finalizar, pasar turno) y los hechizos
               lanzados todavía no entran en la pila de undo.
             </Note>
           </Section>

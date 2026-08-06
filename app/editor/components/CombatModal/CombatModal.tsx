@@ -1,6 +1,6 @@
 'use client';
 
-import { faPlus, faShieldHalved, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faShieldHalved, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
@@ -12,8 +12,6 @@ import type { CombatView, Combatant, CombatantInsert, Side } from '@/lib/shared/
 import { newId } from '@/lib/shared/utils/generateId';
 import styles from './CombatModal.module.css';
 
-export type CombatModalMode = 'new' | 'add';
-
 export interface CombatModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,7 +20,6 @@ export interface CombatModalProps {
   onEndCombat: () => void;
   onAddCombatant: (combatant: CombatantInsert) => void;
   onRemoveCombatant: (combatantId: string) => void;
-  mode?: CombatModalMode;
 }
 
 type DraftCombatant = CombatantInsert & { draftId: string };
@@ -44,8 +41,16 @@ const DEFAULT_VALUES: CombatantInsert = {
 
 /**
  * List-and-editor modal for starting a combat or managing its participants.
- * Initial participants stay local until `onStartCombat`; active-combat changes
- * are sent to the parent's op-backed handlers as soon as they are submitted.
+ * The form is **always visible** alongside the list: pre-combat, the user
+ * fills one combatant at a time and they stack on the draft list until
+ * "Iniciar combate"; mid-combat, every submission is appended to the live
+ * combatants list and the form clears for the next entry. The "Agregar"
+ * toggle button and `mode` prop from the previous design are gone — the
+ * modal itself is the single affordance for adding combatants.
+ *
+ * Initial participants stay local until `onStartCombat`; active-combat
+ * changes are sent to the parent's op-backed handlers as soon as they are
+ * submitted.
  */
 export function CombatModal({
   isOpen,
@@ -55,9 +60,7 @@ export function CombatModal({
   onEndCombat,
   onAddCombatant,
   onRemoveCombatant,
-  mode = 'new',
 }: CombatModalProps) {
-  const [isAdding, setIsAdding] = useState(combat === null);
   const [draftCombatants, setDraftCombatants] = useState<DraftCombatant[]>([]);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const methods = useForm<CombatantInsert>({
@@ -67,25 +70,25 @@ export function CombatModal({
     reValidateMode: 'onBlur',
   });
   const hasCombat = combat !== null;
+  // Reset local state and form whenever the modal opens. ESC / X close the
+  // modal; on reopen the user starts from defaults with an empty (or live)
+  // list.
   useEffect(() => {
     if (!isOpen) {
-      setIsAdding(false);
       setConfirmEnd(false);
       setDraftCombatants([]);
       return;
     }
     setConfirmEnd(false);
-    setIsAdding(!hasCombat || mode === 'add');
     if (hasCombat) setDraftCombatants([]);
     methods.reset(DEFAULT_VALUES);
-  }, [hasCombat, isOpen, mode, methods]);
+  }, [hasCombat, isOpen, methods]);
 
   const listedCombatants: ListedCombatant[] = combat?.combatants ?? draftCombatants;
 
   const handleAdd = (values: CombatantInsert) => {
     if (combat) {
       onAddCombatant(values);
-      setIsAdding(false);
     } else {
       setDraftCombatants((current) => [...current, { ...values, draftId: newId('combatant') }]);
     }
@@ -127,18 +130,6 @@ export function CombatModal({
               <h3>Combatientes</h3>
               <span className={styles.count}>{listedCombatants.length}</span>
             </div>
-            {combat ? (
-              <button
-                type="button"
-                className={styles.addButton}
-                onClick={() => {
-                  methods.reset(DEFAULT_VALUES);
-                  setIsAdding(true);
-                }}
-              >
-                <FontAwesomeIcon icon={faPlus} /> Agregar
-              </button>
-            ) : null}
           </header>
           <ul className={styles.list}>
             {listedCombatants.length === 0 ? (
@@ -160,7 +151,7 @@ export function CombatModal({
                       onClick={() => handleRemove(combatant)}
                       aria-label={`Quitar ${combatant.name}`}
                     >
-                      <FontAwesomeIcon icon={faTrash} /> Quitar
+                      Quitar
                     </button>
                   </li>
                 );
@@ -170,22 +161,11 @@ export function CombatModal({
         </aside>
 
         <section className={styles.editorPane}>
-          {(!combat || isAdding) && (
-            <CombatantForm
-              methods={methods}
-              isInitial={!combat}
-              onCancel={combat ? () => setIsAdding(false) : undefined}
-              onSubmit={methods.handleSubmit(handleAdd)}
-            />
-          )}
-
-          {combat && !isAdding ? (
-            <div className={styles.summary}>
-              <FontAwesomeIcon icon={faShieldHalved} />
-              <h3>Combate activo</h3>
-              <p>Ronda {combat.roundNumber}. Usá los atajos o el visor para avanzar el turno.</p>
-            </div>
-          ) : null}
+          <CombatantForm
+            methods={methods}
+            isInitial={!combat}
+            onSubmit={methods.handleSubmit(handleAdd)}
+          />
 
           {combat ? (
             <footer className={styles.footer}>
@@ -228,12 +208,10 @@ export function CombatModal({
 function CombatantForm({
   methods,
   isInitial,
-  onCancel,
   onSubmit,
 }: {
   methods: UseFormReturn<CombatantInsert>;
   isInitial: boolean;
-  onCancel?: () => void;
   onSubmit: () => void;
 }) {
   const {
@@ -283,11 +261,6 @@ function CombatantForm({
         </fieldset>
 
         <footer className={styles.formFooter}>
-          {onCancel ? (
-            <button type="button" className={styles.secondaryButton} onClick={onCancel}>
-              Cancelar
-            </button>
-          ) : null}
           <button type="submit" className={styles.primaryButton}>
             <FontAwesomeIcon icon={faPlus} /> Agregar a la lista
           </button>

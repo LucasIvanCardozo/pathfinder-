@@ -57,7 +57,7 @@ import type {
   ScenarioEffect,
 } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
-import { CombatModal, type CombatModalMode } from './components/CombatModal/CombatModal';
+import { CombatModal } from './components/CombatModal/CombatModal';
 import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
@@ -292,12 +292,10 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   });
 
   const [combatModalOpen, setCombatModalOpen] = useState(false);
-  const [combatModalMode, setCombatModalMode] = useState<CombatModalMode>('new');
   // PR 4: header pill Finalizar combate confirm dialog. Lives next to
   // `combatModalOpen` because both gate on `combatSession.isActive`.
   const [confirmEndCombat, setConfirmEndCombat] = useState(false);
-  const openCombatModal = useCallback((options?: { mode?: CombatModalMode }) => {
-    setCombatModalMode(options?.mode ?? 'new');
+  const openCombatModal = useCallback(() => {
     setCombatModalOpen(true);
     modalOpenRef.current = true;
   }, []);
@@ -572,7 +570,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       nextTurn: combatOps.nextTurn,
       previousTurn: combatOps.previousTurn,
       advanceRound: combatOps.advanceRound,
-      addCombatant: () => openCombatModal({ mode: 'add' }),
+      closeCombatModal,
       rotateSpell,
       modalOpenRef,
       save: () => {
@@ -929,7 +927,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       <RoundViewer combat={combatSession.combat} onEndCombat={() => setConfirmEndCombat(true)} />
       <CombatModal
         isOpen={combatModalOpen}
-        mode={combatModalMode}
         onClose={closeCombatModal}
         combat={combatSession.combat}
         onStartCombat={combatOps.startCombat}
