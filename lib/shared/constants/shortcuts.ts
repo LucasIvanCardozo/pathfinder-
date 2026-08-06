@@ -277,6 +277,19 @@ export const SHORTCUTS = {
     label: 'Reducir zoom',
     category: 'navigation',
   },
+  /**
+   * Toggles the floating compass rose at the bottom-right of the editor.
+   * Bound to `M` ("mapa") so it sits next to `H` ("chrome") and `Shift+↑/↓`
+   * (floors) in the navigation cluster without overlapping any single-key
+   * binding. The compass rotation itself is per-click and ephemeral — this
+   * binding only controls visibility.
+   */
+  toggleCompass: {
+    id: 'toggleCompass',
+    code: KEYS_BY_CODE.keyM,
+    label: 'Mostrar / ocultar brújula',
+    category: 'navigation',
+  },
   subdivisionTemplate: {
     // No `key` — the consumer assigns `String(i + 1)` per subdivision.
     id: 'subdivisionTemplate',

@@ -51,6 +51,7 @@ import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
 import type { CombatView, Floor, PaintedCell, Piece, ScenarioEffect } from '@/lib/shared/types';
 import { newId } from '@/lib/shared/utils/generateId';
 import { CombatModal } from './components/CombatModal/CombatModal';
+import { Compass } from './components/Compass';
 import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
 import { useClearHandlers } from './hooks/use-clear-handlers';
@@ -116,6 +117,9 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [brushSize, setBrushSize] = useState<number>(1);
   const [brushShape, setBrushShape] = useState<BrushShape>(DEFAULT_BRUSH_SHAPE);
   const [chromeVisible, setChromeVisible] = useState(true);
+  /** Floating compass rose at the bottom-right. Toggled by the `M` shortcut;
+   *  the rotation state lives inside the `Compass` component itself. */
+  const [compassVisible, setCompassVisible] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const modalOpenRef = useRef(false);
@@ -578,6 +582,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       },
       traitMenu,
       setChromeVisible,
+      setCompassVisible,
       handleSubdivisionChange,
       subdivisions,
       handleFloorUp,
@@ -923,6 +928,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           ya retorna null si !isActive, asi que esta linea no agrega DOM extra
           fuera de combate. */}
       {!chromeVisible && <RoundViewer combat={combatSession.combat} flipped />}
+      {compassVisible && <Compass />}
       <CombatModal
         isOpen={combatModalOpen}
         onClose={closeCombatModal}

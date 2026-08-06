@@ -1,9 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/gotgenes/pi-autoformat/main/schemas/pi-autoformat.schema.json",
   "formatters": {
-    "biome": {
-      "command": ["biome", "check", "--write", "--files-ignore-unknown=true"]
-    }
+    "biome": { "command": ["biome", "format", "--write"] }
   },
   "chains": {
     ".ts": ["biome"],

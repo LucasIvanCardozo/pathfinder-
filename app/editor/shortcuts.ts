@@ -39,6 +39,10 @@ type Args = {
   save: () => void;
   traitMenu: { close: () => void };
   setChromeVisible: Dispatch<SetStateAction<boolean>>;
+  /** Toggles the bottom-right compass rose. Independent from `setChromeVisible`
+   *  so the GM can hide just the compass (e.g. for a screenshot) without losing
+   *  the rest of the editor chrome. */
+  setCompassVisible: Dispatch<SetStateAction<boolean>>;
   handleSubdivisionChange: (id: string) => void;
   subdivisions: readonly SubdivisionConfig[];
   handleFloorUp: () => void;
@@ -109,6 +113,7 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
       args.rotateSpell();
     }),
     bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
+    bindShortcut('toggleCompass', () => args.setCompassVisible((v) => !v)),
     bindShortcut('save', () => args.save()),
     bindShortcut('closeOverlay', () => {
       args.traitMenu.close();
