@@ -605,38 +605,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         <Link href="/" className={styles.backLink}>
           ← Escenarios
         </Link>
-        <PaintToolbar
-          tool={tool}
-          darknessMode={darknessMode}
-          onChange={handleToolChange}
-          brushSize={brushSize}
-          onBrushSizeChange={handleBrushSizeChange}
-          brushShape={brushShape}
-          onBrushShapeChange={setBrushShape}
-          combatActive={combatSession.isActive}
-        />
-        {tool === 'paint' && activeSubdivision ? (
-          <PiecePalette
-            pieces={activePieces}
-            activePieceId={activePieceId}
-            onSelect={setActivePieceId}
-          />
-        ) : null}
-        {tool === 'effects' && combatSession.isActive && (
-          <SpellPalette
-            selectedId={selectedSpellTemplateId}
-            onSelect={(id) =>
-                  setSelectedSpellTemplateId((prev) => (prev === id ? null : id))
-                }
-            durationRounds={spellDurationRounds}
-            onDurationChange={setSpellDurationRounds}
-          />
-        )}
-        {tool === 'erase' || tool === 'darkness' ? (
-          <p className={styles.helpText}>
-            Esta herramienta no usa piezas ni hechizos.
-          </p>
-        ) : null}
         <div className={styles.secondaryActions}>
           <Button
             type="button"
@@ -720,6 +688,39 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             )}
           </Popover>
         </div>
+        <PaintToolbar
+          tool={tool}
+          darknessMode={darknessMode}
+          onChange={handleToolChange}
+          brushSize={brushSize}
+          onBrushSizeChange={handleBrushSizeChange}
+          brushShape={brushShape}
+          onBrushShapeChange={setBrushShape}
+          combatActive={combatSession.isActive}
+        />
+        {tool === 'paint' && activeSubdivision ? (
+          <PiecePalette
+            pieces={activePieces}
+            activePieceId={activePieceId}
+            onSelect={setActivePieceId}
+          />
+        ) : null}
+        {tool === 'effects' && combatSession.isActive && (
+          <SpellPalette
+            selectedId={selectedSpellTemplateId}
+            onSelect={(id) =>
+                  setSelectedSpellTemplateId((prev) => (prev === id ? null : id))
+                }
+            durationRounds={spellDurationRounds}
+            onDurationChange={setSpellDurationRounds}
+          />
+        )}
+        {tool === 'erase' || tool === 'darkness' ? (
+          <p className={styles.helpText}>
+            Esta herramienta no usa piezas ni hechizos.
+          </p>
+        ) : null}
+
       </FloatingPanel>
 
       <FloatingPanel

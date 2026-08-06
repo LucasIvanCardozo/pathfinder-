@@ -61,9 +61,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
+  flex-shrink: 1;
+}
+
+.secondaryActions button {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
 }
 
 .editor[data-chrome-visible='false'] .floatingHeader,

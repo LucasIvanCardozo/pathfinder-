@@ -42,20 +42,36 @@
 
    Direction: light from top-left, so shadow offset is down + right.
    Intensity scales with `order` to simulate elevation. */
-.floor canvas:nth-child(1) {
-  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 1));
+.floor.tier0 canvas:nth-child(1) {
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 1)) drop-shadow(-1px -2px 2px rgba(0, 0, 0, 1)) ;
 }
 
-.floor canvas:nth-child(2) {
-  filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 1));
+.floor.tier0 canvas:nth-child(2) {
+  filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 1)) drop-shadow(-2px -3px 3px rgba(0, 0, 0, 1));
 }
 
-.floor canvas:nth-child(3) {
-  filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 1));
+.floor.tier0 canvas:nth-child(3) {
+  filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 1)) drop-shadow(-3px -4px 4px rgba(0, 0, 0, 1));
 }
 
-.floor canvas:nth-child(4) {
-  filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, 1));
+.floor.tier0 canvas:nth-child(4) {
+  filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, 1)) drop-shadow(-4px -3px 4px rgba(0, 0, 0, 1));
+}
+
+.floor:not(.tier0) canvas:nth-child(1) {
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, .4)) drop-shadow(-1px -2px 2px rgba(0, 0, 0, .4)) ;
+}
+
+.floor:not(.tier0) canvas:nth-child(2) {
+  filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, .4)) drop-shadow(-2px -3px 3px rgba(0, 0, 0,.4));
+}
+
+.floor:not(.tier0) canvas:nth-child(3) {
+  filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, .4)) drop-shadow(-3px -4px 4px rgba(0, 0, 0, .4));
+}
+
+.floor:not(.tier0) canvas:nth-child(4) {
+  filter: drop-shadow(5px 6px 4px rgba(0, 0, 0, .4)) drop-shadow(-4px -3px 4px rgba(0, 0, 0, .4));
 }
 
 /* Effects Layer (PR 2): no extra filter — each <Group> already owns its
