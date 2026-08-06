@@ -15,15 +15,28 @@ type Props = {
    * dialog before mutating combat state.
    */
   onEndCombat?: () => void;
+  /**
+   * Modo "pantalla tumbada": posiciona el viewer arriba del viewport y lo
+   * rota 180° para que los jugadores sentados al lado opuesto de la mesa
+   * puedan leer los turnos sin girar la cabeza. Omite el botón "Finalizar"
+   * (queda al revés e inutilizable para el GM) y aplica `aria-hidden` para
+   * no duplicar anuncios del screen reader con la instancia normal.
+   */
+  flipped?: boolean;
 };
 
-export function RoundViewer({ combat, onEndCombat }: Props) {
+export function RoundViewer({ combat, onEndCombat, flipped = false }: Props) {
   const session = useCombatSession(combat);
   if (!session.isActive) return null;
   const { roundNumber, currentCombatant, sortedCombatants } = session;
+  // La instancia flipped es decorativa para los jugadores visuales; la única
+  // fuente de anuncios a11y es la instancia normal (abajo, role=status).
+  const a11y = flipped
+    ? { 'aria-hidden': true as const }
+    : { role: 'status', 'aria-live': 'polite' as const };
 
   return (
-    <div className={styles.viewer} role="status" aria-live="polite">
+    <div className={`${styles.viewer} ${flipped ? styles.flipped : ''}`} {...a11y}>
       <div className={styles.round}>Ronda {roundNumber}</div>
       <div className={styles.turn}>
         <span className={styles.turnLabel}>Turno:</span>
@@ -41,7 +54,7 @@ export function RoundViewer({ combat, onEndCombat }: Props) {
           </span>
         ))}
       </div>
-      {onEndCombat && (
+      {!flipped && onEndCombat && (
         <span className={styles.endButton}>
           <Button
             type="button"

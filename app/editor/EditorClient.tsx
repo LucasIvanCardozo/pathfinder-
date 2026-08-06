@@ -918,6 +918,11 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
       <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
       <RoundViewer combat={combatSession.combat} onEndCombat={() => setConfirmEndCombat(true)} />
+      {/* Modo "pantalla tumbada": segunda instancia arriba rotada 180°, visible
+          solo cuando el chrome esta oculto y hay combate activo. El componente
+          ya retorna null si !isActive, asi que esta linea no agrega DOM extra
+          fuera de combate. */}
+      {!chromeVisible && <RoundViewer combat={combatSession.combat} flipped />}
       <CombatModal
         isOpen={combatModalOpen}
         onClose={closeCombatModal}
