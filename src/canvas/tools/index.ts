@@ -11,8 +11,8 @@ export {
   MIN_BRUSH_SIZE,
   normalizeBrushSize,
 } from './brush';
+export { clipFootprintByWalls } from './clipFootprint';
 export { applyEraseStroke } from './erase';
-export { eraseFootprintFor } from './eraseFootprint';
 export { applyPaintStroke } from './paint';
 export type {
   BrushBounds,

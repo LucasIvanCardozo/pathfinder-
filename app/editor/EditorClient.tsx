@@ -37,7 +37,7 @@ import {
   templateById,
 } from '@/canvas/effects/spell-templates';
 import type { ToolKind } from '@/canvas/tools';
-import { eraseFootprintFor, normalizeBrushSize } from '@/canvas/tools';
+import { clipFootprintByWalls, normalizeBrushSize } from '@/canvas/tools';
 import { Button } from '@/components/Button';
 import { FloatingPanel } from '@/components/FloatingPanel';
 import { Modal } from '@/components/Modal';
@@ -495,7 +495,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       const eraseable = new Set<string>();
       for (const { centre, cells } of footprints) {
         if (cells.length === 0) continue;
-        const filtered = eraseFootprintFor(centre, cells, isWall);
+        const filtered = clipFootprintByWalls(centre, cells, isWall);
         for (const f of filtered) eraseable.add(`${f.gridX}|${f.gridY}`);
       }
 

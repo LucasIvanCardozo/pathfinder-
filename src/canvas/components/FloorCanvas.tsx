@@ -15,15 +15,15 @@ import type {
 import { computeEffectFootprint } from '../effects/footprint';
 import type { RotationIndex, SpellTemplateId } from '../effects/spell-templates';
 import { templateById } from '../effects/spell-templates';
+import { useBrushPreview } from '../hooks/useBrushPreview';
 import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
-import { brushCellsAt } from '../tools';
-import { eraseFootprintFor } from '../tools/eraseFootprint';
+import { clipFootprintByWalls } from '../tools/clipFootprint';
 import { EffectsLayer } from './EffectsLayer';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
 import { depthToTier } from './floor-canvas/depthToTier';
 import { pointerToCell } from './floor-canvas/pointerToCell';
-import { PREVIEW_STYLE } from './floor-canvas/previewStyle';
+
 import { resolveRenderImagePath } from './floor-canvas/resolveRenderImagePath';
 import { useCanvasEventHandlers } from './floor-canvas/useCanvasEventHandlers';
 import { usePaintStroke } from './floor-canvas/usePaintStroke';
@@ -241,6 +241,21 @@ function FloorCanvasImpl({
     [activeCellSize, activeMaxX, activeMaxY],
   );
 
+  // Wall predicate built from the painted cells for this floor. Used by
+  // both the stroke pipeline (paint/erase are wall-aware via the
+  // `usePaintStroke` `isWall` arg) and the brush preview (the preview
+  // mirrors the wall-aware behaviour). Memoised on `cells` so a content-
+  // equal re-render doesn't rebuild the Set.
+  const isWallForFloor = useMemo(() => {
+    const wallKeys = new Set<string>();
+    for (const c of cells) {
+      if (c.subdivisionId === 'estructuras') {
+        wallKeys.add(`${c.gridX}|${c.gridY}`);
+      }
+    }
+    return (x: number, y: number) => wallKeys.has(`${x}|${y}`);
+  }, [cells]);
+
   const applyLocal = useCallback(
     (pointer: { x: number; y: number }, isDragging: boolean) => {
       apply({
@@ -252,11 +267,13 @@ function FloorCanvasImpl({
         brushSize,
         brushShape,
         bounds: { maxX: activeMaxX, maxY: activeMaxY },
+        mapDims,
         onPaint: onPaint ?? (() => {}),
         onDarknessErase: onDarknessErase ?? (() => {}),
         pointerToCell: pointerToCellLocal,
         tool,
         darknessMode,
+        isWall: isWallForFloor,
       });
     },
     [
@@ -273,6 +290,8 @@ function FloorCanvasImpl({
       pointerToCellLocal,
       tool,
       darknessMode,
+      isWallForFloor,
+      mapDims,
     ],
   );
 
@@ -342,25 +361,28 @@ function FloorCanvasImpl({
           : styles.tier3;
   const className = `${styles.floor} ${tierClass}${isActive ? ` ${styles.interactive}` : ''}`;
 
-  // Always-visible, non-interactive brush preview. Renders one filled
-  // rect per cell in the brush footprint at the current hover position,
-  // with no stroke so adjacent cells don't draw an interior grid line.
-  // Empty when the cursor is outside the canvas or no subdivision is
-  // active. The `Layer` is `listening={false}` so it never intercepts
-  // pointer events — paint strokes still flow through to the active
-  // floor's hit testing.
-  const previewCells = useMemo(() => {
-    if (!activeSubdivision || !hoverCell) return [];
-    const bounds = {
-      maxX: mapDims.width * activeSubdivision.cellSizeRatio,
-      maxY: mapDims.height * activeSubdivision.cellSizeRatio,
-    };
-    return brushCellsAt(hoverCell, brushSize, bounds, brushShape);
-  }, [activeSubdivision, hoverCell, brushSize, brushShape, mapDims.width, mapDims.height]);
+  // Brush preview geometry + style. Delegates the wall-aware clipping
+  // (paint/erase) and the darkness-erase intersection to the hook so
+  // FloorCanvas stays focused on rendering.
+  const brushPreview = useBrushPreview({
+    tool,
+    darknessMode,
+    hoverCell,
+    activeSubdivision,
+    activeSubdivisionId,
+    cells,
+    brushSize,
+    brushShape,
+    mapDims,
+  });
   const previewCellSize = activeSubdivision
     ? mapDims.baseCellSize / activeSubdivision.cellSizeRatio
     : 0;
-  const previewStyle = PREVIEW_STYLE[tool];
+  // Darkness always renders in obscured-space cells (cellSizeRatio 1) so the
+  // preview lines up with the cells painted on `obscured`, regardless of the
+  // active subdivision. Without this, og/op would show the preview at half
+  // or quarter size, visually offset from the darkness underneath.
+  const darknessPreviewCellSize = mapDims.baseCellSize;
 
   // Spell preview (PR 2). When the effects tool is active AND a template
   // is selected, the brush preview mirrors the spell's footprint
@@ -401,7 +423,7 @@ function FloorCanvasImpl({
       }
     }
     const isWall = (x: number, y: number) => wallKeys.has(`${x}|${y}`);
-    const visibleCells = eraseFootprintFor(
+    const visibleCells = clipFootprintByWalls(
       { gridX: anchorX, gridY: anchorY },
       footprintCells,
       isWall,
@@ -500,20 +522,37 @@ function FloorCanvasImpl({
             // (see the `<EffectsLayer />` between the two `.map`s below);
             // rendering darkness after effects means a darkness cell
             // hides any AoE marker it covers.
+            //
+            // Darkness-erase preview integration: when the user is in
+            // darkness-erase mode, `brushPreview.cells` lists exactly the
+            // dark cells that the click will reveal. Rendering the black
+            // rect on top would defeat the white preview highlight, so we
+            // skip those cells here — the underlying paintable subdivision
+            // shows through, and the white preview rect (drawn below in
+            // the brush preview Layer) sits on top of the revealed content.
             const cellSize = cellSizeFor(sub);
+            const revealPreviewKeys =
+              tool === 'darkness' && darknessMode === 'erase'
+                ? new Set(brushPreview.cells.map((c) => `${c.gridX}|${c.gridY}`))
+                : null;
             return (
               <Layer key={sub.id} listening={false}>
-                {subCells.map((cell) => (
-                  <Rect
-                    key={cell.id}
-                    x={cell.gridX * cellSize}
-                    y={cell.gridY * cellSize}
-                    width={cellSize}
-                    height={cellSize}
-                    fill="black"
-                    perfectDrawEnabled={false}
-                  />
-                ))}
+                {subCells.map((cell) => {
+                  if (revealPreviewKeys?.has(`${cell.gridX}|${cell.gridY}`)) {
+                    return null;
+                  }
+                  return (
+                    <Rect
+                      key={cell.id}
+                      x={cell.gridX * cellSize}
+                      y={cell.gridY * cellSize}
+                      width={cellSize}
+                      height={cellSize}
+                      fill="black"
+                      perfectDrawEnabled={false}
+                    />
+                  );
+                })}
               </Layer>
             );
           })}
@@ -549,18 +588,25 @@ function FloorCanvasImpl({
                 ))
               )
             ) : (
-              previewCells.map((cell) => (
-                <Rect
-                  key={`preview-${cell.gridX}-${cell.gridY}`}
-                  x={cell.gridX * previewCellSize}
-                  y={cell.gridY * previewCellSize}
-                  width={previewCellSize}
-                  height={previewCellSize}
-                  fill={previewStyle.fill}
-                  perfectDrawEnabled={false}
-                  listening={false}
-                />
-              ))
+              brushPreview.cells.map((cell) => {
+                // Darkness renders in obscured-space cells so the preview
+                // lines up with the darkness cells underneath; everything
+                // else (paint/erase/effects spell preview) uses the
+                // active-subdivision cell size.
+                const renderSize = tool === 'darkness' ? darknessPreviewCellSize : previewCellSize;
+                return (
+                  <Rect
+                    key={`preview-${cell.gridX}-${cell.gridY}`}
+                    x={cell.gridX * renderSize}
+                    y={cell.gridY * renderSize}
+                    width={renderSize}
+                    height={renderSize}
+                    fill={brushPreview.style.fill}
+                    perfectDrawEnabled={false}
+                    listening={false}
+                  />
+                );
+              })
             )}
           </Layer>
         )}

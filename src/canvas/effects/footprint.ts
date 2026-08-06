@@ -42,7 +42,7 @@ import { SPELL_TEMPLATES } from './spell-templates';
  * active-subdivision cell` (e.g. 1 for `suelo`, 2 for `objetos-grandes`).
  *
  * The returned cells are an *over-estimate* — the wall-aware BFS in
- * `useEffectMarkers` post-filters them via `eraseFootprintFor` so cells
+ * `useEffectMarkers` post-filters them via `clipFootprintByWalls` so cells
  * behind a structure wall are dropped.
  */
 export function computeEffectFootprint(effect: ScenarioEffect, cellSizeRatio: number): BrushCell[] {

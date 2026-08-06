@@ -1,5 +1,5 @@
 import type { PaintedCell, ScenarioEffect, SubdivisionConfig } from '@/lib/shared/types';
-import { eraseFootprintFor } from '../tools/eraseFootprint';
+import { clipFootprintByWalls } from '../tools/clipFootprint';
 import { computeEffectFootprint } from './footprint';
 
 /**
@@ -11,7 +11,9 @@ import { computeEffectFootprint } from './footprint';
  * The helper intentionally rebuilds the wall set + footprint + BFS rather
  * than threading the already-computed footprint through, so call sites can
  * decide "is this marker fully hidden?" without coupling to the per-cell
- * geometry used by the renderer.
+ * geometry used by the renderer. The same `clipFootprintByWalls` primitive
+ * powers the spell markers, spell preview, brush preview, paint/erase
+ * strokes, and darkness erase — all share the "walls are opaque" rule.
  */
 export function isEffectBlockedByWall(
   effect: ScenarioEffect,
@@ -34,6 +36,6 @@ export function isEffectBlockedByWall(
     gridY: Math.round(effect.originCellY),
   };
   const footprint = computeEffectFootprint(effect, activeSub.cellSizeRatio);
-  const visible = eraseFootprintFor(anchor, footprint, isWall);
+  const visible = clipFootprintByWalls(anchor, footprint, isWall);
   return visible.length === 0;
 }

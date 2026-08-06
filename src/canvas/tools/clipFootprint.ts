@@ -1,13 +1,14 @@
-// Wall-aware darkness erase. The brush footprint normally erases every cell it
-// covers, but the user wants painted structures (`subdivisionId === 'estructuras'`)
-// to act as opaque walls for the erase — light does not bend around them. Pure
-// function so it can be unit-tested without React/Konva.
+// Wall-aware footprint filter used by paint, erase, darkness erase, and
+// spell markers. The brush footprint normally covers every cell in its
+// disc/square, but the user wants painted structures (`subdivisionId ===
+// 'estructuras'`) to act as opaque walls — light does not bend around them.
+// Pure function so it can be unit-tested without React/Konva.
 
 import type { BrushCell } from './types';
 
 /**
  * Bresenham 8-connected line from `start` to `end`, inclusive of both endpoints.
- * Used by `eraseFootprintFor` to ray-cast from the brush centre to each cell
+ * Used by `clipFootprintByWalls` to ray-cast from the brush centre to each cell
  * in the footprint. Bresenham 8-connected (vs 4-connected) keeps the line close
  * to the geometric straight between the two points, which matches what the
  * user mentally pictures as "the ray from the cursor".
@@ -44,15 +45,15 @@ function bresenhamLine(start: BrushCell, end: BrushCell): BrushCell[] {
 }
 
 /**
- * Cells of the brush `footprint` that should lose their darkness, given the
- * set of structure cells (`isWall`). Ray-casts from `center` to each footprint
- * cell along the Bresenham 8-connected line and applies two rules:
+ * Cells of the brush `footprint` reachable from `center` without crossing a
+ * wall, given the predicate `isWall`. Ray-casts from `center` to each
+ * footprint cell along the Bresenham 8-connected line and applies two rules:
  *
- * - A footprint cell is **erasable** iff the line from the centre to that cell
+ * - A footprint cell is **reachable** iff the line from the centre to that cell
  *   does not pass through any wall. Light does not bend around corners: if the
- *   straight ray crosses a wall, the cell behind it keeps its darkness. This
- *   is the property the user asked for — walls are opaque even when the user
- *   clicks on a different cell and the BFS could otherwise route around a gap.
+ *   straight ray crosses a wall, the cell behind it stays hidden. This is the
+ *   property the user asked for — walls are opaque even when the user clicks
+ *   on a different cell and the BFS could otherwise route around a gap.
  * - Walls reveal themselves. If `target` is itself a wall, it is included in
  *   the output as long as the line does not pass through a *different* wall on
  *   the way. (If a wall sits between the centre and another wall, the far wall
@@ -69,10 +70,17 @@ function bresenhamLine(start: BrushCell, end: BrushCell): BrushCell[] {
  * the physical intuition that a light source embedded in an opaque material
  * cannot illuminate its surroundings.
  *
+ * Used by:
+ * - paint and erase tool strokes (via `usePaintStroke`): the brush cannot
+ *   paint or erase across a structure wall.
+ * - darkness erase (`handleDarknessErase`): the brush acts as a light source.
+ * - spell markers (`useEffectMarkers`) and the spell preview (`FloorCanvas`).
+ * - the brush preview when the tool is paint, erase, or darkness-erase.
+ *
  * `isWall` is injected instead of taking the painted-cells array so this layer
  * stays free of React state and can be reused for any future wall-like rule.
  */
-export function eraseFootprintFor(
+export function clipFootprintByWalls(
   center: BrushCell,
   footprint: readonly BrushCell[],
   isWall: (x: number, y: number) => boolean,

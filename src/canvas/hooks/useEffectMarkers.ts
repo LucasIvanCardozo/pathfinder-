@@ -3,7 +3,7 @@ import type { PaintedCell, ScenarioEffect, SubdivisionConfig } from '@/lib/share
 import { isEffectBlockedByWall } from '../effects/blocked';
 import { computeEffectFootprint } from '../effects/footprint';
 import { templateById } from '../effects/spell-templates';
-import { eraseFootprintFor } from '../tools/eraseFootprint';
+import { clipFootprintByWalls } from '../tools/clipFootprint';
 
 /**
  * Per-cell visibility marker derived from a `ScenarioEffect` row. The
@@ -58,8 +58,9 @@ export type UseEffectMarkersArgs = {
  * Memoised so the `FloorCanvas` memo comparator sees a stable reference
  * between unrelated renders.
  *
- * Wall-aware BFS (the same `eraseFootprintFor` that drives the darkness
- * erase) drops cells behind a structure wall; the anchor cell itself is
+ * Wall-aware BFS (the same `clipFootprintByWalls` that drives the darkness
+ * erase, the brush preview, and the paint/erase strokes) drops cells behind a
+ * structure wall; the anchor cell itself is
  * always visible per the design invariant. When the BFS empties the
  * footprint, the renderer falls back to the "blocked by wall" vignette.
  *
@@ -114,7 +115,7 @@ export function useEffectMarkers({
         gridY: Math.round(effect.originCellY),
       };
       const footprint = computeEffectFootprint(effect, activeSub.cellSizeRatio);
-      const visibleCells = eraseFootprintFor(anchor, footprint, isWall).map<EffectMarkerCell>(
+      const visibleCells = clipFootprintByWalls(anchor, footprint, isWall).map<EffectMarkerCell>(
         (c) => ({ effect, gridX: c.gridX, gridY: c.gridY, template }),
       );
       return {
