@@ -63,6 +63,7 @@ import { useOpsBuffer } from './hooks/use-ops-buffer';
 import { usePaintStrokeDiff } from './hooks/use-paint-stroke-diff';
 import { useScenarioAutosave } from './hooks/use-scenario-autosave';
 import { useSpellOps } from './hooks/use-spell-ops';
+import { useStrokeLatch } from './hooks/use-stroke-latch';
 import { useTraitMenu } from './hooks/use-trait-menu';
 import { useWeatherSession } from './hooks/use-weather-session';
 import { useZoomControl } from './hooks/use-zoom-control';
@@ -242,6 +243,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     }),
     [],
   );
+
+  // Undo granularity: one step per stroke, not per painted cell. The latch is
+  // armed on `pointerdown` and consumed by the first effective mutation, so a
+  // drag across N cells collapses into one entry instead of flooding the stack.
+  const consumeStrokeLatch = useStrokeLatch();
+  const recordStrokeHistory = useCallback(() => {
+    if (consumeStrokeLatch()) history.record(buildSnapshot());
+  }, [consumeStrokeLatch, history, buildSnapshot]);
   const { pushPaint, pushErase } = opsBuffer;
 
   const { isSaving, autosaveStatus, savedAt, save } = useScenarioAutosave({
@@ -392,7 +401,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           }));
         if (newCells.length === 0) return; // stroke was entirely over darkness
         telemetry.recordEvent('paint');
-        history.record(buildSnapshot());
+        recordStrokeHistory();
         pushPaint(floorId, 'obscured', newCells);
         setPaintedCells((prev) => [...prev, ...newCells]);
         markDirty();
@@ -409,7 +418,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           paintedCells: currentPaintedCells,
         });
         telemetry.recordEvent('erase');
-        history.record(buildSnapshot());
+        recordStrokeHistory();
         pushErase(removedIds);
         setPaintedCells(next);
         markDirty();
@@ -430,7 +439,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       const { eraseIds, paintCells } = computeStrokeDiff(currentPaintedCells, next, stroke);
       if (eraseIds.length === 0 && paintCells.length === 0) return;
       telemetry.recordEvent('paint');
-      history.record(buildSnapshot());
+      recordStrokeHistory();
       if (eraseIds.length > 0) pushErase(eraseIds);
       if (paintCells.length > 0) pushPaint(floorId, subdivisionId, paintCells);
       setPaintedCells(next);
@@ -444,8 +453,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       pushErase,
       computeStrokeDiff,
       computeRemovedIds,
-      history,
-      buildSnapshot,
+      recordStrokeHistory,
     ],
   );
 
@@ -480,11 +488,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const handleDarknessErase = useCallback(
     (floorId: string, footprints: StrokeFootprint[]) => {
       if (footprints.length === 0) return;
-      // Record the pre-erase state so undo can restore the darkness cells.
-      // Done before the `removedIds.length === 0` guard because the record
-      // is harmless even if the erase ends up a no-op (one redundant step
-      // in the history).
-      history.record(buildSnapshot());
       const current = paintedCellsRef.current;
 
       // Precompute the structure walls for this floor once. Structures
@@ -521,12 +524,15 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
         if (found) removedIds.push(found.id);
       }
       if (removedIds.length === 0) return;
+      // Recorded here (not before the guards) so a no-op erase doesn't consume
+      // the stroke latch and swallow the undo step for the rest of the drag.
+      recordStrokeHistory();
       markDirty();
       telemetry.recordEvent('erase');
       pushErase(removedIds);
       setPaintedCells((prev) => prev.filter((c) => !removedIds.includes(c.id)));
     },
-    [markDirty, pushErase, history, buildSnapshot],
+    [markDirty, pushErase, recordStrokeHistory],
   );
 
   const { handleClearAll, handleClearFloor, handleClearSubdivision } = useClearHandlers({
