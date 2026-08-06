@@ -27,7 +27,10 @@ export interface EffectsLayerMarker {
 
 interface EffectsLayerProps {
   markers: readonly EffectsLayerMarker[];
-  activeCellSize: number;
+  /** Cell size for the spell marker render. Spells live in obscured-space
+   *  (cellSizeRatio 1) so this is always `baseCellSize` regardless of the
+   *  active subdivision. */
+  spellCellSize: number;
 }
 
 /** 16x16 px clock-strikethrough vignette drawn at the anchor when the
@@ -64,7 +67,7 @@ const FOOTPRINT_OPACITY = 0.35;
  * intended for the obscured layer. The empty Layer is a no-op visually
  * (Konva draws nothing) but keeps the slot reserved.
  */
-export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
+export function EffectsLayer({ markers, spellCellSize }: EffectsLayerProps) {
   return (
     <Layer>
       {markers.map(({ effect, visibleCells, template, anchor, blockedByWall }) => (
@@ -81,13 +84,13 @@ export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
         >
           {blockedByWall ? (
             <Text
-              x={anchor.gridX * activeCellSize}
-              y={anchor.gridY * activeCellSize}
-              width={activeCellSize}
-              height={activeCellSize}
+              x={anchor.gridX * spellCellSize}
+              y={anchor.gridY * spellCellSize}
+              width={spellCellSize}
+              height={spellCellSize}
               align="center"
               verticalAlign="middle"
-              fontSize={Math.min(16, activeCellSize)}
+              fontSize={Math.min(16, spellCellSize)}
               text={BLOCKED_EMOJI}
               opacity={BLOCKED_OPACITY}
               listening={false}
@@ -96,10 +99,10 @@ export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
             visibleCells.map((cell) => (
               <Rect
                 key={`${cell.gridX}-${cell.gridY}`}
-                x={cell.gridX * activeCellSize}
-                y={cell.gridY * activeCellSize}
-                width={activeCellSize}
-                height={activeCellSize}
+                x={cell.gridX * spellCellSize}
+                y={cell.gridY * spellCellSize}
+                width={spellCellSize}
+                height={spellCellSize}
                 fill={template.color}
                 opacity={FOOTPRINT_OPACITY}
                 perfectDrawEnabled={false}
@@ -118,13 +121,13 @@ export function EffectsLayer({ markers, activeCellSize }: EffectsLayerProps) {
             pins the stroke to 1px even at high zoom levels.
           */}
           <Text
-            x={anchor.gridX * activeCellSize}
-            y={anchor.gridY * activeCellSize}
-            width={activeCellSize}
-            height={activeCellSize}
+            x={anchor.gridX * spellCellSize}
+            y={anchor.gridY * spellCellSize}
+            width={spellCellSize}
+            height={spellCellSize}
             align="center"
             verticalAlign="middle"
-            fontSize={Math.min(28, activeCellSize * 0.7)}
+            fontSize={Math.min(28, spellCellSize * 0.7)}
             fontStyle="bold"
             fill="#fff"
             stroke="#000"

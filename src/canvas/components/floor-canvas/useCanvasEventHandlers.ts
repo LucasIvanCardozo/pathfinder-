@@ -29,6 +29,12 @@ type UseCanvasEventHandlersArgs = {
   updateHoverCell: (cell: BrushCell | null) => void;
   beginPan: (clientX: number, clientY: number) => void;
   pointerToCell: (pointer: { x: number; y: number }) => BrushCell | null;
+  /** Pointer → cell in obscured-space (cellSizeRatio 1). Used by the spell
+   *  placement path so the marker anchor survives active-subdivision
+   *  changes (og/op = ratio 2/4) and stays in the same grid as the
+   *  darkness cells underneath. Optional — falls back to `pointerToCell`
+   *  when the canvas isn't laid out yet. */
+  pointerToCellObscured?: (pointer: { x: number; y: number }) => BrushCell | null;
   floorId: string;
   cells: readonly PaintedCell[];
   mapDims: { baseCellSize: number };
@@ -103,7 +109,11 @@ export function useCanvasEventHandlers(args: UseCanvasEventHandlersArgs): FloorC
           // marker is wrapped in a Group inside EffectsLayer; Layers,
           // Rects, and the Stage are not Groups so they fall through.
           if (e.target.getType() === 'Group') return;
-          const cell = args.pointerToCell(pointer);
+          // Spell anchors live in obscured-space (cellSizeRatio 1) so
+          // they render at `baseCellSize` regardless of the active
+          // subdivision. Convert the active-subdivision pointer first.
+          const toObscured = args.pointerToCellObscured ?? args.pointerToCell;
+          const cell = toObscured(pointer);
           if (cell && args.onPlaceSpell) {
             args.onPlaceSpell(cell);
           }

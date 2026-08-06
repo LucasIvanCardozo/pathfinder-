@@ -19,6 +19,7 @@ import { useBrushPreview } from '../hooks/useBrushPreview';
 import { useEffectMarkers } from '../hooks/useEffectMarkers';
 import type { BrushCell, BrushShape, BrushSize, StrokeFootprint, ToolKind } from '../tools';
 import { clipFootprintByWalls } from '../tools/clipFootprint';
+import { toObscuredSpace } from '../utils/coords';
 import { EffectsLayer } from './EffectsLayer';
 import { floorCanvasPropsAreEqual } from './floor-canvas/comparators';
 import { depthToTier } from './floor-canvas/depthToTier';
@@ -232,6 +233,21 @@ function FloorCanvasImpl({
   const activeMaxX = activeSubdivision ? mapDims.width * activeSubdivision.cellSizeRatio : 0;
   const activeMaxY = activeSubdivision ? mapDims.height * activeSubdivision.cellSizeRatio : 0;
 
+  // `hoverCell` lives in active-subdivision space — the correct grid for
+  // paint and erase strokes. Darkness and spell systems live in obscured
+  // space (cellSizeRatio 1) regardless of the active subdivision, so we
+  // expose a separate `hoverCellObscured` derived once and consumed by
+  // every code path that doesn't depend on the subdivision selection.
+  // Without this, each consumer (`useBrushPreview`, `spellPreview`,
+  // `onPlaceSpell`) would have to know `activeSubdivision.cellSizeRatio`
+  // and convert internally — error-prone and the source of the spell
+  // preview bug where `clipFootprintByWalls` received the centre in one
+  // space and the footprint in another.
+  const hoverCellObscured = useMemo(() => {
+    if (!hoverCell || !activeSubdivision) return null;
+    return toObscuredSpace(hoverCell, activeSubdivision.cellSizeRatio);
+  }, [hoverCell, activeSubdivision]);
+
   // Convert a world-space pointer to a subdivision grid cell, or null when
   // the pointer is outside the active subdivision's bounds. Centralised so
   // mousedown/mousemove/mouseleave stay in sync.
@@ -239,6 +255,18 @@ function FloorCanvasImpl({
     (pointer: { x: number; y: number }): BrushCell | null =>
       pointerToCell(pointer, { activeCellSize, activeMaxX, activeMaxY }),
     [activeCellSize, activeMaxX, activeMaxY],
+  );
+  // Pointer → cell in obscured-space (cellSizeRatio 1). Used by the spell
+  // placement path so the anchor survives any active subdivision. Equivalent
+  // to `pointerToCell` with active subdivision = obscured.
+  const pointerToCellObscuredLocal = useCallback(
+    (pointer: { x: number; y: number }): BrushCell | null =>
+      pointerToCell(pointer, {
+        activeCellSize: mapDims.baseCellSize,
+        activeMaxX: mapDims.width,
+        activeMaxY: mapDims.height,
+      }),
+    [mapDims.baseCellSize, mapDims.width, mapDims.height],
   );
 
   // Wall predicate built from the painted cells for this floor. Used by
@@ -317,6 +345,7 @@ function FloorCanvasImpl({
     updateHoverCell,
     beginPan,
     pointerToCell: pointerToCellLocal,
+    pointerToCellObscured: pointerToCellObscuredLocal,
     floorId: floor.id,
     cells,
     mapDims,
@@ -368,6 +397,7 @@ function FloorCanvasImpl({
     tool,
     darknessMode,
     hoverCell,
+    hoverCellObscured,
     activeSubdivision,
     activeSubdivisionId,
     cells,
@@ -383,26 +413,37 @@ function FloorCanvasImpl({
   // active subdivision. Without this, og/op would show the preview at half
   // or quarter size, visually offset from the darkness underneath.
   const darknessPreviewCellSize = mapDims.baseCellSize;
-
+  // Spells always render at the base cell size — their cells live in
+  // obscured-space (cellSizeRatio 1) regardless of the active subdivision.
+  const spellCellSize = mapDims.baseCellSize;
   // Spell preview (PR 2). When the effects tool is active AND a template
   // is selected, the brush preview mirrors the spell's footprint
   // (template size + rotation) anchored at the hover cell. The
   // same `computeEffectFootprint` walker the persistent marker uses
   // keeps the preview and the placed marker in sync.
+  //
+  // Spell cells live in obscured-space (cellSizeRatio 1), so the entire
+  // flow uses `hoverCellObscured` as the anchor — `clipFootprintByWalls`
+  // receives both the centre and the footprint in the same space, which
+  // is required for the wall-aware filter to find any structure walls
+  // (which live in obscured-space too via the `estructuras` subdivision).
   const spellPreview = useMemo(() => {
-    if (tool !== 'effects' || !selectedSpellTemplateId || !activeSubdivision || !hoverCell) {
+    if (
+      tool !== 'effects' ||
+      !selectedSpellTemplateId ||
+      !activeSubdivision ||
+      !hoverCellObscured
+    ) {
       return null;
     }
     const template = templateById(selectedSpellTemplateId);
-    const anchorX = hoverCell.gridX;
-    const anchorY = hoverCell.gridY;
     const synthetic = {
       id: '__preview__',
       floorId: floor.id,
       scenarioId: '',
       templateId: selectedSpellTemplateId,
-      originCellX: anchorX,
-      originCellY: anchorY,
+      originCellX: hoverCellObscured.gridX,
+      originCellY: hoverCellObscured.gridY,
       rotationIndex: spellRotationIndex,
       durationRounds: 1,
       casterCombatantId: null,
@@ -411,11 +452,10 @@ function FloorCanvasImpl({
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    // Apply the same wall-aware BFS the persistent marker uses so the
-    // preview matches what will actually render after placement. Without
-    // this the GM sees cells behind a structure wall light up on hover,
-    // only for the placed marker to be hidden by the wall.
-    const footprintCells = computeEffectFootprint(synthetic, activeSubdivision.cellSizeRatio);
+    // Pass `1` to the walker so it doesn't affine-scale the offsets —
+    // the template shape stays invariant in cells, and the renderer
+    // multiplies by `spellCellSize = baseCellSize` for the world size.
+    const footprintCells = computeEffectFootprint(synthetic, 1);
     const wallKeys = new Set<string>();
     for (const pc of cells) {
       if (pc.subdivisionId === 'estructuras') {
@@ -423,18 +463,14 @@ function FloorCanvasImpl({
       }
     }
     const isWall = (x: number, y: number) => wallKeys.has(`${x}|${y}`);
-    const visibleCells = clipFootprintByWalls(
-      { gridX: anchorX, gridY: anchorY },
-      footprintCells,
-      isWall,
-    );
+    const visibleCells = clipFootprintByWalls(hoverCellObscured, footprintCells, isWall);
     const blockedByWall = visibleCells.length === 0;
     return { cells: visibleCells, color: template.color, blockedByWall };
   }, [
     tool,
     selectedSpellTemplateId,
     activeSubdivision,
-    hoverCell,
+    hoverCellObscured,
     spellRotationIndex,
     floor.id,
     cells,
@@ -509,7 +545,7 @@ function FloorCanvasImpl({
           hidden by a darkness overlay. The Konva Group inside each effect
           collapses to one draw call.
         */}
-        <EffectsLayer markers={effectMarkers} activeCellSize={activeCellSize} />
+        <EffectsLayer markers={effectMarkers} spellCellSize={mapDims.baseCellSize} />
         {cellsBySub
           .filter(({ sub }) => sub.id === 'obscured')
           .map(({ sub, cells: subCells }) => {
@@ -558,16 +594,16 @@ function FloorCanvasImpl({
           })}
         {showBrushPreview && (
           <Layer listening={false}>
-            {spellPreview ? (
+            {spellPreview && hoverCellObscured ? (
               spellPreview.blockedByWall ? (
                 <Text
-                  x={(hoverCell?.gridX ?? 0) * previewCellSize}
-                  y={(hoverCell?.gridY ?? 0) * previewCellSize}
-                  width={previewCellSize}
-                  height={previewCellSize}
+                  x={hoverCellObscured.gridX * spellCellSize}
+                  y={hoverCellObscured.gridY * spellCellSize}
+                  width={spellCellSize}
+                  height={spellCellSize}
                   align="center"
                   verticalAlign="middle"
-                  fontSize={Math.min(16, previewCellSize)}
+                  fontSize={Math.min(16, spellCellSize)}
                   text="🕓"
                   opacity={0.6}
                   listening={false}
@@ -576,10 +612,10 @@ function FloorCanvasImpl({
                 spellPreview.cells.map((cell) => (
                   <Rect
                     key={`spell-preview-${cell.gridX}-${cell.gridY}`}
-                    x={cell.gridX * previewCellSize}
-                    y={cell.gridY * previewCellSize}
-                    width={previewCellSize}
-                    height={previewCellSize}
+                    x={cell.gridX * spellCellSize}
+                    y={cell.gridY * spellCellSize}
+                    width={spellCellSize}
+                    height={spellCellSize}
                     fill={spellPreview.color}
                     opacity={0.35}
                     perfectDrawEnabled={false}

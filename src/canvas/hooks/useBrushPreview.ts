@@ -18,6 +18,11 @@ export type UseBrushPreviewArgs = {
   tool: ToolKind;
   darknessMode: 'apply' | 'erase';
   hoverCell: BrushCell | null;
+  /** Hover cell in obscured-space (cellSizeRatio 1). Used by the darkness
+   *  preview path which always operates in obscured-space regardless of
+   *  the active subdivision. Caller is responsible for deriving it from
+   *  `hoverCell` + the active subdivision's `cellSizeRatio`. */
+  hoverCellObscured: BrushCell | null;
   /** Resolved active subdivision, or `null` when the editor has none selected. */
   activeSubdivision: SubdivisionConfig | null | undefined;
   activeSubdivisionId: string;
@@ -82,6 +87,7 @@ export function useBrushPreview(args: UseBrushPreviewArgs): BrushPreview {
     tool,
     darknessMode,
     hoverCell,
+    hoverCellObscured,
     activeSubdivision,
     cells,
     brushSize,
@@ -126,25 +132,31 @@ export function useBrushPreview(args: UseBrushPreviewArgs): BrushPreview {
     const styleKey = styleKeyFor(tool, darknessMode);
     const style = PREVIEW_STYLE[styleKey];
 
-    if (!activeSubdivision || !hoverCell) {
+    // Resolve the right hover cell up-front: darkness uses the
+    // pre-computed obscured-space cell, paint/erase use the active-
+    // subdivision cell. Done first so the guards below reflect what the
+    // rest of the body actually consumes.
+    const useDarknessSpace = tool === 'darkness';
+    const previewCenter = useDarknessSpace ? hoverCellObscured : hoverCell;
+
+    if (!activeSubdivision || !previewCenter) {
       return { cells: [], style };
     }
 
-    const useDarknessSpace = tool === 'darkness';
     const bounds = useDarknessSpace
       ? darknessBounds
       : {
           maxX: mapDims.width * activeSubdivision.cellSizeRatio,
           maxY: mapDims.height * activeSubdivision.cellSizeRatio,
         };
-    const footprint = brushCellsAt(hoverCell, brushSize, bounds, brushShape);
+    const footprint = brushCellsAt(previewCenter, brushSize, bounds, brushShape);
 
     // Wall-aware preview applies to paint, erase, and darkness-erase,
     // uniformly across every active subdivision (including `estructuras`).
     const wallFilterEligible =
       tool === 'paint' || tool === 'erase' || (tool === 'darkness' && darknessMode === 'erase');
     const wallFiltered = wallFilterEligible
-      ? clipFootprintByWalls(hoverCell, footprint, isWall)
+      ? clipFootprintByWalls(previewCenter, footprint, isWall)
       : footprint;
 
     // Darkness-erase: further filter to currently-dark cells (what the
@@ -162,6 +174,7 @@ export function useBrushPreview(args: UseBrushPreviewArgs): BrushPreview {
   }, [
     activeSubdivision,
     hoverCell,
+    hoverCellObscured,
     mapDims.width,
     mapDims.height,
     brushSize,
