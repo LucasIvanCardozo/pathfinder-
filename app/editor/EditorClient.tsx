@@ -325,7 +325,13 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     markDirty,
   });
 
-  const handleSubdivisionChange = (id: string) => setActiveSubdivisionId(id);
+  const handleSubdivisionChange = (id: string) => {
+    setActiveSubdivisionId(id);
+    // Cada subcapa tiene su propio `cellSizeRatio`, así que el footprint del
+    // pincel se "percibe" distinto en cada una. Volvemos a 1x1 al cambiar de
+    // tab para que un tamaño elegido en una subcapa no contamine la siguiente.
+    setBrushSize(1);
+  };
 
   const handlePaint = useCallback(
     (
