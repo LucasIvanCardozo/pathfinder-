@@ -8,9 +8,13 @@ import { SPELL_TEMPLATES } from '@/canvas/effects/spell-templates';
  * Shape is resolved from `templateId` against `SPELL_TEMPLATES` at read time;
  * the schema is closed over the five hardcoded ids so an unknown id fails
  * validation before it can poison the read side. `rotationIndex` is an
- * integer in 0..7 — even indices pick the cardinal matrix, odd indices pick
- * the diagonal matrix; `Math.floor(rotationIndex / 2)` is the quarter-turn within each
- * orientation. The walker snaps with `Math.round` + clamp as a safety net
+ * integer in `[0..MAX_CYCLE_SIZE-1]`. Cycle length per template is
+ * `figures.length × 4` and the cycle interleaves figures by parity:
+ * `figureIdx = rotationIndex % figures.length`,
+ * `quarterTurn = Math.floor(rotationIndex / figures.length)`. Cones cycle
+ * through 8 states (2 figures × 4 quarter-turns, alternating each click
+ * for ~45° visual steps); circles cycle through 4 (visually invariant due
+ * to symmetry). The walker snaps with `Math.round` + clamp as a safety net
  * for legacy rows outside the range.
  *
  * `originCellX` / `originCellY` are integer cell coords in the active

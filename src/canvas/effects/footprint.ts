@@ -6,35 +6,36 @@ import { SPELL_TEMPLATES } from './spell-templates';
 // Spell footprint geometry (PR 1 of the spellcasting refactor).
 //
 // Each `effect.templateId` resolves to a template in `spell-templates.ts`
-// carrying TWO 1/0 matrices (cardinal and diagonal) plus their pivot cells.
-// `effect.rotationIndex` (0..7) drives the runtime selection: even indices
-// pick the cardinal matrix, odd indices pick the diagonal one (the
-// `rotationIndex % 2 === 1` parity gate), and `Math.floor(rotationIndex / 2)`
-// is the quarter-turn count within the chosen parity (0/1/2/3 → 0/90/180/270,
-// 90° clockwise in screen coords). This pairs the two matrices without
-// authoring eight separate shapes — the cardinal and diagonal cells aren't
-// reachable by a 90° rotation of one matrix around the other's pivot, so we
-// keep both literal. Circles repeat the same matrix on both slots, so cycling
-// the index is a no-op for them.
+// carrying a list of `figures` (visual variants — e.g. cardinal and
+// NE-diagonal for cones, single matrix for circles). `effect.rotationIndex`
+// interleaves figures by parity and step by stride: with N figures,
+// `figureIdx = rotationIndex % N` and `quarterTurn = Math.floor(idx / N)`.
+// The walker picks `template.figures[figureIdx]` as the active shape and
+// rotates its cells around its pivot by `quarterTurn` quarter-turns
+// (0/1/2/3 → 0/90/180/270, 90° clockwise in screen coords).
 //
-// The walker enumerates every `1` cell, rotates its offset around the pivot
-// by `Math.floor(rotationIndex / 2)` quarter-turns, and applies
-// `cellSizeRatio` as an affine scale around the anchor.
+// This is uniform across all templates — a cone with two figures cycles
+// through 8 states (cardinal ↔ NE-diagonal each click), a circle with
+// one figure cycles through 4 (visually invariant due to symmetry). No
+// parity gate is hardcoded for 2 figures; the math scales to whatever
+// number of figures the template declares. The shape never shifts
+// relative to the anchor; only the rotation and the active matrix change
+// per click.
 //
-// For `cellSizeRatio = 1` (the active subdivision is `suelo`, the common case)
-// the output matches the legacy cone/circle walker exactly. For other ratios
-// the shape scales affinely with the ratio instead of regenerating a
-// halfCells ramp — the shape in cells stays invariant, the active-cell layout
-// differs. Spell rendering happens on `suelo` in practice, so this is a
-// non-issue in the running app.
+// For `cellSizeRatio = 1` (the active subdivision is `suelo`, the common
+// case) the output matches the legacy cone/circle walker exactly. For
+// other ratios the shape scales affinely with the ratio instead of
+// regenerating a `halfCells` ramp — the shape in cells stays invariant,
+// the active-cell layout differs. Spell rendering happens on `suelo` in
+// practice, so this is a non-issue in the running app.
 // =============================================================================
 
 /**
- * Compute the per-cell footprint for one spell. Resolves `effect.templateId`
- * to a template (cardinal + diagonal matrices + pivots), selects the active
- * shape via `effect.rotationIndex` (parity picks the orientation,
- * `Math.floor(idx / 2)` picks the quarter-turn within that parity), rotates
- * every cell's offset around the pivot, and applies `cellSizeRatio` as an
+ * Compute the per-cell footprint for one spell. Resolves
+ * `effect.templateId` to a template, picks the active figure via
+ * `rotationIndex % figures.length`, picks the quarter-turn via
+ * `Math.floor(rotationIndex / figures.length)`, rotates every `1` cell's
+ * offset around the figure's pivot, and applies `cellSizeRatio` as an
  * affine scale around the anchor cell.
  *
  * `cellSizeRatio` is the active subdivision's `base cells per
@@ -51,25 +52,32 @@ export function computeEffectFootprint(
   if (cellSizeRatio <= 0) return [];
   const template = SPELL_TEMPLATES.find((t) => t.id === effect.templateId);
   if (!template) return [];
-  const rotationIndex = Math.max(0, Math.min(7, Math.round(effect.rotationIndex)));
-  // Parity picks the orientation (0/2/4/6 → cardinal, 1/3/5/7 → diagonal).
-  // `Math.floor(idx / 2)` is the quarter-turn count within the chosen
-  // parity: cardinal: 0→0°, 2→90°, 4→180°, 6→270°; diagonal: 1→0°,
-  // 3→90°, 5→180°, 7→270° in NE-diag matrix coords. Each adjacent state
-  // pair is a ~45° visual step.
-  const shape = rotationIndex % 2 === 1 ? template.diagonal : template.cardinal;
-  const times = Math.floor(rotationIndex / 2);
+  const rotationIndex = Math.max(
+    0,
+    Math.min(template.figures.length * 4 - 1, Math.round(effect.rotationIndex)),
+  );
+  // Decompose `rotationIndex` so the cycle interleaves figures. For N
+  // figures, the figure index repeats every N states (parity via
+  // `idx % N`) and the quarter-turn advances every Nth state (via
+  // `floor(idx / N)`). Two figures → cardinal ↔ NE-diagonal each click
+  // (~45° visual step). One figure (circles) → quarter-turn only (visually
+  // invariant due to symmetry).
+  const n = template.figures.length;
+  const figureIdx = rotationIndex % n;
+  const figure = template.figures[figureIdx];
+  if (!figure) return [];
+  const times = Math.floor(rotationIndex / n);
   const cells: BrushCell[] = [];
   const originX = Math.round(effect.originCellX);
   const originY = Math.round(effect.originCellY);
-  for (let row = 0; row < shape.matrix.length; row++) {
-    const rowCells = shape.matrix[row];
+  for (let row = 0; row < figure.matrix.length; row++) {
+    const rowCells = figure.matrix[row];
     if (!rowCells) continue;
     for (let col = 0; col < rowCells.length; col++) {
       if (rowCells[col] !== 1) continue;
       // Offset from pivot, in matrix coordinates.
-      const offsetCol = col - shape.pivot.col;
-      const offsetRow = row - shape.pivot.row;
+      const offsetCol = col - figure.pivot.col;
+      const offsetRow = row - figure.pivot.row;
       // Rotate 90° clockwise in screen coords (Y grows downward).
       // (offsetCol, offsetRow) → (-offsetRow, offsetCol)
       let rc = offsetCol;

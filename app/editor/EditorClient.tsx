@@ -31,6 +31,8 @@ import { SpellPalette } from '@/canvas/components/SpellPalette';
 
 import {
   cycleRotationIndex,
+  cycleSizeFor,
+  MAX_CYCLE_SIZE,
   type RotationIndex,
   templateById,
   type SpellTemplateId,
@@ -145,6 +147,15 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
   const [selectedSpellTemplateId, setSelectedSpellTemplateId] =
     useState<SpellTemplateId | null>(null);
   const [spellRotationIndex, setSpellRotationIndex] = useState<RotationIndex>(0);
+  // Cycle length depends on the active template: cones have 2 figures (8
+  // states), circles have 1 figure (4 states, visually invariant due to
+  // symmetry). Default to the catalog max when no template is selected.
+  const rotateSpell = useCallback(() => {
+    const cycleSize = selectedSpellTemplateId
+      ? cycleSizeFor(templateById(selectedSpellTemplateId))
+      : MAX_CYCLE_SIZE;
+    setSpellRotationIndex(cycleRotationIndex(spellRotationIndex, cycleSize));
+  }, [selectedSpellTemplateId, spellRotationIndex]);
   // Reset the rotation cycle when the GM picks a different template. Each
   // template carries its own `defaultRotationIndex` (always 0 today, but the
   // hook makes the contract explicit so a future template can open at a
@@ -562,7 +573,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       previousTurn: combatOps.previousTurn,
       advanceRound: combatOps.advanceRound,
       addCombatant: () => openCombatModal({ mode: 'add' }),
-      rotateSpell: () => setSpellRotationIndex(cycleRotationIndex(spellRotationIndex)),
+      rotateSpell,
       modalOpenRef,
       save: () => {
         if (isSaving) return;
@@ -854,7 +865,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onPaint={handlePaint}
           onDarknessErase={handleDarknessErase}
           onOpenTraitMenu={traitMenu.open}
-          onRotateSpell={() => setSpellRotationIndex(cycleRotationIndex(spellRotationIndex))}
+          onRotateSpell={rotateSpell}
           onPlaceSpell={(cell) => {
             if (!selectedSpellTemplateId) {
               // Tool is `effects` but no template was picked from the

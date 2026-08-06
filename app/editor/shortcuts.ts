@@ -28,7 +28,8 @@ type Args = {
   /** Opens the combat modal in add-combatant mode. */
   addCombatant: () => void;
   /** Cycles the currently-selected spell template rotation one step
-   *  forward (8 states: cardinal/diagonal × 4 quarter-turns). */
+   *  forward. Cycle length is `figures.length × 4` per template;
+   *  the cycle interleaves figures by parity. */
   rotateSpell: () => void;
   /** Shared guard for modal-triggered shortcuts. */
   modalOpenRef?: { current: boolean };
@@ -100,9 +101,10 @@ export function buildEditorShortcuts(args: Args): Shortcut[] {
     bindShortcut('rotateSpell', () => {
       // No modal-guard: rotating never opens a modal. The handler is
       // a no-op when no template is selected (EditorClient guards).
-      // Cycles `spellRotationIndex` through 0..7 — even indices pick
-      // the cardinal matrix, odd indices pick the diagonal matrix; mod 4
-      // gives the quarter-turn within each orientation.
+      // Cycles `spellRotationIndex` through `figures.length × 4` states.
+      // The cycle interleaves figures by parity (`idx % figures.length`)
+      // and advances the quarter-turn every Nth state
+      // (`Math.floor(idx / figures.length)`).
       args.rotateSpell();
     }),
     bindShortcut('toggleChrome', () => args.setChromeVisible((v) => !v)),
