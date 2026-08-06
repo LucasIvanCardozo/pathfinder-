@@ -1,9 +1,8 @@
 'use client';
 
 import type Konva from 'konva';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Text } from 'react-konva';
-import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap, useSubdivisionMap } from '@/hooks';
 import type {
   Floor,
@@ -170,18 +169,6 @@ function FloorCanvasImpl({
   useEffect(() => {
     if (!isActive) setHoverCell(null);
   }, [isActive]);
-
-  // Render counter. Lives inside FloorCanvas so React.memo gates it: when
-  // the comparator returns true the useLayoutEffect never runs and
-  // `recordRender` is never called. `useLayoutEffect` fires pre-paint so
-  // the measured duration is closer to actual render cost. Strict Mode
-  // (dev only) runs the effect twice → +2 per logical mount; production
-  // has Strict Mode off and the count is exact.
-  const renderStartRef = useRef(0);
-  renderStartRef.current = performance.now();
-  useLayoutEffect(() => {
-    telemetry.recordRender(floor.id, performance.now() - renderStartRef.current);
-  });
 
   const subById = useSubdivisionMap(subdivisions);
   const pieceById = usePieceMap(pieces);

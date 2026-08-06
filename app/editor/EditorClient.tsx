@@ -44,7 +44,6 @@ import { Modal } from '@/components/Modal';
 import { Popover } from '@/components/Popover';
 import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { Spinner } from '@/components/Spinner';
-import { telemetry } from '@/dev/perf/telemetry';
 import { usePieceMap } from '@/hooks';
 import { DARKNESS_PIECE_ID, DEFAULT_BRUSH_SHAPE, SUBDIVISIONS } from '@/lib/shared/constants';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/shared/constants/map';
@@ -400,7 +399,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
             pieceId: DARKNESS_PIECE_ID,
           }));
         if (newCells.length === 0) return; // stroke was entirely over darkness
-        telemetry.recordEvent('paint');
         recordStrokeHistory();
         pushPaint(floorId, 'obscured', newCells);
         setPaintedCells((prev) => [...prev, ...newCells]);
@@ -417,7 +415,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           stroke,
           paintedCells: currentPaintedCells,
         });
-        telemetry.recordEvent('erase');
         recordStrokeHistory();
         pushErase(removedIds);
         setPaintedCells(next);
@@ -438,7 +435,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       });
       const { eraseIds, paintCells } = computeStrokeDiff(currentPaintedCells, next, stroke);
       if (eraseIds.length === 0 && paintCells.length === 0) return;
-      telemetry.recordEvent('paint');
       recordStrokeHistory();
       if (eraseIds.length > 0) pushErase(eraseIds);
       if (paintCells.length > 0) pushPaint(floorId, subdivisionId, paintCells);
@@ -528,7 +524,6 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
       // the stroke latch and swallow the undo step for the rest of the drag.
       recordStrokeHistory();
       markDirty();
-      telemetry.recordEvent('erase');
       pushErase(removedIds);
       setPaintedCells((prev) => prev.filter((c) => !removedIds.includes(c.id)));
     },

@@ -23,7 +23,6 @@ export * from './floors';
 export * from './image-pipeline';
 export * from './keyboard';
 export * from './map';
-export * from './perf';
 export * from './shortcuts';
 export * from './subdivisions';
 export * from './timing';

@@ -1,9 +1,6 @@
 /**
- * Application timing knobs (autosave, anything else that fires on a wall-clock
- * schedule outside of the dev/perf subsystem).
- *
- * Dev/perf instrumentation intervals live in `lib/shared/constants/perf.ts`
- * so the perf layer is self-contained.
+ * Application timing knobs: autosave cadence, the save round-trip ceiling, and
+ * the transaction bounds that back it.
  */
 
 /** How often `useScenarioAutosave` checks for unsaved changes and flushes them
