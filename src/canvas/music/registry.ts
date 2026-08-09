@@ -20,9 +20,19 @@ export const MUSIC_TRACKS: readonly MusicDef[] = [
   { id: 'none', label: 'Silencio', src: null },
 
   {
+    id: 'batalla-epica',
+    label: 'Batalla Epica',
+    src: '/music/batalla-epica.mp3',
+  },
+  {
     id: 'batalla-heroica',
     label: 'Batalla Heroica',
     src: '/music/batalla-heroica.mp3',
+  },
+  {
+    id: 'batalla-infernal',
+    label: 'Batalla Infernal',
+    src: '/music/batalla-infernal.mp3',
   },
   {
     id: 'bosque-encantado',
@@ -50,6 +60,21 @@ export const MUSIC_TRACKS: readonly MusicDef[] = [
     src: '/music/ciudad-medieval.mp3',
   },
   {
+    id: 'combate-intenso',
+    label: 'Combate Intenso',
+    src: '/music/combate-intenso.mp3',
+  },
+  {
+    id: 'combate-normal',
+    label: 'Combate Normal',
+    src: '/music/combate-normal.mp3',
+  },
+  {
+    id: 'combate-oscuro',
+    label: 'Combate Oscuro',
+    src: '/music/combate-oscuro.mp3',
+  },
+  {
     id: 'descanso',
     label: 'Descanso',
     src: '/music/descanso.mp3',
@@ -73,6 +98,31 @@ export const MUSIC_TRACKS: readonly MusicDef[] = [
     id: 'exploración-oscura',
     label: 'Exploración Oscura',
     src: '/music/exploración-oscura.mp3',
+  },
+  {
+    id: 'fiesta',
+    label: 'Fiesta',
+    src: '/music/fiesta.mp3',
+  },
+  {
+    id: 'horror',
+    label: 'Horror',
+    src: '/music/horror.mp3',
+  },
+  {
+    id: 'investigación',
+    label: 'Investigación',
+    src: '/music/investigación.mp3',
+  },
+  {
+    id: 'jefe',
+    label: 'Jefe',
+    src: '/music/jefe.mp3',
+  },
+  {
+    id: 'jefe-final',
+    label: 'Jefe Final',
+    src: '/music/jefe-final.mp3',
   },
   {
     id: 'mazmorra-oscura',
@@ -100,14 +150,29 @@ export const MUSIC_TRACKS: readonly MusicDef[] = [
     src: '/music/taberna.mp3',
   },
   {
+    id: 'tema-heroico',
+    label: 'Tema Heroico',
+    src: '/music/tema-heroico.mp3',
+  },
+  {
     id: 'templo-sagrado',
     label: 'Templo Sagrado',
     src: '/music/templo-sagrado.mp3',
   },
   {
+    id: 'tensión',
+    label: 'Tensión',
+    src: '/music/tensión.mp3',
+  },
+  {
     id: 'torre-del-mago',
     label: 'Torre Del Mago',
     src: '/music/torre-del-mago.mp3',
+  },
+  {
+    id: 'tristeza',
+    label: 'Tristeza',
+    src: '/music/tristeza.mp3',
   },
 ] as const;
 
