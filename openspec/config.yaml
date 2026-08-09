@@ -52,6 +52,7 @@ testing:
     - pnpm format
     - pnpm check
     - pnpm gen-cat
+    - pnpm gen-music
     - pnpm prisma:generate
     - pnpm db:migrate:local
     - pnpm db:migrate:prod

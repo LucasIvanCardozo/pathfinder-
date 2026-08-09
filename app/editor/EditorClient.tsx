@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
+  AmbientPanel,
   applyEraseStroke,
   applyPaintStroke,
   type BrushShape,
@@ -23,7 +24,6 @@ import {
   SubdivisionTabs,
   useKeyboardShortcuts,
   WeatherOverlay,
-  WeatherPanel,
 } from '@/canvas';
 
 import { SpellPalette } from '@/canvas/components/SpellPalette';
@@ -53,6 +53,7 @@ import { CombatModal } from './components/CombatModal/CombatModal';
 import { Compass } from './components/Compass';
 import { RoundViewer } from './components/RoundViewer';
 import styles from './editor.module.css';
+import { useAmbientSession } from './hooks/use-ambient-session';
 import { useClearHandlers } from './hooks/use-clear-handlers';
 import { useCombatOps } from './hooks/use-combat-ops';
 import { useCombatSession } from './hooks/use-combat-session';
@@ -64,7 +65,6 @@ import { useScenarioAutosave } from './hooks/use-scenario-autosave';
 import { useSpellOps } from './hooks/use-spell-ops';
 import { useStrokeLatch } from './hooks/use-stroke-latch';
 import { useTraitMenu } from './hooks/use-trait-menu';
-import { useWeatherSession } from './hooks/use-weather-session';
 import { useZoomControl } from './hooks/use-zoom-control';
 import { buildEditorShortcuts } from './shortcuts';
 
@@ -287,7 +287,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     markDirty,
     pushAddFloor: opsBuffer.pushAddFloor,
   });
-  const { weatherState, setWeatherState, thunderAt } = useWeatherSession();
+  const { ambientState, setAmbientState, thunderAt } = useAmbientSession();
   const traitMenu = useTraitMenu({
     paintedCells,
     setPaintedCells,
@@ -638,7 +638,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
               </Button>
             }
           >
-            <WeatherPanel onChange={setWeatherState} initial={weatherState} />
+            <AmbientPanel onChange={setAmbientState} initial={ambientState} />
           </Popover>
           <Popover
             side="right"
@@ -916,7 +916,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           }}
           selectedSpellTemplateId={selectedSpellTemplateId}
           spellRotationIndex={spellRotationIndex}
-          overlay={<WeatherOverlay weatherId={weatherState.weatherId} thunderAt={thunderAt} />}
+          overlay={<WeatherOverlay weatherId={ambientState.weatherId} thunderAt={thunderAt} />}
         />
       </div>
 

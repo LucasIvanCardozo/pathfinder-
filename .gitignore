@@ -46,3 +46,7 @@ coverage/
 
 # Prisma generated client (regenerated via `prisma generate`)
 src/generated/
+
+# Music originals — kept on local disk only, optimized versions in public/music/
+# are produced by `pnpm gen-music:optimize`. See AGENTS.md.
+public/music/source/

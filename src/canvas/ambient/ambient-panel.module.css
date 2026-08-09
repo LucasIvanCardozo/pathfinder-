@@ -1,0 +1,37 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.panelTitle {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Adjacent sections are separated by a hairline. The first sits directly
+   under the panel title with no extra border. */
+.section + .section {
+  margin-top: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--fg-muted);
+}

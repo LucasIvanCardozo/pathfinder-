@@ -27,7 +27,7 @@ Pathfinder is a single Next.js App Router application for a game-master battle-m
 
 ## 3. Commands
 
-Use only scripts that exist in `package.json`: `pnpm dev | build | start | typecheck | lint | lint:fix | format | check | gen-cat | prisma:generate | db:migrate:local | db:migrate:prod | db:studio:local | db:studio:prod | db:reset | db:pr:reset`. There is **no configured test runner or `pnpm test`**; do not claim test coverage that does not exist.
+Use only scripts that exist in `package.json`: `pnpm dev | build | start | typecheck | lint | lint:fix | format | check | gen-cat | gen-music:optimize | gen-music | prisma:generate | db:migrate:local | db:migrate:prod | db:studio:local | db:studio:prod | db:reset | db:pr:reset`. There is **no configured test runner or `pnpm test`**; do not claim test coverage that does not exist.
 
 ## 4. Documentation map (TOC)
 
@@ -127,6 +127,10 @@ Only floors from the start of the `floors` array up to and including the active 
 ## 11. Explicit scope boundaries
 
 Pathfinder has **no authentication, no multi-tenancy, no realtime (Soketi/pusher), no payment processing, and no file-upload service**. `createProtectedAction` (the auth-extended wrapper) and the `venue:` cache tag convention are out of scope until an auth provider is added. Do not copy those concerns from the reference repo. Rate limiting is manual/opt-in, not automatic, in `createAction`. Introduce new infrastructure only through an explicit architectural decision documented in `docs/architecture/`.
+
+### Music workflow
+
+`public/music/` holds the optimized mp3s the runtime serves (committed). The originals live in `public/music/source/` (gitignored, local disk only) and are re-encoded to 128kbps CBR via `pnpm gen-music:optimize` (or the umbrella `pnpm gen-music`, which also regenerates the registry). The optimizer is incremental by mtime — re-running it is a no-op when nothing changed. It depends on `ffmpeg-static`, which is whitelisted in `pnpm.onlyBuiltDependencies` so fresh clones get the binary without manual approval. Never commit files from `public/music/source/`.
 
 ## 12. Migration debt
 

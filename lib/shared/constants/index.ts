@@ -16,6 +16,8 @@
  * be edited (or its values tweaked in a config UI later) without spelunking
  * through the codebase.
  */
+
+export * from './ambient';
 export * from './brush';
 export * from './combat';
 export * from './darkness';
