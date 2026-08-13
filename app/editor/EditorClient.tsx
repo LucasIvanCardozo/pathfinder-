@@ -91,6 +91,12 @@ type InitialScenario = {
 type Props = {
   initialScenario: InitialScenario | null;
   allPieces: Piece[];
+  /**
+   * Demo mode is open to unauthenticated visitors via `/editor?demo=1`. The
+   * autosave hook short-circuits every write as the single condition that
+   * gates persistence, and the surface hides save controls + shows a banner.
+   */
+  isDemo?: boolean;
 };
 
 /**
@@ -99,7 +105,7 @@ type Props = {
  * floor heuristics, trait menu, shortcut bindings). Layout lives entirely
  * here; behaviour is delegated.
  */
-export function EditorClient({ initialScenario, allPieces }: Props) {
+export function EditorClient({ initialScenario, allPieces, isDemo = false }: Props) {
   const router = useRouter();
   const [scenarioId, setScenarioId] = useState<string | null>(initialScenario?.id ?? null);
   const [scenarioName, setScenarioName] = useState(initialScenario?.name ?? '');
@@ -261,6 +267,7 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
     isDirty,
     opsBuffer,
     baselineVersion,
+    isDemo,
     onSaved: useCallback(
       (savedId: string, newVersion: string) => {
         setScenarioId(savedId);
@@ -599,6 +606,14 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
 
   return (
     <div className={styles.editor} data-chrome-visible={chromeVisible}>
+      {isDemo ? (
+        <div className={styles.demoBanner} role="status">
+          <span className={styles.demoBannerText}>Modo demo — los cambios no se guardan</span>
+          <Link href="/" className={styles.demoBannerLink}>
+            Salir al home
+          </Link>
+        </div>
+      ) : null}
       <FloatingPanel
         as="aside"
         className={styles.floatingAside}
@@ -809,39 +824,43 @@ export function EditorClient({ initialScenario, allPieces }: Props) {
           onChange={handleSubdivisionChange}
         />
 
-        <span
-          className={styles.autosaveStatus}
-          data-status={autosaveStatus}
-          title="Autoguardado cada 1 min"
-        >
-          {autosaveStatus === 'saving' && (
-            <>
-              <Spinner size={12} label="Guardando" />
-              Guardando…
-            </>
-          )}
-          {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
-          {autosaveStatus === 'timeout' && (
-            <>
-              <Spinner size={12} label="Timeout" />
-              Timeout — reintentá
-            </>
-          )}
-          {autosaveStatus === 'error' && '✗ Error al guardar'}
-          {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
-        </span>
-        <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Spinner size={14} label="Guardando" />
-              Guardando…
-            </>
-          ) : scenarioId ? (
-            'Guardar'
-          ) : (
-            'Crear'
-          )}
-        </Button>
+        {isDemo ? null : (
+          <span
+            className={styles.autosaveStatus}
+            data-status={autosaveStatus}
+            title="Autoguardado cada 1 min"
+          >
+            {autosaveStatus === 'saving' && (
+              <>
+                <Spinner size={12} label="Guardando" />
+                Guardando…
+              </>
+            )}
+            {autosaveStatus === 'saved' && savedAt && `✓ Guardado ${savedAt}`}
+            {autosaveStatus === 'timeout' && (
+              <>
+                <Spinner size={12} label="Timeout" />
+                Timeout — reintentá
+              </>
+            )}
+            {autosaveStatus === 'error' && '✗ Error al guardar'}
+            {autosaveStatus === 'idle' && (savedAt ? `Guardado ${savedAt}` : '○')}
+          </span>
+        )}
+        {isDemo ? null : (
+          <Button type="button" variant="primary" onClick={() => save(false)} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Spinner size={14} label="Guardando" />
+                Guardando…
+              </>
+            ) : scenarioId ? (
+              'Guardar'
+            ) : (
+              'Crear'
+            )}
+          </Button>
+        )}
       </FloatingPanel>
 
       <div className={styles.canvasStage}>

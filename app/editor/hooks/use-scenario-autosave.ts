@@ -21,6 +21,13 @@ type UseScenarioAutosaveParams = {
   baselineVersion: string | null;
   /** Called with the server-returned `updatedAt` after a successful save. */
   onSaved: (savedId: string, newVersion: string) => void;
+  /**
+   * Demo mode skips every write — the editor is open to unauthenticated
+   * visitors and the surface has no save controls, but the autosave
+   * interval still ticks, so `save` short-circuits here as the single
+   * condition that gates persistence.
+   */
+  isDemo?: boolean;
 };
 
 type Status = 'idle' | 'saving' | 'saved' | 'timeout' | 'error';
@@ -42,6 +49,7 @@ export function useScenarioAutosave({
   opsBuffer,
   baselineVersion,
   onSaved,
+  isDemo,
 }: UseScenarioAutosaveParams): UseScenarioAutosaveResult {
   const [isSaving, setIsSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<Status>('idle');
@@ -69,6 +77,10 @@ export function useScenarioAutosave({
   const save = useCallback(
     (isAutosave = false) => {
       if (isAutosave && !isDirty) return;
+      // Demo mode: never write. The autosave interval in the editor still
+      // ticks, so this guard is the single condition that prevents any
+      // mutation from reaching the server.
+      if (isDemo) return;
 
       // Cancel any in-flight save to avoid two saves racing on
       // `setAutosaveStatus('saved')` and flickering the badge.
@@ -147,7 +159,17 @@ export function useScenarioAutosave({
         }
       })();
     },
-    [isDirty, scenarioId, scenarioName, mapDims, baselineVersion, onSaved, drainOps, restoreOps],
+    [
+      isDirty,
+      isDemo,
+      scenarioId,
+      scenarioName,
+      mapDims,
+      baselineVersion,
+      onSaved,
+      drainOps,
+      restoreOps,
+    ],
   );
 
   useEffect(() => {
@@ -171,6 +193,14 @@ export function useScenarioAutosave({
       abortRef.current?.abort();
     };
   }, []);
+
+  // Demo mode: the editor surface hides save controls, but the autosave
+  // interval still ticks. Return inert defaults so callers never see a
+  // saving/spinner state and `save` is a no-op for the keyboard shortcut
+  // path too.
+  if (isDemo) {
+    return { isSaving: false, autosaveStatus: 'idle', savedAt: null, save: () => {} };
+  }
 
   return { isSaving, autosaveStatus, savedAt, save };
 }

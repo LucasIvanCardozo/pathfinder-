@@ -104,6 +104,9 @@ export function HomeClient({ scenarios, unlocked }: Props) {
           <Link href="/ayuda" className={styles.homeNavLink}>
             📖 Ayuda del editor
           </Link>
+          <Link href="/editor?demo=1" className={styles.homeNavLink}>
+            ✨ Probar el editor
+          </Link>
           {unlocked ? (
             <button
               type="button"
